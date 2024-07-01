@@ -29,7 +29,7 @@ pub async fn main_controller() {
             panic!("Failed to create mysql client: {:?}", err);
         }
     };
-
+    
     let bot = Bot::from_env();
 
     teloxide::repl(bot, |message: Message, bot: Bot| async move {
@@ -47,8 +47,9 @@ pub async fn main_controller() {
     })
     .await;
             
-
+    
 }
+
 
 /*
     
@@ -57,9 +58,17 @@ async fn handle_command(message: &Message, bot: &Bot) -> Result<()> {
     if let Some(text) = message.text() {
         if text.starts_with("/c ") {
             let args = &text[3..];
+            
+            println!("{:?}", args);
+
             bot.send_message(message.chat.id, format!("Command with args: {}", args))
                 .await
                 .context("Failed to send command response")?;
+            
+            bot.send_message(message.chat.id, format!("Command with args: {}", args))
+                .await
+                .context("Failed to send command response")?;
+            
         } else {
             bot.send_message(message.chat.id, "Hello! Use /c <args> to interact.")
                 .await
