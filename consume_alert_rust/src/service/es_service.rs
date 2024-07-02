@@ -4,7 +4,7 @@ use crate::service::plotter_service::*;
 
 use crate::utils_modules::time_utils::*;
 
-#[derive(Debug, Getters)]
+#[derive(Debug, Getters, Clone)]
 #[getset(get = "pub")]
 pub struct EsHelper {
     mon_es_pool: Vec<EsObj>
@@ -45,7 +45,7 @@ impl EsHelper {
 
     
     /*
-        Functions that handle queries at the Elasticsearch Cluster LEVEL
+        Functions that handle queries at the Elasticsearch Cluster LEVEL - SEARCH
     */
     pub async fn cluster_search_query(&self, es_query: Value, index_name: &str) -> Result<Value, anyhow::Error> {
 
@@ -62,6 +62,27 @@ impl EsHelper {
         
         Err(anyhow!("All Elasticsearch connections failed"))
     }
+
+
+    /*
+        Functions that handle queries at the Elasticsearch Cluster LEVEL - INDEXING
+    */
+    pub async fn cluster_post_query(&self, document: Value, index_name: &str) -> Result<(), anyhow::Error> {
+
+        for es_obj in self.mon_es_pool.iter() {
+
+            match es_obj.node_post_query(&document, index_name).await {
+                Ok(resp) => return Ok(resp),
+                Err(err) => {
+                    error!("{:?}", err);      
+                    continue;
+                }
+            }   
+        }
+        
+        Err(anyhow!("All Elasticsearch connections failed"))
+
+    }
     
 
 }
@@ -69,9 +90,9 @@ impl EsHelper {
 
 impl EsObj {
 
-
+    
     /*
-        Function that EXECUTES elasticsearch queries
+        Function that EXECUTES elasticsearch queries - search
     */
     pub async fn node_search_query(&self, es_query: &Value, index_name: &str) -> Result<Value, anyhow::Error> {
 
@@ -92,6 +113,27 @@ impl EsObj {
         } else {
             Err(anyhow!("response status is failed"))
         }
+    }
+
+
+    /*
+        Function that EXECUTES elasticsearch queries - indexing
+    */
+    pub async fn node_post_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error> {
+
+        let response = self.es_pool
+            .index(IndexParts::Index(index_name))
+            .body(document)
+            .send()
+            .await?;
+        
+        if response.status_code().is_success() {
+            Ok(())
+        } else {
+            let error_message = format!("Failed to index document: Status Code: {}", response.status_code());
+            Err(anyhow!(error_message))
+        }
+
     }
     
 

@@ -21,6 +21,7 @@ pub fn set_global_logger() {
         .unwrap_or_else(|e| panic!("Logger initialization failed: {}", e));
 }
 
+
 // Custom Log Format Function
 fn custom_format(w: &mut dyn Write, now: &mut flexi_logger::DeferredNow, record: &Record) -> Result<(), std::io::Error> {
     write!(w, "[{}] [{}] T[{}] {}",
