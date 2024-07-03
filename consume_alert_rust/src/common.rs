@@ -7,7 +7,7 @@ pub use log::{info, error};
 
 pub use flexi_logger::{Logger, FileSpec, Criterion, Age, Naming, Cleanup, Record};
 
-pub use chrono::{DateTime, Utc, NaiveDateTime, Timelike};
+pub use chrono::{DateTime, Utc, NaiveDateTime, Timelike, Datelike};
 pub use chrono_tz::Asia::Seoul;
 
 pub use serde::{Serialize, Deserialize};

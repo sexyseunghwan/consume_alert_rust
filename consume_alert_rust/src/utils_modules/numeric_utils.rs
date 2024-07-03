@@ -6,3 +6,14 @@ use crate::common::*;
 pub fn is_numeric(s: &str) -> bool {
     s.parse::<i32>().is_ok()
 }
+
+
+/*
+    Functions that convert strings into numbers
+*/
+pub fn convert_numeric(s: &str) -> i32 {
+    match s.parse::<i32>() {
+        Ok(num) => num,
+        Err(_) => 0,  // 변환 실패 시 기본값으로 0 반환
+    }
+}

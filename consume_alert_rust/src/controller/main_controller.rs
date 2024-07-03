@@ -64,8 +64,8 @@ async fn handle_command(message: &Message, bot: &Bot, es_client: &EsHelper) -> R
         if text.starts_with("/c ") {
             command_consumption(message, text, bot, es_client).await?;
         } 
-        else if text.starts_with("/cs ") {
-
+        else if text.starts_with("/cm") {
+            command_consumption_per_mon(message, text, bot, es_client).await?;
         }
         else {
             bot.send_message(message.chat.id, "Hello! Use /c <args> to interact.")

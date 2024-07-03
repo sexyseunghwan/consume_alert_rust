@@ -72,17 +72,35 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
         return Ok(());
     }
     
-    let curr_time = get_current_korean_time("%Y-%m-%dT%H:%M:%S%.3fZ");
+    let curr_time = get_current_korean_time_str("%Y-%m-%dT%H:%M:%S%.3fZ");
     
     let document = json!({
         "@timestamp": curr_time,
         "prodt_name": consume_name,
-        "prodt_money": consume_cash
+        "prodt_money": convert_numeric(consume_cash)
     });
 
     let index_name = "consuming_index_prod_new";
 
     es_client.cluster_post_query(document, index_name).await?;
     
+    Ok(())
+}
+
+
+
+/*
+    command handler: Checks how much you have consumed during a month -> /cm
+*/
+pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bot, es_client: &EsHelper) -> Result<(), anyhow::Error> {
+
+    let args = &text[3..];
+    let split_args_vec: Vec<String> = args.split(":").map(|s| s.to_string()).collect();
+    
+    
+    //let curr_mon = get_current_korean_time("%Y.%m.01");
+    //println!("{:?}", curr_mon);
+    
+
     Ok(())
 }
