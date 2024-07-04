@@ -44,7 +44,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
     if split_args_vec.len() != 2 {
         
         tele_bot_send_msg(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000", 
-            format!("There are not two parameters input to the 'command_consumption_per_term()' function - input_data : {}", args).as_str()).await?;
+            format!("There are not two parameters input to the 'command_consumption_per_term()' function - input_data : {}", text).as_str()).await?;
 
         return Ok(());
     } 
@@ -55,7 +55,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
             
             if !is_numeric(&price) {
                 tele_bot_send_msg(bot, message.chat.id, true, "The second parameter must be numeric. \nEX) /c snack:15000", 
-                format!("There are not two parameters input to the 'command_consumption_per_term()' function - input_data : {}", args).as_str()).await?;
+                format!("There are not two parameters input to the 'command_consumption_per_term()' function - input_data : {}", text).as_str()).await?;
                 
                 return Ok(());
             }
@@ -67,7 +67,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
     } else {
 
         tele_bot_send_msg(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000", 
-            format!("There are not two parameters input to the 'command_consumption_per_term()' function - input_data : {}", args).as_str()).await?;
+            format!("There are not two parameters input to the 'command_consumption_per_term()' function - input_data : {}", text).as_str()).await?;
 
         return Ok(());
     }
@@ -95,9 +95,36 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
 pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bot, es_client: &EsHelper) -> Result<(), anyhow::Error> {
 
     let args = &text[3..];
-    let split_args_vec: Vec<String> = args.split(":").map(|s| s.to_string()).collect();
+    let split_args_vec: Vec<String> = args.split(" ").map(|s| s.to_string()).collect();
     
-    
+    println!("{:?}", split_args_vec.len());
+
+    if split_args_vec.len() == 1 {
+        // case1) /cm
+
+        // 1. Find out the current month
+        let cur_date = get_current_korean_time_str("%Y.%m.01");
+        let one_mon_ago = get_one_month_ago_kr_str(cur_date.as_str(), "%Y.%m.%d")?;
+
+        println!("{:?}", cur_date);
+        println!("{:?}", one_mon_ago);
+
+    } else if split_args_vec.len() == 2 {
+        // case2) /cm 2024.01.01
+
+        // 1. Date Verification
+
+
+    } else {
+        tele_bot_send_msg(bot, message.chat.id, 
+            true, "There is a problem with the parameter you entered. Please check again. \nEX01) /cm 2023.07.01\nEX02) /cm", 
+            format!("The input parameter value of the 'command_consumption_per_mon()' function does not satisfy the specified date format. - input_val : {}", text).as_str()).await?;
+    }
+
+    // println!("{:?}", args);
+    // println!("{:?}", split_args_vec);
+    // println!("{:?}", split_args_vec.len());
+
     //let curr_mon = get_current_korean_time("%Y.%m.01");
     //println!("{:?}", curr_mon);
     
