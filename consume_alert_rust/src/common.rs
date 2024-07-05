@@ -36,3 +36,4 @@ pub use teloxide::prelude::*;
 pub use teloxide::types::Message;
 pub use teloxide::Bot;
 
+pub use regex::Regex;

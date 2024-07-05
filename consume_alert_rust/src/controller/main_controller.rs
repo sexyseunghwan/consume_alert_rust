@@ -41,10 +41,6 @@ pub async fn main_controller() {
                 Ok(_) => (),
                 Err(e) => {
                     error!("Error handling message: {:?}", e);
-                    bot.send_message(message.chat.id, format!("Error: {}", e))
-                       .await
-                       .log_on_error()
-                       .await;
                 }
             };
             respond(())
