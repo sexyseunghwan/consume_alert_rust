@@ -37,7 +37,7 @@ pub fn validate_date_format(date_str: &str, format: &str) -> Result<bool, anyhow
 */
 pub fn get_last_date_str(date_str: &str, format: &str) -> Result<String, anyhow::Error> {
 
-    let date = NaiveDate::parse_from_str(date_str, "%Y.%m.%d")?;
+    let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")?;
 
     let next_month = if date.month() == 12 { 1 } else { date.month() + 1 };
     let next_month_year = if date.month() == 12 { date.year() + 1 } else { date.year() };
@@ -61,7 +61,7 @@ pub fn get_last_date_str(date_str: &str, format: &str) -> Result<String, anyhow:
 */
 pub fn get_one_month_ago_kr_str(date: &str, time_format: &str) -> Result<String, anyhow::Error> {
     
-    let naive_date = NaiveDate::parse_from_str(date, "%Y.%m.%d")?;
+    let naive_date = NaiveDate::parse_from_str(date, "%Y-%m-%d")?;
     let naive_datetime = match naive_date.and_hms_opt(0, 0, 0) {
         Some(naive_datetime) => naive_datetime,
         None => return Err(anyhow!("Invalid date or time provided"))
