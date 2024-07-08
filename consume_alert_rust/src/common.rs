@@ -1,7 +1,7 @@
 pub use std::io::{Read, Write};
 pub use std::env;
 pub use std::time::{Duration, Instant};
-pub use std::sync::Arc;
+pub use std::sync::{Arc, Mutex};
 
 pub use log::{info, error};
 
@@ -37,3 +37,27 @@ pub use teloxide::types::Message;
 pub use teloxide::Bot;
 
 pub use regex::Regex;
+
+pub use once_cell::sync::Lazy;
+
+
+use crate::service::es_service::*;
+
+pub static ES_CLIENT: Lazy<Arc<Mutex<EsHelper>>> = Lazy::new(|| {
+    
+    dotenv().ok();
+
+    let es_host: Vec<String> = env::var("ES_DB_URL")
+        .expect("'ES_DB_URL' must be set")
+        .split(',')
+        .map(|s| s.to_string())
+        .collect();
+
+    let es_id = env::var("ES_ID").expect("'ES_ID' must be set");
+    let es_pw = env::var("ES_PW").expect("'ES_PW' must be set");
+
+    let es_client = EsHelper::new(es_host, &es_id, &es_pw)
+        .expect("Failed to create Elasticsearch client");
+
+    Arc::new(Mutex::new(es_client))
+});

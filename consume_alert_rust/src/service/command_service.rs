@@ -34,7 +34,7 @@ async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str, 
 /*
     command handler: Writes the expenditure details to the index in ElasticSearch. -> /c
 */
-pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_client: &EsHelper) -> Result<(), anyhow::Error> {
+pub async fn command_consumption(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
 
     let args = &text[3..];
     let split_args_vec: Vec<String> = args.split(":").map(|s| s.to_string()).collect();
@@ -76,6 +76,11 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
 
     let index_name = "consuming_index_prod_new";
 
+    let es_client = {
+        let lock = ES_CLIENT.lock().unwrap(); // Lock the mutex
+        lock.clone() // Assuming `EsHelper` implements Clone, otherwise copy the needed data
+    };
+
     es_client.cluster_post_query(document, index_name).await?;
     
     Ok(())
@@ -86,7 +91,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
 /*
     command handler: Checks how much you have consumed during a month -> /cm
 */
-pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bot, es_client: &EsHelper) -> Result<(), anyhow::Error> {
+pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
 
     let args = &text[3..];
     let split_args_vec: Vec<String> = args.split(" ").map(|s| s.to_string()).collect();
@@ -133,14 +138,29 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
         return Err(anyhow!(format!("The input parameter value of the 'command_consumption_per_mon()' function does not satisfy the specified date format. - input_val : {}", text)));
     }
 
+    println!("??");
+
     // 2. It calculates the total amount of consumption.
+    let cur_mon_total_cost = total_cost_specific_period(cur_date_start.as_str(), cur_date_end.as_str(), "consuming_index_prod_new").await?;
+    println!("==========");
+    let pre_mon_total_cost = total_cost_specific_period(one_mon_ago_date_start.as_str(), one_mon_ago_date_end.as_str(), "consuming_index_prod_new").await?;
+    
+    Ok(())
+}
+
+
+/*
+
+*/
+async fn total_cost_specific_period(start_date: &str, end_date: &str, index_name: &str) -> Result<i32, anyhow::Error> {
+
     let query = json!({
         "size": 0,
         "query": {
             "range": {
                 "@timestamp": {
-                    "gte": "2024-07-01T00:00:00Z",
-                    "lte": "2024-07-31T23:59:59Z"
+                    "gte": start_date,
+                    "lte": end_date
                 }
             }
         },
@@ -153,6 +173,13 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
         }
     });
 
-    
-    Ok(())
+    let es_client = {
+        let lock = ES_CLIENT.lock().unwrap(); // Lock the mutex
+        lock.clone() // Assuming `EsHelper` implements Clone, otherwise copy the needed data
+    };
+    let es_cur_res = es_client.cluster_search_query(query, index_name).await?;
+
+    println!("{:?}",es_cur_res);
+
+    Ok(12)
 }

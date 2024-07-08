@@ -33,7 +33,7 @@ pub fn validate_date_format(date_str: &str, format: &str) -> Result<bool, anyhow
 
 
 /*
-    
+    Function that calculates the last date of a particular month
 */
 pub fn get_last_date_str(date_str: &str, format: &str) -> Result<String, anyhow::Error> {
 
