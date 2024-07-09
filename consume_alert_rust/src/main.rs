@@ -10,6 +10,7 @@ mod common;
 mod controller;
 mod utils_modules;
 mod service;
+mod dtos;
 
 use utils_modules::logger_utils::*;
 use controller::main_controller::*;
@@ -24,5 +25,7 @@ async fn main() {
     set_global_logger();
 
     // Start Controller
-    main_controller().await;
+    //main_controller().await;
+
+    test_controller().await;
 }

@@ -74,14 +74,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
         "prodt_money": convert_numeric(consume_cash)
     });
 
-    let index_name = "consuming_index_prod_new";
-
-    // let es_client = {
-    //     let lock = ES_CLIENT.lock().unwrap(); // Lock the mutex
-    //     lock.clone() // Assuming `EsHelper` implements Clone, otherwise copy the needed data
-    // };
-
-    es_client.cluster_post_query(document, index_name).await?;
+    es_client.cluster_post_query(document, "consuming_index_prod_new").await?;
     
     Ok(())
 }
@@ -142,11 +135,11 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
 
     // 2. It calculates the total amount of consumption.
     let cur_mon_total_cost = total_cost_specific_period(cur_date_start.as_str(), cur_date_end.as_str(), es_client, "consuming_index_prod_new").await?;
-    println!("==========");
     let pre_mon_total_cost = total_cost_specific_period(one_mon_ago_date_start.as_str(), one_mon_ago_date_end.as_str(), es_client, "consuming_index_prod_new").await?;
     
     Ok(())
 }
+
 
 
 /*
@@ -155,7 +148,7 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
 async fn total_cost_specific_period(start_date: &str, end_date: &str, es_client: &Arc<EsHelper>, index_name: &str) -> Result<i32, anyhow::Error> {
 
     let query = json!({
-        "size": 0,
+        "size": 10000,
         "query": {
             "range": {
                 "@timestamp": {
