@@ -2,6 +2,7 @@ use crate::common::*;
 
 use crate::service::es_service::*;
 use crate::service::command_service::*;
+use crate::service::calculate_service::*;
 
 
 
@@ -28,50 +29,54 @@ pub async fn test_controller() {
         }
     };
 
-    let query = json!({
-        "size": 10000,
-        "query": {
-            "range": {
-                "@timestamp": {
-                    "gte": "2024-06-01",
-                    "lte": "2024-07-01"
-                }
-            }
-        },
-        "aggs": {
-            "total_prodt_money": {
-                "sum": {
-                    "field": "prodt_money"
-                }
-            }
-        },
-        "sort": {
-            "@timestamp": { "order": "asc" }
-        }
-    });
+    let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
+    
+    classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
+
+    // let query = json!({
+    //     "size": 10000,
+    //     "query": {
+    //         "range": {
+    //             "@timestamp": {
+    //                 "gte": "2024-06-01",
+    //                 "lte": "2024-07-01"
+    //             }
+    //         }
+    //     },
+    //     "aggs": {
+    //         "total_prodt_money": {
+    //             "sum": {
+    //                 "field": "prodt_money"
+    //             }
+    //         }
+    //     },
+    //     "sort": {
+    //         "@timestamp": { "order": "asc" }
+    //     }
+    // });
 
 
-    let es_cur_res = es_client.cluster_search_query(query, "consuming_index_prod_new").await.unwrap();
+    // let es_cur_res = es_client.cluster_search_query(query, "consuming_index_prod_new").await.unwrap();
 
-    // total cost
-    println!("{:?}", es_cur_res["aggregations"]["total_prodt_money"]["value"]);
-    //println!("{:?}", es_cur_res["hits"]["hits"]);    
+    // // total cost
+    // println!("{:?}", es_cur_res["aggregations"]["total_prodt_money"]["value"]);
+    // //println!("{:?}", es_cur_res["hits"]["hits"]);    
 
-    // for elem in es_cur_res["hits"]["hits"].as_array() {
-    //     println!("{:?}", elem);
-    //     println!("~~~~~~~~~~~~~~~~~~~~");
-    // }
+    // // for elem in es_cur_res["hits"]["hits"].as_array() {
+    // //     println!("{:?}", elem);
+    // //     println!("~~~~~~~~~~~~~~~~~~~~");
+    // // }
 
-    // consume infos
-    if let Some(vec) = es_cur_res["hits"]["hits"].as_array() { 
+    // // consume infos
+    // if let Some(vec) = es_cur_res["hits"]["hits"].as_array() { 
 
-        for elem in vec {
+    //     for elem in vec {
             
-            println!("{:?}", elem);
-        }
-        println!("&&&&&&&&&&&&");
+    //         println!("{:?}", elem);
+    //     }
+    //     println!("&&&&&&&&&&&&");
 
-    }
+    // }
 
 
 }

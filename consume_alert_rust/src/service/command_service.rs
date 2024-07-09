@@ -1,5 +1,6 @@
 use crate::common::*;
 
+use crate::service::calculate_service::*;
 use crate::service::es_service::*;
 
 use crate::utils_modules::numeric_utils::*;
@@ -134,42 +135,11 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
     println!("??");
 
     // 2. It calculates the total amount of consumption.
-    let cur_mon_total_cost = total_cost_specific_period(cur_date_start.as_str(), cur_date_end.as_str(), es_client, "consuming_index_prod_new").await?;
-    let pre_mon_total_cost = total_cost_specific_period(one_mon_ago_date_start.as_str(), one_mon_ago_date_end.as_str(), es_client, "consuming_index_prod_new").await?;
+    //let cur_mon_total_cost = total_cost_specific_period(cur_date_start.as_str(), cur_date_end.as_str(), es_client, "consuming_index_prod_new").await?;
+    //let pre_mon_total_cost = total_cost_specific_period(one_mon_ago_date_start.as_str(), one_mon_ago_date_end.as_str(), es_client, "consuming_index_prod_new").await?;
     
     Ok(())
 }
 
 
 
-/*
-
-*/
-async fn total_cost_specific_period(start_date: &str, end_date: &str, es_client: &Arc<EsHelper>, index_name: &str) -> Result<i32, anyhow::Error> {
-
-    let query = json!({
-        "size": 10000,
-        "query": {
-            "range": {
-                "@timestamp": {
-                    "gte": start_date,
-                    "lte": end_date
-                }
-            }
-        },
-        "aggs": {
-            "total_prodt_money": {
-                "sum": {
-                    "field": "prodt_money"
-                }
-            }
-        }
-    });
-
-
-    let es_cur_res = es_client.cluster_search_query(query, index_name).await?;
-
-    println!("{:?}",es_cur_res);
-
-    Ok(12)
-}
