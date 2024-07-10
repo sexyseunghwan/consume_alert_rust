@@ -207,13 +207,17 @@ dependencies = [
  "dotenv",
  "elasticsearch",
  "flexi_logger",
+ "fonterator",
+ "footile 0.6.0",
  "futures",
  "getset",
  "log",
  "once_cell",
  "openssl",
  "percent-encoding",
+ "pix",
  "plotters",
+ "png_pong",
  "rand",
  "regex",
  "reqwest",
@@ -559,6 +563,35 @@ dependencies = [
  "walkdir",
  "winapi",
  "yeslogic-fontconfig-sys",
+]
+
+[[package]]
+name = "fonterator"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f5b926dc51d744fa12ea27a9be8e49770fd661bf61b9ad3fb2a1ae951b04d57"
+dependencies = [
+ "footile 0.5.0",
+ "ttf-parser 0.6.2",
+ "unicode-script",
+]
+
+[[package]]
+name = "footile"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36ff7fffb35e9d456cf492ba1ef9a72d9e82feba066a5a70da808d67a00a9801"
+dependencies = [
+ "pix",
+]
+
+[[package]]
+name = "footile"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2494e16b487f077a8527d5a4bf3401a878b79847e95b075e638bcea0cbfa8920"
+dependencies = [
+ "pix",
 ]
 
 [[package]]
@@ -1304,6 +1337,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
+name = "pix"
+version = "0.13.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5de5067af0cd27add969cdb4ef2eecc955f59235f3b7a75a3c6ac9562cfb6b81"
+
+[[package]]
 name = "pkg-config"
 version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1324,7 +1363,7 @@ dependencies = [
  "plotters-backend",
  "plotters-bitmap",
  "plotters-svg",
- "ttf-parser",
+ "ttf-parser 0.20.0",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -1366,6 +1405,17 @@ dependencies = [
  "fdeflate",
  "flate2",
  "miniz_oxide",
+]
+
+[[package]]
+name = "png_pong"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3daa5a7330d36033a4d7239a85a65a78214a29c1a5478f1f9a9dde10fe9afffd"
+dependencies = [
+ "miniz_oxide",
+ "pix",
+ "simd-adler32",
 ]
 
 [[package]]
@@ -2046,6 +2096,12 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "ttf-parser"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e5d7cd7ab3e47dda6e56542f4bbf3824c15234958c6e1bd6aaa347e93499fdc"
+
+[[package]]
+name = "ttf-parser"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "17f77d76d837a7830fe1d4f12b7b4ba4192c1888001c7164257e4bc6d21d96b4"
@@ -2079,6 +2135,12 @@ checksum = "a56d1686db2308d901306f92a263857ef59ea39678a5458e7cb17f01415101f5"
 dependencies = [
  "tinyvec",
 ]
+
+[[package]]
+name = "unicode-script"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad8d71f5726e5f285a935e9fe8edfd53f0491eb6e9a5774097fdabee7cd8c9cd"
 
 [[package]]
 name = "url"

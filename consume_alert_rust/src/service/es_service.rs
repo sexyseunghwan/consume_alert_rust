@@ -104,9 +104,7 @@ impl EsObj {
             .body(es_query)
             .send()
             .await?;
-        
-        info!("{:?}", response);
-
+    
         if response.status_code().is_success() { 
             let response_body = response.json::<Value>().await?;
             Ok(response_body)
