@@ -24,3 +24,4 @@ pub struct ProdtTypeInfo {
     pub prodt_detail_list: Vec<ProdtDetailInfo>
 }
 
+

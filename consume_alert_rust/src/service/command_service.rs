@@ -17,8 +17,6 @@ async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str, 
             .await
             .context("Failed to send command response")?;
         
-        //error!("{:?}", log_msg);
-        
     } else {
         
         bot.send_message(chat_id, msg)
@@ -132,8 +130,7 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
         return Err(anyhow!(format!("The input parameter value of the 'command_consumption_per_mon()' function does not satisfy the specified date format. - input_val : {}", text)));
     }
 
-    println!("??");
-
+    
     // 2. It calculates the total amount of consumption.
     //let cur_mon_total_cost = total_cost_specific_period(cur_date_start.as_str(), cur_date_end.as_str(), es_client, "consuming_index_prod_new").await?;
     //let pre_mon_total_cost = total_cost_specific_period(one_mon_ago_date_start.as_str(), one_mon_ago_date_end.as_str(), es_client, "consuming_index_prod_new").await?;

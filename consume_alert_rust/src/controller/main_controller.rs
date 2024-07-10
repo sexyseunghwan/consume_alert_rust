@@ -1,5 +1,6 @@
 use crate::common::*;
 
+use crate::dtos::dto::*;
 use crate::service::es_service::*;
 use crate::service::command_service::*;
 use crate::service::calculate_service::*;
@@ -30,8 +31,28 @@ pub async fn test_controller() {
     };
 
     let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
+
+    let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
     
-    classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
+    total_cost_detail_specific_period("2023-06-01", "2024-06-15", &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
+       
+
+    // for elem in res {
+    //     println!("keyword_type: {:?}", elem.keyword_type);
+
+    //     for in_elem in elem.prodt_detail_list {
+    //         println!("keyword: {:?}", in_elem.keyword);
+    //         println!("bias_value: {:?}", in_elem.bias_value);
+    //     }
+
+    //     println!("============================");
+    // }
+
+    // let mut test_consume_obj = ConsumeInfo::new(String::from(""), String::from("호야 초밥"), 12000, String::from(""));
+
+    // let result = get_consume_info_by_classification_type(consume_type_vec, &mut test_consume_obj).await.unwrap();
+    
+    // println!("{:?}", result);
 
     // let query = json!({
     //     "size": 10000,
