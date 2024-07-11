@@ -33,13 +33,11 @@ pub async fn test_controller() {
 
     let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
 
-    draw_test();
+    //let res = draw_and_save_graph();
     //let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
     
     //total_cost_detail_specific_period("2023-06-01", "2024-06-15", &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
-
     
-
     // for elem in res {
     //     println!("keyword_type: {:?}", elem.keyword_type);
 

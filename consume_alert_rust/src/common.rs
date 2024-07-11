@@ -40,3 +40,8 @@ pub use teloxide::Bot;
 pub use regex::Regex;
 
 pub use plotters::prelude::*;
+
+
+pub use pyo3::prelude::*;
+pub use plotpy::*;
+pub use pyo3::types::{PyDict, PyTuple};
