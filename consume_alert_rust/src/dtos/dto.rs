@@ -24,4 +24,19 @@ pub struct ProdtTypeInfo {
     pub prodt_detail_list: Vec<ProdtDetailInfo>
 }
 
+#[derive(Debug, Getters, Serialize, Deserialize, new)]
+#[getset(get = "pub")]
+pub struct ConsumeTypeInfo {
+    pub prodt_type: String,
+    pub prodt_cost: i32
+}
 
+#[derive(Debug, Getters, Serialize, Deserialize, new)]
+#[getset(get = "pub")]
+pub struct ToPythonGraphCircle {
+    title_vec: Vec<String>,
+    cost_vec: Vec<i32>,
+    start_dt: String,
+    end_dt: String,
+    total_cost: f64
+}

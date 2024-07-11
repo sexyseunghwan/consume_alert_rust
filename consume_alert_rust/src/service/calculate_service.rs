@@ -1,6 +1,7 @@
 use crate::common::*;
 
 use crate::service::es_service::*;
+use crate::service::graph_api_service::*;
 
 use crate::dtos::dto::*;
 
@@ -164,7 +165,7 @@ pub async fn total_cost_detail_specific_period(start_date: &str, end_date: &str,
 */
 pub async fn get_consume_info_by_classification_type<'a>(consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error> {
 
-    let mut type_cores: HashMap<String, i32> = HashMap::new();
+    let mut type_scores: HashMap<String, i32> = HashMap::new();
     
     let prodt_name_trim = consume_info.prodt_name().trim(); // Remove both spaces
 
@@ -184,14 +185,14 @@ pub async fn get_consume_info_by_classification_type<'a>(consume_type_vec: &'a V
         }
         
         if total_bias != 0 {
-            type_cores.insert(keyword_type.to_string(), total_bias);
+            type_scores.insert(keyword_type.to_string(), total_bias);
         } 
     }
     
     let mut confirm_type = String::from("");
     let mut max_score = 0;
 
-    for (key, value) in &type_cores {
+    for (key, value) in &type_scores {
         
         let in_key = key.to_string();
         let in_value = *value;
@@ -208,5 +209,43 @@ pub async fn get_consume_info_by_classification_type<'a>(consume_type_vec: &'a V
         consume_info.prodt_type = confirm_type;
     }
     
+    Ok(())
+}
+
+
+/*
+
+*/
+pub async fn get_consume_type_graph(total_cost: f64, start_dt: &str, end_dt: &str, consume_list: Vec<ConsumeInfo>) -> Result<(), anyhow::Error> {
+
+    let mut type_scores: HashMap<String, i32> = HashMap::new();
+    
+    for consume_info in consume_list {
+        
+        let prodt_money = consume_info.prodt_money;
+        let prodt_type = consume_info.prodt_type;
+
+        type_scores.entry(prodt_type)
+            .and_modify(|e| *e += prodt_money)
+            .or_insert(prodt_money);
+    } 
+    
+    let mut consume_type_list: Vec<ConsumeTypeInfo> = Vec::new();
+    
+    for (key, value) in &type_scores {
+        
+        let prodt_type = key.to_string();
+        let prodt_cost = *value;
+
+        let consume_type_info = ConsumeTypeInfo::new(prodt_type, prodt_cost);
+        consume_type_list.push(consume_type_info);
+    }  
+
+    consume_type_list.sort_by(|a, b| b.prodt_cost.cmp(&a.prodt_cost));
+
+
+    call_python_matplot_consume_type(consume_type_list, start_dt, end_dt, total_cost).await?;
+
+
     Ok(())
 }

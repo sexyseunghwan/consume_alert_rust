@@ -26,8 +26,6 @@ pub use elasticsearch::http::transport::TransportBuilder;
 pub use elasticsearch::http::Url;
 pub use elasticsearch::{SearchParts, IndexParts, CountParts};
 
-pub use plotters::prelude::*;
-
 pub use anyhow::{Result, anyhow, Context};
 
 pub use getset::{Getters, Setters};
@@ -38,10 +36,3 @@ pub use teloxide::types::Message;
 pub use teloxide::Bot;
 
 pub use regex::Regex;
-
-pub use plotters::prelude::*;
-
-
-pub use pyo3::prelude::*;
-pub use plotpy::*;
-pub use pyo3::types::{PyDict, PyTuple};
