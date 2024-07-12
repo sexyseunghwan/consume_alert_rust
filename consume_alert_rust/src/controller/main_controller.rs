@@ -32,11 +32,16 @@ pub async fn test_controller() {
     };
 
     let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
-
+    
     let consume_type_vec = get_classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
     let (total_cost, consume_list) = total_cost_detail_specific_period("2024-06-01", "2024-06-15", &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
     
-    get_consume_type_graph(total_cost, "2024-06-01", "2024-06-15", consume_list).await.unwrap();
+    let (consume_type_list, png_path) = get_consume_type_graph(total_cost, "2024-06-01", "2024-06-15", consume_list).await.unwrap();
+    
+    // 텔래그램으로 전송
+    
+    
+    
 
     // for elem in res {
     //     println!("keyword_type: {:?}", elem.keyword_type);

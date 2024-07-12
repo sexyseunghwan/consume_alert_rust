@@ -31,6 +31,21 @@ async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str, 
 
 
 /*
+    Function to send photo message via Telegram Bot
+*/
+async fn tele_bot_send_photo(bot: &Bot, chat_id: ChatId, image_path: &str) -> Result<(), anyhow::Error> {
+
+    let photo = InputFile::file(Path::new(image_path));
+
+    bot.send_photo(chat_id, photo)
+        .await
+        .context("Failed to send Photo")?;
+    
+    Ok(())
+}
+
+
+/*
     command handler: Writes the expenditure details to the index in ElasticSearch. -> /c
 */
 pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {

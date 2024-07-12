@@ -216,7 +216,7 @@ pub async fn get_consume_info_by_classification_type<'a>(consume_type_vec: &'a V
 /*
 
 */
-pub async fn get_consume_type_graph(total_cost: f64, start_dt: &str, end_dt: &str, consume_list: Vec<ConsumeInfo>) -> Result<(), anyhow::Error> {
+pub async fn get_consume_type_graph(total_cost: f64, start_dt: &str, end_dt: &str, consume_list: Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error> {
 
     let mut type_scores: HashMap<String, i32> = HashMap::new();
     
@@ -236,16 +236,16 @@ pub async fn get_consume_type_graph(total_cost: f64, start_dt: &str, end_dt: &st
         
         let prodt_type = key.to_string();
         let prodt_cost = *value;
+        let prodt_per = (prodt_cost as f64 / total_cost) * 100.0; 
+        let prodt_per_rounded = (prodt_per * 100.0).round() / 100.0; // Round to the second decimal place
 
-        let consume_type_info = ConsumeTypeInfo::new(prodt_type, prodt_cost);
+        let consume_type_info = ConsumeTypeInfo::new(prodt_type, prodt_cost, prodt_per_rounded);
         consume_type_list.push(consume_type_info);
     }  
-
+    
     consume_type_list.sort_by(|a, b| b.prodt_cost.cmp(&a.prodt_cost));
-
-
-    call_python_matplot_consume_type(consume_type_list, start_dt, end_dt, total_cost).await?;
-
-
-    Ok(())
+    
+    let png_path = call_python_matplot_consume_type(&consume_type_list, start_dt, end_dt, total_cost).await?;
+    
+    Ok((consume_type_list, png_path))
 }

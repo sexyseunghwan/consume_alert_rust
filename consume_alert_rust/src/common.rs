@@ -3,6 +3,8 @@ pub use std::env;
 pub use std::time::{Duration, Instant};
 pub use std::sync::{Arc, Mutex};
 pub use std::collections::HashMap;
+pub use std::path::Path;
+pub use std::fs;
 
 pub use log::{info, error};
 
@@ -34,5 +36,6 @@ pub use derive_new::new;
 pub use teloxide::prelude::*;
 pub use teloxide::types::Message;
 pub use teloxide::Bot;
+pub use teloxide::types::InputFile;
 
 pub use regex::Regex;
