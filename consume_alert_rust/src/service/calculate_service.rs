@@ -213,8 +213,9 @@ pub async fn get_consume_info_by_classification_type<'a>(consume_type_vec: &'a V
 }
 
 
-/*
 
+/*
+    Function that returns consumption type information (Graphs and detailed consumption details)
 */
 pub async fn get_consume_type_graph(total_cost: f64, start_dt: &str, end_dt: &str, consume_list: Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error> {
 
