@@ -33,14 +33,60 @@ pub async fn test_controller() {
 
     let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
     
-    let consume_type_vec = get_classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
-    let (total_cost, consume_list) = total_cost_detail_specific_period("2024-06-01", "2024-06-15", &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
+    let start_dt = "2024-06-01";
+    let end_dt = "2024-06-15";
+
+    let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
+    let (total_cost, consume_list) = total_cost_detail_specific_period(start_dt, end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
     
-    let (consume_type_list, png_path) = get_consume_type_graph(total_cost, "2024-06-01", "2024-06-15", consume_list).await.unwrap();
+    //let (consume_type_list, png_path) = get_consume_type_graph(total_cost, "2024-06-01", "2024-06-15", consume_list).await.unwrap();
     
     // 텔래그램으로 전송
+    //println!("{:?}", consume_type_vec);
     
+    // for elem in consume_list {
+    //     println!("{:?}", elem);
+    // }   
+
+    let total_cost_i32 = total_cost as i32;
+    let cnt = 10;
+    let consume_list_len = consume_list.len();
+    let mut loop_cnt: usize = 0;
+    let consume_q = consume_list_len / cnt;
+    let consume_r = consume_list_len % cnt;
+
+    if consume_r != 0 { loop_cnt += consume_q + 1 }
+    else { loop_cnt = consume_q }
     
+    if consume_list_len == 0 {
+        // 소비내역 없는 경우
+    }
+    
+    for idx in 0..loop_cnt {
+
+        let mut send_text = String::new();
+        let end_idx = cmp::min(consume_list_len, (idx+1)*cnt);
+
+        if idx == 0 {
+            send_text.push_str(&format!("The money you spent from [{} ~ {}] is [ {} won ] \n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)));
+        } 
+
+        for inner_idx in (cnt*idx)..end_idx {
+            send_text.push_str("---------------------------------\n");
+            send_text.push_str(&format!("name : {}\n", consume_list[inner_idx].prodt_name()));
+            send_text.push_str(&format!("date : {}\n", consume_list[inner_idx].timestamp()));
+            send_text.push_str(&format!("cost : {}\n", consume_list[inner_idx].prodt_money().to_formatted_string(&Locale::ko)));
+        }
+
+
+        println!("{}", send_text);
+    }
+     
+
+    // println!("consume_list_len = {:?}", consume_list_len);
+    // println!("loop_cnt = {:?}", loop_cnt);
+    // println!("consume_q = {:?}", consume_q);
+    // println!("consume_r = {:?}", consume_r);
     
 
     // for elem in res {

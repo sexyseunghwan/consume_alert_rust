@@ -2,47 +2,11 @@ use crate::common::*;
 
 use crate::service::calculate_service::*;
 use crate::service::es_service::*;
+use crate::service::tele_bot_service::*;
 
 use crate::utils_modules::numeric_utils::*;
 use crate::utils_modules::time_utils::*;
 
-/*
-    Function to send result message via Telegram Bot
-*/
-async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str, log_msg: &str) -> Result<(), anyhow::Error> {
-    
-    if err_yn {
-
-        bot.send_message(chat_id, msg)
-            .await
-            .context("Failed to send command response")?;
-        
-    } else {
-        
-        bot.send_message(chat_id, msg)
-            .await
-            .context("Failed to send command response")?;
-        
-        info!("{:?}", log_msg);
-    }
-    
-    Ok(())
-}
-
-
-/*
-    Function to send photo message via Telegram Bot
-*/
-async fn tele_bot_send_photo(bot: &Bot, chat_id: ChatId, image_path: &str) -> Result<(), anyhow::Error> {
-
-    let photo = InputFile::file(Path::new(image_path));
-
-    bot.send_photo(chat_id, photo)
-        .await
-        .context("Failed to send Photo")?;
-    
-    Ok(())
-}
 
 
 /*
@@ -57,7 +21,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
 
     if split_args_vec.len() != 2 {
         
-        tele_bot_send_msg(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000","").await?;
+        send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000","").await?;
         return Err(anyhow!(format!("ERROR in 'command_consumption()' function - input_data : {}", text)));
     } 
 
@@ -66,7 +30,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
         if let Some(price) = split_args_vec.get(1) {
             
             if !is_numeric(&price) {
-                tele_bot_send_msg(bot, message.chat.id, true, "The second parameter must be numeric. \nEX) /c snack:15000", "").await?;
+                send_message_confirm(bot, message.chat.id, true, "The second parameter must be numeric. \nEX) /c snack:15000", "").await?;
                 return Err(anyhow!(format!("ERROR in 'command_consumption()' function - input_data : {}", text)));
             }
 
@@ -76,7 +40,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
 
     } else {
 
-        tele_bot_send_msg(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000", "").await?;
+        send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000", "").await?;
         return Err(anyhow!("ERROR in 'command_consumption()' function - input_data : {}", text));
     }
     
@@ -127,7 +91,7 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
             let date_format_yn = validate_date_format(input_date, r"^\d{4}\.\d{2}$")?;
 
             if !date_format_yn {
-                tele_bot_send_msg(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX01) /cm 2023.07\nEX02) /cm","").await?;
+                send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX01) /cm 2023.07\nEX02) /cm","").await?;
                 return Err(anyhow!(format!("ERROR in 'command_consumption_per_mon()' function - input_data : {}", text)));
             }
             
@@ -141,7 +105,7 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
         }
         
     } else {
-        tele_bot_send_msg(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX01) /cm 2023.07.01\nEX02) /cm", "").await?;
+        send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX01) /cm 2023.07.01\nEX02) /cm", "").await?;
         return Err(anyhow!(format!("The input parameter value of the 'command_consumption_per_mon()' function does not satisfy the specified date format. - input_val : {}", text)));
     }
 
