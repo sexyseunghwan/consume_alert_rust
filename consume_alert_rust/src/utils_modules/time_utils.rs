@@ -31,6 +31,16 @@ pub fn validate_date_format(date_str: &str, format: &str) -> Result<bool, anyhow
     Ok(re.is_match(date_str))
 }
 
+/*
+
+*/
+pub fn get_date_from_datestr(date_str: &str) -> Result<NaiveDate, anyhow::Error> {
+
+    let datetime: NaiveDateTime = NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%SZ")?;
+    let date: NaiveDate = datetime.date();
+
+    Ok(date)
+}
 
 /*
     Function that calculates the last date of a particular month

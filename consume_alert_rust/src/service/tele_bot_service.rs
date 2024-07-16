@@ -1,4 +1,4 @@
-use crate::common::*;
+use crate::{common::*, dtos::dto::ConsumeInfo};
 
 
 /* 
@@ -12,6 +12,7 @@ where
     let mut attempts = 0;
 
     while attempts <= max_retries {
+
         match operation().await {
             Ok(_) => return Ok(()),
             Err(e) if attempts == max_retries => {
@@ -24,34 +25,86 @@ where
                 attempts += 1;
             }
         }
+        
     }
     Err(anyhow::anyhow!("Failed after retrying {} times", max_retries))
 }
 
-// Send message via Telegram Bot
+/*
+    Send message via Telegram Bot
+*/
 async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str, log_msg: &str) -> Result<(), anyhow::Error> {
+    
+    if ! err_yn { info!("{:?}", log_msg) }
     bot.send_message(chat_id, msg).await.context("Failed to send command response")?;
-    if !err_yn {
-        info!("{:?}", log_msg);
-    }
+
     Ok(())
 }
 
-// Retry sending messages
+/* 
+    Retry sending messages
+*/ 
 pub async fn send_message_confirm(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str, log_msg: &str) -> Result<(), anyhow::Error> {
     try_send_operation(|| tele_bot_send_msg(bot, chat_id, err_yn, msg, log_msg), 6, Duration::from_secs(40)).await
 }
 
-// Send photo message via Telegram Bot
+/* 
+    Send photo message via Telegram Bot
+*/
 async fn tele_bot_send_photo(bot: &Bot, chat_id: ChatId, image_path: &str) -> Result<(), anyhow::Error> {
     let photo = InputFile::file(Path::new(image_path));
     bot.send_photo(chat_id, photo).await.context("Failed to send Photo")?;
     Ok(())
 }
 
-// Retry sending photos
+/* 
+    Retry sending photos
+*/
 pub async fn send_photo_confirm(bot: &Bot, chat_id: ChatId, image_path: &str) -> Result<(), anyhow::Error> {
     try_send_operation(|| tele_bot_send_photo(bot, chat_id, image_path), 6, Duration::from_secs(40)).await
+}
+
+
+/*
+    When sending multiple messages via Telegram bot, a function to resolve the problem of transmission failure      
+*/
+pub async fn send_message_consume_split(bot: &Bot, chat_id: ChatId, consume_list: &Vec<ConsumeInfo>, total_cost: f64, start_dt: &str, end_dt: &str) -> Result<(), anyhow::Error> {
+
+    let total_cost_i32 = total_cost as i32;
+    let cnt = 10;
+    let consume_list_len = consume_list.len();
+    let mut loop_cnt: usize = 0;
+    let consume_q = consume_list_len / cnt;
+    let consume_r = consume_list_len % cnt;
+
+    if consume_r != 0 { loop_cnt += consume_q + 1 }
+    else { loop_cnt = consume_q }
+    
+    if consume_list_len == 0 {
+        // If there is no consumption details
+        send_message_confirm(bot, chat_id, false, &format!("The money you spent from [{} ~ {}] is [ {} won ] \nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost), "").await?;
+    }
+    
+    for idx in 0..loop_cnt {
+
+        let mut send_text = String::new();
+        let end_idx = cmp::min(consume_list_len, (idx+1)*cnt);
+
+        if idx == 0 {
+            send_text.push_str(&format!("The money you spent from [{} ~ {}] is [ {} won ] \n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)));
+        } 
+
+        for inner_idx in (cnt*idx)..end_idx {
+            send_text.push_str("---------------------------------\n");
+            send_text.push_str(&format!("name : {}\n", consume_list[inner_idx].prodt_name()));
+            send_text.push_str(&format!("date : {}\n", consume_list[inner_idx].timestamp()));
+            send_text.push_str(&format!("cost : {}\n", consume_list[inner_idx].prodt_money().to_formatted_string(&Locale::ko)));
+        }
+
+        send_message_confirm(bot, chat_id, false, &send_text, "").await?;
+    }
+    
+    Ok(())
 }
 
 
@@ -59,28 +112,6 @@ pub async fn send_photo_confirm(bot: &Bot, chat_id: ChatId, image_path: &str) ->
 
 
 
-// /*
-//     Function to send result message via Telegram Bot
-// */
-// async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str, log_msg: &str) -> Result<(), anyhow::Error> {
-    
-//     if err_yn {
-
-//         bot.send_message(chat_id, msg)
-//             .await
-//             .context("Failed to send command response")?;
-        
-//     } else {
-        
-//         bot.send_message(chat_id, msg)
-//             .await
-//             .context("Failed to send command response")?;
-        
-//         info!("{:?}", log_msg);
-//     }
-    
-//     Ok(())
-// }
 
 
 // /*

@@ -217,14 +217,14 @@ pub async fn get_consume_info_by_classification_type<'a>(consume_type_vec: &'a V
 /*
     Function that returns consumption type information (Graphs and detailed consumption details)
 */
-pub async fn get_consume_type_graph(total_cost: f64, start_dt: &str, end_dt: &str, consume_list: Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error> {
+pub async fn get_consume_type_graph(total_cost: f64, start_dt: &str, end_dt: &str, consume_list: &Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error> {
 
     let mut type_scores: HashMap<String, i32> = HashMap::new();
     
     for consume_info in consume_list {
         
         let prodt_money = consume_info.prodt_money;
-        let prodt_type = consume_info.prodt_type;
+        let prodt_type = (&consume_info.prodt_type).to_string();
 
         type_scores.entry(prodt_type)
             .and_modify(|e| *e += prodt_money)
@@ -249,4 +249,33 @@ pub async fn get_consume_type_graph(total_cost: f64, start_dt: &str, end_dt: &st
     let png_path = call_python_matplot_consume_type(&consume_type_list, start_dt, end_dt, total_cost).await?;
     
     Ok((consume_type_list, png_path))
+}
+
+
+/*
+
+*/
+pub async fn get_consume_detail_graph_double(python_graph_line_info_cur: ToPythonGraphLine, python_graph_line_info_pre: ToPythonGraphLine) -> Result<String, anyhow::Error> {
+
+    let mut python_graph_line_vec: Vec<ToPythonGraphLine> = Vec::new();
+    python_graph_line_vec.push(python_graph_line_info_cur);
+    python_graph_line_vec.push(python_graph_line_info_pre);
+
+    call_python_matplot_consume_detail(&python_graph_line_vec).await?;
+
+    Ok(String::from("test"))
+}
+
+
+/*
+
+*/
+pub async fn get_consume_detail_graph_single(python_graph_line_info: &ToPythonGraphLine) -> Result<String, anyhow::Error> {
+
+    let mut python_graph_line_vec: Vec<ToPythonGraphLine> = Vec::new();
+    python_graph_line_vec.push(python_graph_line_info.clone());
+
+    call_python_matplot_consume_detail(&python_graph_line_vec).await?;
+
+    Ok(String::from("test"))
 }
