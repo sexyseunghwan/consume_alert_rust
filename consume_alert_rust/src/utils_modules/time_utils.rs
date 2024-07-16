@@ -51,7 +51,7 @@ pub fn get_last_date_str(date_str: &str, format: &str) -> Result<String, anyhow:
 
     let next_month = if date.month() == 12 { 1 } else { date.month() + 1 };
     let next_month_year = if date.month() == 12 { date.year() + 1 } else { date.year() };
-
+    
     let temp_date = match NaiveDate::from_ymd_opt(next_month_year, next_month, 1) {
         Some(temp_date) => temp_date,
         None => return Err(anyhow!("Date conversion failed"))
