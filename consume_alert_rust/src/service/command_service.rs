@@ -92,20 +92,32 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
     };
     
     let consume_type_vec = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
-    let cur_mon_total_cost = total_cost_detail_specific_period(&cur_date_start, &cur_date_end, es_client, "consuming_index_prod_new", &consume_type_vec).await?;
-    let pre_mon_total_cost = total_cost_detail_specific_period(&one_mon_ago_date_start, &one_mon_ago_date_end, es_client, "consuming_index_prod_new", &consume_type_vec).await?;
+    let cur_mon_total_cost_infos = total_cost_detail_specific_period(&cur_date_start, &cur_date_end, es_client, "consuming_index_prod_new", &consume_type_vec).await?;
+    let pre_mon_total_cost_infos = total_cost_detail_specific_period(&one_mon_ago_date_start, &one_mon_ago_date_end, es_client, "consuming_index_prod_new", &consume_type_vec).await?;
     
     // Hand over the consumption details to Telegram bot.
-    send_message_consume_split(bot, message.chat.id, &cur_mon_total_cost.1, *(&cur_mon_total_cost.0), &cur_date_start, &cur_date_end).await?;  
+    send_message_consume_split(bot, message.chat.id, &cur_mon_total_cost_infos.1, *(&cur_mon_total_cost_infos.0), &cur_date_start, &cur_date_end).await?;  
+
+    println!("1");
 
     // ( consumption type information, consumption type graph storage path )
-    let comsume_type_infos = get_consume_type_graph(*(&cur_mon_total_cost.0), &cur_date_start, &cur_date_end, &cur_mon_total_cost.1).await?;
+    let comsume_type_infos = get_consume_type_graph(*(&cur_mon_total_cost_infos.0), &cur_date_start, &cur_date_end, &cur_mon_total_cost_infos.1).await?;
+    println!("{:?} // {:?} // {:?} // {:?}", &cur_date_start, &cur_date_end, cur_mon_total_cost_infos.0, cur_mon_total_cost_infos.1);
+    let python_graph_line_info_cur = ToPythonGraphLine::new("cur", &cur_date_start, &cur_date_end, cur_mon_total_cost_infos.0, cur_mon_total_cost_infos.1)?;
+    println!("2");
+    let python_graph_line_info_pre = ToPythonGraphLine::new("pre", &one_mon_ago_date_start, &one_mon_ago_date_end, pre_mon_total_cost_infos.0, pre_mon_total_cost_infos.1)?;
+    println!("3");
+    let graph_path = get_consume_detail_graph_double(python_graph_line_info_cur, python_graph_line_info_pre).await?;
+    println!("4");
 
-    //let python_graph_line_info_cur = ToPythonGraphLine::new(String::from("cur"), cur_date_start, cur_date_end, cur_mon_total_cost.0, cur_mon_total_cost.1);
-    //let python_graph_line_info_pre = ToPythonGraphLine::new(String::from("pre"), one_mon_ago_date_start, one_mon_ago_date_end, pre_mon_total_cost.0, pre_mon_total_cost.1);
 
+    println!("{:?}", comsume_type_infos.1);
+    println!("{:?}", graph_path);
+
+    //send_photo_confirm(bot, message.chat.id, &graph_path).await?;
+    //send_photo_confirm(bot, message.chat.id, &comsume_type_infos.1).await?;
     
-    //call_python_matplot_consume_detail_double(&comparison_info).await?;
+    //send_message_consume_type(bot, message.chat.id, &comsume_type_infos.0, *(&cur_mon_total_cost_infos.0), &cur_date_start, &cur_date_end).await?;  
 
     
     Ok(())

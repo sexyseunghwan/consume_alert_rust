@@ -39,18 +39,13 @@ pub async fn call_python_matplot_consume_type(consume_type_list: &Vec<ConsumeTyp
 
 
 /*
-    
+        
 */
 pub async fn call_python_matplot_consume_detail(comparison_info: &Vec<ToPythonGraphLine>) -> Result<String, anyhow::Error> {
     
     let client = reqwest::Client::new();
-   
-    const API_SINGLE: &str = "http://localhost:5800/api/consume_detail_single";
-    const API_DOUBLE: &str = "http://localhost:5800/api/consume_detail_double";
 
-    let api_name = if comparison_info.len() == 1 { API_SINGLE } else { API_DOUBLE };
-
-    let res: reqwest::Response = client.post(api_name)
+    let res: reqwest::Response = client.post("http://localhost:5800/api/consume_detail")
         .json(&comparison_info)
         .send()
         .await?;

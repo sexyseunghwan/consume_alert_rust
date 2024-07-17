@@ -37,14 +37,14 @@ pub async fn test_controller() {
     let end_dt = "2024-06-15";
     let pre_start_dt = "2024-05-01";
     let pre_end_dt = "2024-05-15";
-
+    
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
     let (total_cost, consume_list) = total_cost_detail_specific_period(start_dt, end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
     let (total_cost_pre, consume_list_pre) = total_cost_detail_specific_period(pre_start_dt, pre_end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
     
     let python_graph_line_info_cur = ToPythonGraphLine::new("cur", start_dt, end_dt, total_cost, consume_list).unwrap();
     let python_graph_line_info_pre = ToPythonGraphLine::new("pre", pre_start_dt, pre_end_dt, total_cost_pre, consume_list_pre).unwrap();
-     
+    
     get_consume_detail_graph_double(python_graph_line_info_cur, python_graph_line_info_pre).await.unwrap();
     
     //let (consume_type_list, png_path) = get_consume_type_graph(total_cost, "2024-06-01", "2024-06-15", consume_list).await.unwrap();

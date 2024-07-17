@@ -25,7 +25,7 @@ async fn main() {
     set_global_logger();
 
     // Start Controller
-    //main_controller().await;
+    main_controller().await;
     
-    test_controller().await;
+    //test_controller().await;
 }

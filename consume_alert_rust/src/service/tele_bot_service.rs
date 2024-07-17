@@ -1,4 +1,4 @@
-use crate::{common::*, dtos::dto::ConsumeInfo};
+use crate::{common::*, dtos::dto::*};
 
 
 /* 
@@ -66,47 +66,181 @@ pub async fn send_photo_confirm(bot: &Bot, chat_id: ChatId, image_path: &str) ->
 
 
 /*
-    When sending multiple messages via Telegram bot, a function to resolve the problem of transmission failure      
-*/
-pub async fn send_message_consume_split(bot: &Bot, chat_id: ChatId, consume_list: &Vec<ConsumeInfo>, total_cost: f64, start_dt: &str, end_dt: &str) -> Result<(), anyhow::Error> {
 
+*/
+async fn send_consumption_message<T>(
+    bot: &Bot, 
+    chat_id: ChatId, 
+    items: &Vec<T>, 
+    total_cost: f64, 
+    start_dt: &str, 
+    end_dt: &str, 
+    message_builder: fn(&T) -> String
+) -> Result<(), anyhow::Error> {
     let total_cost_i32 = total_cost as i32;
     let cnt = 10;
-    let consume_list_len = consume_list.len();
-    let mut loop_cnt: usize = 0;
-    let consume_q = consume_list_len / cnt;
-    let consume_r = consume_list_len % cnt;
+    let items_len = items.len();
+    let loop_cnt = items_len / cnt + if items_len % cnt != 0 { 1 } else { 0 };
 
-    if consume_r != 0 { loop_cnt += consume_q + 1 }
-    else { loop_cnt = consume_q }
-    
-    if consume_list_len == 0 {
-        // If there is no consumption details
-        send_message_confirm(bot, chat_id, false, &format!("The money you spent from [{} ~ {}] is [ {} won ] \nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost), "").await?;
+    if items_len == 0 {
+        send_message_confirm(
+            bot, 
+            chat_id, 
+            false, 
+            &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)), 
+            ""
+        ).await?;
     }
-    
-    for idx in 0..loop_cnt {
 
+    for idx in 0..loop_cnt {
         let mut send_text = String::new();
-        let end_idx = cmp::min(consume_list_len, (idx+1)*cnt);
+        let end_idx = cmp::min(items_len, (idx + 1) * cnt);
 
         if idx == 0 {
-            send_text.push_str(&format!("The money you spent from [{} ~ {}] is [ {} won ] \n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)));
-        } 
+            send_text.push_str(&format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)));
+        }
 
-        for inner_idx in (cnt*idx)..end_idx {
+        for inner_idx in (cnt * idx)..end_idx {
             send_text.push_str("---------------------------------\n");
-            send_text.push_str(&format!("name : {}\n", consume_list[inner_idx].prodt_name()));
-            send_text.push_str(&format!("date : {}\n", consume_list[inner_idx].timestamp()));
-            send_text.push_str(&format!("cost : {}\n", consume_list[inner_idx].prodt_money().to_formatted_string(&Locale::ko)));
+            send_text.push_str(&message_builder(&items[inner_idx]));
         }
 
         send_message_confirm(bot, chat_id, false, &send_text, "").await?;
     }
-    
+
     Ok(())
 }
 
+
+/*
+
+*/
+pub async fn send_message_consume_split(
+    bot: &Bot, 
+    chat_id: ChatId, 
+    consume_list: &Vec<ConsumeInfo>, 
+    total_cost: f64, 
+    start_dt: &str, 
+    end_dt: &str
+) -> Result<(), anyhow::Error> {
+    send_consumption_message(bot, chat_id, consume_list, total_cost, start_dt, end_dt, |item| {
+        format!(
+            "name : {}\ndate : {}\ncost : {}\n",
+            item.prodt_name(),
+            item.timestamp(),
+            item.prodt_money().to_formatted_string(&Locale::ko)
+        )
+    }).await
+}
+
+
+/*
+
+*/
+pub async fn send_message_consume_type(
+    bot: &Bot, 
+    chat_id: ChatId, 
+    consume_type_list: &Vec<ConsumeTypeInfo>, 
+    total_cost: f64, 
+    start_dt: &str, 
+    end_dt: &str
+) -> Result<(), anyhow::Error> {
+    send_consumption_message(bot, chat_id, consume_type_list, total_cost, start_dt, end_dt, |item| {
+        format!(
+            "category name : {}\ncost : {}\ncost(%) : {}%\n",
+            item.prodt_type(),
+            item.prodt_cost(),
+            item.prodt_per()
+        )
+    }).await
+}
+
+
+
+// /*
+//     When sending multiple messages via Telegram bot, a function to resolve the problem of transmission failure      
+// */
+// pub async fn send_message_consume_split(bot: &Bot, chat_id: ChatId, consume_list: &Vec<ConsumeInfo>, total_cost: f64, start_dt: &str, end_dt: &str) -> Result<(), anyhow::Error> {
+
+//     let total_cost_i32 = total_cost as i32;
+//     let cnt = 10;
+//     let consume_list_len = consume_list.len();
+//     let mut loop_cnt: usize = 0;
+//     let consume_q = consume_list_len / cnt;
+//     let consume_r = consume_list_len % cnt;
+
+//     if consume_r != 0 { loop_cnt += consume_q + 1 }
+//     else { loop_cnt = consume_q }
+    
+//     if consume_list_len == 0 {
+//         // If there is no consumption details
+//         send_message_confirm(bot, chat_id, false, &format!("The money you spent from [{} ~ {}] is [ {} won ] \nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost), "").await?;
+//     }
+    
+//     for idx in 0..loop_cnt {
+
+//         let mut send_text = String::new();
+//         let end_idx = cmp::min(consume_list_len, (idx+1)*cnt);
+        
+//         if idx == 0 {
+//             send_text.push_str(&format!("The money you spent from [{} ~ {}] is [ {} won ] \n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)));
+//         } 
+        
+//         for inner_idx in (cnt*idx)..end_idx {
+//             send_text.push_str("---------------------------------\n");
+//             send_text.push_str(&format!("name : {}\n", consume_list[inner_idx].prodt_name()));
+//             send_text.push_str(&format!("date : {}\n", consume_list[inner_idx].timestamp()));
+//             send_text.push_str(&format!("cost : {}\n", consume_list[inner_idx].prodt_money().to_formatted_string(&Locale::ko)));
+//         }
+
+//         send_message_confirm(bot, chat_id, false, &send_text, "").await?;
+//     }
+    
+//     Ok(())
+// }
+
+
+// /*
+
+// */
+// pub async fn send_message_consume_type(bot: &Bot, chat_id: ChatId, consume_type_list: &Vec<ConsumeTypeInfo>, total_cost: f64, start_dt: &str, end_dt: &str) -> Result<(), anyhow::Error> {
+
+//     let total_cost_i32 = total_cost as i32;
+//     let cnt = 10;
+//     let consume_list_len = consume_type_list.len();
+//     let mut loop_cnt: usize = 0;
+//     let consume_q = consume_list_len / cnt;
+//     let consume_r = consume_list_len % cnt;
+    
+//     if consume_r != 0 { loop_cnt += consume_q + 1 }
+//     else { loop_cnt = consume_q }
+    
+//     if consume_list_len == 0 {
+//         // If there is no consumption details
+//         send_message_confirm(bot, chat_id, false, &format!("The money you spent from [{} ~ {}] is [ {} won ] \nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost), "").await?;
+//     }
+    
+//     for idx in 0..loop_cnt {
+
+//         let mut send_text = String::new();
+//         let end_idx = cmp::min(consume_list_len, (idx+1)*cnt);
+        
+//         if idx == 0 {
+//             send_text.push_str(&format!("The money you spent from [{} ~ {}] is [ {} won ] \n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)));
+//         } 
+        
+//         for inner_idx in (cnt*idx)..end_idx {
+//             send_text.push_str("---------------------------------\n");
+//             send_text.push_str(&format!("category name : {}\n", consume_type_list[inner_idx].prodt_type()));
+//             send_text.push_str(&format!("cost : {}\n", consume_type_list[inner_idx].prodt_cost()));
+//             send_text.push_str(&format!("cost(%) : {}%\n", consume_type_list[inner_idx].prodt_per()));
+//         }
+        
+//         send_message_confirm(bot, chat_id, false, &send_text, "").await?;
+//     }
+    
+//     Ok(())
+// }
 
 
 

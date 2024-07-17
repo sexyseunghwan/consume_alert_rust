@@ -34,12 +34,15 @@ pub fn validate_date_format(date_str: &str, format: &str) -> Result<bool, anyhow
 /*
 
 */
-pub fn get_date_from_datestr(date_str: &str) -> Result<NaiveDate, anyhow::Error> {
+pub fn get_date_from_fulldate(date_str: &str) -> Result<String, anyhow::Error> {
 
-    let datetime: NaiveDateTime = NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%SZ")?;
+    println!("date_str= {:?}", date_str);
+
+    let datetime: NaiveDateTime = NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S%3fZ")?;
     let date: NaiveDate = datetime.date();
+    let formatted_date = date.format("%Y-%m-%d").to_string();
 
-    Ok(date)
+    Ok(formatted_date)
 }
 
 /*

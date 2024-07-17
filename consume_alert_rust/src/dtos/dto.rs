@@ -59,23 +59,43 @@ impl ToPythonGraphLine {
     
     pub fn new(line_type: &str, start_dt: &str, end_dt: &str, total_cost: f64, consume_detail: Vec<ConsumeInfo>) -> Result<Self, anyhow::Error> {
         
-        let mut consume_accumulate_list: Vec<i32> = Vec::new();
-        let mut accumulate_cost = 0;
-        
-        let mut date: NaiveDate = get_date_from_datestr("1900-01-01T00:00:00Z")?;
-        
-        for elem in consume_detail {
-            let elem_date = get_date_from_datestr(&elem.timestamp)?;
-            // Hash map 을 만들어서 구현하는게 나을거 같음.
-            // if date == elem_date {
-            //     accumulate_cost += elem.prodt_money;
-            //     consume_accumulate_list.push(accumulate_cost);
-            // } else {
+        println!("start");
 
-            // }
+        let mut date_consume: HashMap<String, i32> = HashMap::new();
+        
+        println!("{:?}", consume_detail.len());
 
+        for elem in &consume_detail {
+
+            let elem_date = get_date_from_fulldate(&elem.timestamp)?;
+            let prodt_money = elem.prodt_money;
+            
+            println!("elem_date: {:?}", elem_date);
+            println!("prodt_money: {:?}", prodt_money);
+
+            date_consume.entry(elem_date)
+                .and_modify(|e| *e += prodt_money)
+                .or_insert(prodt_money);
         }
         
+        println!("#");
+        
+        let mut sorted_dates: Vec<_> = date_consume.iter().collect();
+        sorted_dates.sort_by(|a, b| a.0.cmp(b.0));
+        
+        println!("@");
+
+        let sorted_dates_list: Vec<i32> = sorted_dates.into_iter().map(|(_, v)| *v).collect();
+        let mut consume_accumulate_list = Vec::new();
+        let mut accumulate_cost = 0;
+
+        for cost in sorted_dates_list {
+            accumulate_cost += cost;
+            consume_accumulate_list.push(accumulate_cost);
+        }
+
+        println!("!");
+
         Ok(
             ToPythonGraphLine {
                 line_type: line_type.to_string(),
