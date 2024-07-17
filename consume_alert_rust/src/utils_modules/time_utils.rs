@@ -35,9 +35,7 @@ pub fn validate_date_format(date_str: &str, format: &str) -> Result<bool, anyhow
 
 */
 pub fn get_date_from_fulldate(date_str: &str) -> Result<String, anyhow::Error> {
-
-    println!("date_str= {:?}", date_str);
-
+    
     let datetime: NaiveDateTime = NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S%3fZ")?;
     let date: NaiveDate = datetime.date();
     let formatted_date = date.format("%Y-%m-%d").to_string();
@@ -94,3 +92,108 @@ pub fn get_one_month_ago_kr_str(date: &str, time_format: &str) -> Result<String,
         _ => Err(anyhow!("Invalid date or time provided")),
     }
 }
+
+
+
+
+// =========================================================================================================
+
+
+/*
+
+*/
+pub fn get_str_from_naivedate(naive_date: NaiveDate) -> String {
+    naive_date.format("%Y-%m-%d").to_string()
+}
+
+
+/*
+
+*/
+pub fn get_current_kor_naivedate() -> NaiveDate {
+    
+    let utc_now: DateTime<Utc> = Utc::now();
+    let kst_time: DateTime<chrono_tz::Tz> = utc_now.with_timezone(&Seoul);
+
+    kst_time.date_naive()
+}
+
+
+/*
+
+*/
+pub fn get_current_kor_naivedate_first_date() -> Result<NaiveDate, anyhow::Error> {
+
+    let utc_now: DateTime<Utc> = Utc::now();
+    let kst_time: DateTime<chrono_tz::Tz> = utc_now.with_timezone(&Seoul);
+
+    NaiveDate::from_ymd_opt(kst_time.year(), kst_time.month(), 1)
+        .ok_or_else(|| anyhow!("Invalid date for year: {}, month: {}, day: 1", kst_time.year(), kst_time.month()))
+    
+}
+
+/*
+    
+*/
+pub fn get_lastday_naivedate(naive_date: NaiveDate) -> Result<NaiveDate, anyhow::Error> {
+
+    let next_month = if naive_date.month() == 12 {
+        NaiveDate::from_ymd_opt(naive_date.year() + 1, 1, 1)
+    } else {
+        NaiveDate::from_ymd_opt(naive_date.year(), naive_date.month() + 1, 1)
+    }
+    .ok_or_else(|| anyhow!("Invalid date when calculating the first day of the next month."))?;
+    
+    let last_day_of_month = next_month.pred_opt()
+        .ok_or_else(|| anyhow!("Unable to import the previous date for that date."))?;
+    
+    Ok(last_day_of_month)
+}
+
+
+/*
+
+*/
+//pub fn get_add_month_from_naivedate(naive_date: NaiveDate, add_month: i32) -> Result<NaiveDate, anyhow::Error> {
+
+pub fn get_add_month_from_naivedate(naive_date: NaiveDate, add_month: i32) -> Result<(), anyhow::Error> {
+
+    let mut new_year = naive_date.year() + (naive_date.month() as i32 + add_month - 1) / 12;
+    let mut new_month = (naive_date.month() as i32 + add_month - 1) % 12 + 1;
+    
+    println!("new_year: {:?}", new_year);
+    println!("new_month: {:?}", new_month);
+        
+    Ok(())
+    // let next_month = if naive_date.month() == 12 {
+    //     NaiveDate::from_ymd_opt(naive_date.year() + 1, 1, 1)
+    // } else {
+    //     NaiveDate::from_ymd_opt(naive_date.year(), naive_date.month() + 1, 1)
+    // }
+    // .ok_or_else(|| anyhow!("Invalid date when calculating the first day of the next month."))?;
+
+}
+
+
+// pub fn get_add_month_from_naivedate(naive_date: NaiveDate, add_month: i32) -> Result<NaiveDate, anyhow::Error> {
+//     // 계산된 새로운 연도와 월을 구합니다.
+//     let mut new_year = naive_date.year() + (naive_date.month() as i32 + add_month - 1) / 12;
+//     let mut new_month = (naive_date.month() as i32 + add_month - 1) % 12 + 1;
+
+//     // 월이 범위를 벗어나면 조정
+//     if new_month <= 0 {
+//         new_month += 12;
+//         new_year -= 1;
+//     }
+
+//     // 새로운 날짜를 구하되, 월의 마지막 날을 고려
+//     match NaiveDate::from_ymd_opt(new_year, new_month as u32, naive_date.day()) {
+//         Some(date) => Ok(date),
+//         None => {
+//             // 입력된 일이 목표 월의 일수를 초과하는 경우 해당 월의 마지막 날을 사용
+//             let last_day_of_new_month = NaiveDate::from_ymd(new_year, new_month as u32, 1).succ_opt().unwrap().pred();
+//             Ok(last_day_of_new_month)
+//         }
+//     }
+// }
+

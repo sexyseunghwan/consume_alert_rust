@@ -6,6 +6,7 @@ use crate::service::command_service::*;
 use crate::service::calculate_service::*;
 use crate::service::graph_api_service::*;
 
+use crate::utils_modules::time_utils::*;
 
 
 /*
@@ -33,19 +34,22 @@ pub async fn test_controller() {
 
     let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
     
-    let start_dt = "2024-06-01";
-    let end_dt = "2024-06-15";
-    let pre_start_dt = "2024-05-01";
-    let pre_end_dt = "2024-05-15";
+    let start_dt = NaiveDate::from_ymd_opt(2024, 6, 1).unwrap();
+    let end_dt = NaiveDate::from_ymd_opt(2024, 6, 15).unwrap();
+    let pre_start_dt = NaiveDate::from_ymd_opt(2024, 5, 1).unwrap();
+    let pre_end_dt = NaiveDate::from_ymd_opt(2024, 5, 15).unwrap();
+
     
-    let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
-    let (total_cost, consume_list) = total_cost_detail_specific_period(start_dt, end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
-    let (total_cost_pre, consume_list_pre) = total_cost_detail_specific_period(pre_start_dt, pre_end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
+    get_add_month_from_naivedate(start_dt, -24).unwrap();
+
+    // let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
+    // let (total_cost, consume_list) = total_cost_detail_specific_period(start_dt, end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
+    // let (total_cost_pre, consume_list_pre) = total_cost_detail_specific_period(pre_start_dt, pre_end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
     
-    let python_graph_line_info_cur = ToPythonGraphLine::new("cur", start_dt, end_dt, total_cost, consume_list).unwrap();
-    let python_graph_line_info_pre = ToPythonGraphLine::new("pre", pre_start_dt, pre_end_dt, total_cost_pre, consume_list_pre).unwrap();
+    // let python_graph_line_info_cur = ToPythonGraphLine::new("cur", &get_str_from_naivedate(start_dt), &get_str_from_naivedate(end_dt), total_cost, consume_list).unwrap();
+    // let python_graph_line_info_pre = ToPythonGraphLine::new("pre", &get_str_from_naivedate(pre_start_dt), &get_str_from_naivedate(pre_end_dt), total_cost_pre, consume_list_pre).unwrap();
     
-    get_consume_detail_graph_double(python_graph_line_info_cur, python_graph_line_info_pre).await.unwrap();
+    // get_consume_detail_graph_double(python_graph_line_info_cur, python_graph_line_info_pre).await.unwrap();
     
     //let (consume_type_list, png_path) = get_consume_type_graph(total_cost, "2024-06-01", "2024-06-15", consume_list).await.unwrap();
     
@@ -103,67 +107,67 @@ pub async fn test_controller() {
     ============= Telegram Bot Controller =============
     ======================================================
 */
-pub async fn main_controller() {
+// pub async fn main_controller() {
 
-    // Select compilation environment
-    dotenv().ok();
+//     // Select compilation environment
+//     dotenv().ok();
     
-    let es_host: Vec<String> = env::var("ES_DB_URL").expect("'ES_DB_URL' must be set").split(",").map(|s| s.to_string()).collect();
-    let es_id = env::var("ES_ID").expect("'ES_ID' must be set");
-    let es_pw = env::var("ES_PW").expect("'ES_PW' must be set");
+//     let es_host: Vec<String> = env::var("ES_DB_URL").expect("'ES_DB_URL' must be set").split(",").map(|s| s.to_string()).collect();
+//     let es_id = env::var("ES_ID").expect("'ES_ID' must be set");
+//     let es_pw = env::var("ES_PW").expect("'ES_PW' must be set");
 
-    // Elasticsearch connection
-    let es_client: EsHelper = match EsHelper::new(es_host, &es_id, &es_pw) {
-        Ok(es_client) => es_client,
-        Err(err) => {
-            error!("Failed to create mysql client: {:?}", err);
-            panic!("Failed to create mysql client: {:?}", err);
-        }
-    };
+//     // Elasticsearch connection
+//     let es_client: EsHelper = match EsHelper::new(es_host, &es_id, &es_pw) {
+//         Ok(es_client) => es_client,
+//         Err(err) => {
+//             error!("Failed to create mysql client: {:?}", err);
+//             panic!("Failed to create mysql client: {:?}", err);
+//         }
+//     };
     
-    // Telegram Bot - Read bot information from the ".env" file.
-    let bot = Bot::from_env();
+//     // Telegram Bot - Read bot information from the ".env" file.
+//     let bot = Bot::from_env();
 
-    // It wraps the Elasticsearch connection object with "Arc" for secure use in multiple threads.
-    let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
+//     // It wraps the Elasticsearch connection object with "Arc" for secure use in multiple threads.
+//     let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
 
-    //The ability to handle each command.
-    teloxide::repl(bot, move |message: Message, bot: Bot| {
+//     //The ability to handle each command.
+//     teloxide::repl(bot, move |message: Message, bot: Bot| {
 
-        let arc_es_client_clone = arc_es_client.clone();
+//         let arc_es_client_clone = arc_es_client.clone();
 
-        async move {
-            match handle_command(&message, &bot, &arc_es_client_clone).await {
-                Ok(_) => (),
-                Err(e) => {
-                    error!("Error handling message: {:?}", e);
-                }
-            };
-            respond(())
-        }
-    })
-    .await;
+//         async move {
+//             match handle_command(&message, &bot, &arc_es_client_clone).await {
+//                 Ok(_) => (),
+//                 Err(e) => {
+//                     error!("Error handling message: {:?}", e);
+//                 }
+//             };
+//             respond(())
+//         }
+//     })
+//     .await;
     
-}
+// }
 
 
 /*
     Functions that handle each command
 */
-async fn handle_command(message: &Message, bot: &Bot, arc_es_client_clone: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+// async fn handle_command(message: &Message, bot: &Bot, arc_es_client_clone: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
     
-    if let Some(text) = message.text() {
-        if text.starts_with("/c ") {
-            command_consumption(message, text, bot, arc_es_client_clone).await?;
-        } 
-        else if text.starts_with("/cm") {
-            command_consumption_per_mon(message, text, bot, arc_es_client_clone).await?;
-        }
-        else {
-            bot.send_message(message.chat.id, "Hello! Use /c <args> to interact.")
-                .await
-                .context("Failed to send default interaction message")?;
-        }
-    }
-    Ok(())
-}
+//     if let Some(text) = message.text() {
+//         if text.starts_with("/c ") {
+//             command_consumption(message, text, bot, arc_es_client_clone).await?;
+//         } 
+//         else if text.starts_with("/cm") {
+//             command_consumption_per_mon(message, text, bot, arc_es_client_clone).await?;
+//         }
+//         else {
+//             bot.send_message(message.chat.id, "Hello! Use /c <args> to interact.")
+//                 .await
+//                 .context("Failed to send default interaction message")?;
+//         }
+//     }
+//     Ok(())
+// }

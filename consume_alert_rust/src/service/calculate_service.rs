@@ -3,6 +3,8 @@ use crate::common::*;
 use crate::service::es_service::*;
 use crate::service::graph_api_service::*;
 
+use crate::utils_modules::time_utils::*;
+
 use crate::dtos::dto::*;
 
 
@@ -84,15 +86,15 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
 /*
     Functions that show the details of total consumption and consumption over a specific period of time
 */
-pub async fn total_cost_detail_specific_period(start_date: &str, end_date: &str, es_client: &Arc<EsHelper>, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<(f64, Vec<ConsumeInfo>), anyhow::Error> {
+pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, es_client: &Arc<EsHelper>, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<(f64, Vec<ConsumeInfo>), anyhow::Error> {
 
     let query = json!({
         "size": 10000,
         "query": {
             "range": {
                 "@timestamp": {
-                    "gte": start_date,
-                    "lte": end_date
+                    "gte": get_str_from_naivedate(start_date),
+                    "lte": get_str_from_naivedate(end_date)
                 }
             }
         },
@@ -115,7 +117,7 @@ pub async fn total_cost_detail_specific_period(start_date: &str, end_date: &str,
         Some(total_cost) => *total_cost,
         None => return Err(anyhow!(format!("ERROR in 'total_cost_specific_period()'")))
     };
-
+    
     if let Some(prodt_infos) = es_cur_res["hits"]["hits"].as_array() {
 
         for elem in prodt_infos {
