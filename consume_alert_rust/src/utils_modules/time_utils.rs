@@ -16,6 +16,21 @@ pub fn get_str_from_naive_datetime(naive_datetime: NaiveDateTime) -> String {
     naive_datetime.format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
+
+/*
+
+*/
+pub fn get_naive_date_from_str(date: &str, format: &str) -> Result<NaiveDate, anyhow::Error> {
+    
+    let date = match NaiveDate::parse_from_str(date, format) {
+        Ok(date) => date,
+        Err(e) => return Err(anyhow!(format!("ERROR in 'get_naive_date_from_str()' : {:?}", e)))
+    };
+
+    Ok(date)
+}
+
+
 /*
     Functions that make the current date (Korean time) a 'NaiveDateTime' data type
 */

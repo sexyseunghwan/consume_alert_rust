@@ -88,6 +88,9 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
 */
 pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, es_client: &Arc<EsHelper>, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<(f64, Vec<ConsumeInfo>), anyhow::Error> {
 
+    info!("start_date = {:?}", get_str_from_naivedate(start_date));
+    info!("end_date = {:?}", get_str_from_naivedate(end_date));
+
     let query = json!({
         "size": 10000,
         "query": {

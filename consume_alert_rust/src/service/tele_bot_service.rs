@@ -25,17 +25,17 @@ where
                 attempts += 1;
             }
         }
-        
     }
+    
     Err(anyhow::anyhow!("Failed after retrying {} times", max_retries))
 }
 
 /*
     Send message via Telegram Bot
 */
-async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str, log_msg: &str) -> Result<(), anyhow::Error> {
+async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str) -> Result<(), anyhow::Error> {
     
-    if ! err_yn { info!("{:?}", log_msg) }
+    if ! err_yn { info!("{:?}", msg) }
     bot.send_message(chat_id, msg).await.context("Failed to send command response")?;
 
     Ok(())
@@ -44,8 +44,8 @@ async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str, 
 /* 
     Retry sending messages
 */ 
-pub async fn send_message_confirm(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str, log_msg: &str) -> Result<(), anyhow::Error> {
-    try_send_operation(|| tele_bot_send_msg(bot, chat_id, err_yn, msg, log_msg), 6, Duration::from_secs(40)).await
+pub async fn send_message_confirm(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str) -> Result<(), anyhow::Error> {
+    try_send_operation(|| tele_bot_send_msg(bot, chat_id, err_yn, msg), 6, Duration::from_secs(40)).await
 }
 
 /* 
@@ -66,7 +66,7 @@ pub async fn send_photo_confirm(bot: &Bot, chat_id: ChatId, image_path: &str) ->
 
 
 /*
-
+    Functions that send messages related to consumption details
 */
 async fn send_consumption_message<T>(
     bot: &Bot, 
@@ -80,18 +80,17 @@ async fn send_consumption_message<T>(
     let total_cost_i32 = total_cost as i32;
     let cnt = 10;
     let items_len = items.len();
-    let loop_cnt = items_len / cnt + if items_len % cnt != 0 { 1 } else { 0 };
-
+    let loop_cnt = (items_len / cnt) + (if items_len % cnt != 0 { 1 } else { 0 });
+    
     if items_len == 0 {
         send_message_confirm(
             bot, 
             chat_id, 
             false, 
             &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)), 
-            ""
         ).await?;
     }
-
+    
     for idx in 0..loop_cnt {
         let mut send_text = String::new();
         let end_idx = cmp::min(items_len, (idx + 1) * cnt);
@@ -99,13 +98,13 @@ async fn send_consumption_message<T>(
         if idx == 0 {
             send_text.push_str(&format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)));
         }
-
+        
         for inner_idx in (cnt * idx)..end_idx {
             send_text.push_str("---------------------------------\n");
             send_text.push_str(&message_builder(&items[inner_idx]));
         }
 
-        send_message_confirm(bot, chat_id, false, &send_text, "").await?;
+        send_message_confirm(bot, chat_id, false, &send_text).await?;
     }
 
     Ok(())
@@ -113,7 +112,7 @@ async fn send_consumption_message<T>(
 
 
 /*
-
+    Functions that send messages related to consumption details  
 */
 pub async fn send_message_consume_split(
     bot: &Bot, 
@@ -135,7 +134,7 @@ pub async fn send_message_consume_split(
 
 
 /*
-
+    Function that sends messages related to consumption type history
 */
 pub async fn send_message_consume_type(
     bot: &Bot, 

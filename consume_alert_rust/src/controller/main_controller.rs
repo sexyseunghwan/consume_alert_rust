@@ -160,6 +160,9 @@ async fn handle_command(message: &Message, bot: &Bot, arc_es_client_clone: &Arc<
         else if text.starts_with("/cm") {
             command_consumption_per_mon(message, text, bot, arc_es_client_clone).await?;
         }
+        else if text.starts_with("/ctr") {
+            command_consumption_per_term(message, text, bot, arc_es_client_clone).await?;
+        }
         else {
             bot.send_message(message.chat.id, "Hello! Use /c <args> to interact.")
                 .await
