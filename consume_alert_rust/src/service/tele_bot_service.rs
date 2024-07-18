@@ -73,8 +73,8 @@ async fn send_consumption_message<T>(
     chat_id: ChatId, 
     items: &Vec<T>, 
     total_cost: f64, 
-    start_dt: &str, 
-    end_dt: &str, 
+    start_dt: NaiveDate, 
+    end_dt: NaiveDate, 
     message_builder: fn(&T) -> String
 ) -> Result<(), anyhow::Error> {
     let total_cost_i32 = total_cost as i32;
@@ -120,8 +120,8 @@ pub async fn send_message_consume_split(
     chat_id: ChatId, 
     consume_list: &Vec<ConsumeInfo>, 
     total_cost: f64, 
-    start_dt: &str, 
-    end_dt: &str
+    start_dt: NaiveDate, 
+    end_dt: NaiveDate
 ) -> Result<(), anyhow::Error> {
     send_consumption_message(bot, chat_id, consume_list, total_cost, start_dt, end_dt, |item| {
         format!(
@@ -142,8 +142,8 @@ pub async fn send_message_consume_type(
     chat_id: ChatId, 
     consume_type_list: &Vec<ConsumeTypeInfo>, 
     total_cost: f64, 
-    start_dt: &str, 
-    end_dt: &str
+    start_dt: NaiveDate, 
+    end_dt: NaiveDate
 ) -> Result<(), anyhow::Error> {
     send_consumption_message(bot, chat_id, consume_type_list, total_cost, start_dt, end_dt, |item| {
         format!(

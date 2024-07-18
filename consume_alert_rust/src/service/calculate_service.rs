@@ -219,7 +219,7 @@ pub async fn get_consume_info_by_classification_type<'a>(consume_type_vec: &'a V
 /*
     Function that returns consumption type information (Graphs and detailed consumption details)
 */
-pub async fn get_consume_type_graph(total_cost: f64, start_dt: &str, end_dt: &str, consume_list: &Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error> {
+pub async fn get_consume_type_graph(total_cost: f64, start_dt: NaiveDate, end_dt: NaiveDate, consume_list: &Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error> {
 
     let mut type_scores: HashMap<String, i32> = HashMap::new();
     
@@ -263,9 +263,9 @@ pub async fn get_consume_detail_graph_double(python_graph_line_info_cur: ToPytho
     python_graph_line_vec.push(python_graph_line_info_cur);
     python_graph_line_vec.push(python_graph_line_info_pre);
 
-    call_python_matplot_consume_detail(&python_graph_line_vec).await?;
+    let path = call_python_matplot_consume_detail(&python_graph_line_vec).await?;
 
-    Ok(String::from("test"))
+    Ok(path)
 }
 
 
@@ -277,7 +277,7 @@ pub async fn get_consume_detail_graph_single(python_graph_line_info: &ToPythonGr
     let mut python_graph_line_vec: Vec<ToPythonGraphLine> = Vec::new();
     python_graph_line_vec.push(python_graph_line_info.clone());
 
-    call_python_matplot_consume_detail(&python_graph_line_vec).await?;
+    let path = call_python_matplot_consume_detail(&python_graph_line_vec).await?;
 
-    Ok(String::from("test"))
+    Ok(path)
 }

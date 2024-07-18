@@ -8,6 +8,7 @@ use crate::service::tele_bot_service::*;
 
 use crate::utils_modules::numeric_utils::*;
 use crate::utils_modules::time_utils::*;
+use crate::utils_modules::file_manager_utils::*;
 
 use crate::dtos::dto::*;
 
@@ -48,10 +49,10 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
         return Err(anyhow!("ERROR in 'command_consumption()' function - input_data : {}", text));
     }
     
-    let curr_time = get_current_korean_time_str("%Y-%m-%dT%H:%M:%S%.3fZ");
+    let curr_time = get_current_kor_naive_datetime();
     
     let document = json!({
-        "@timestamp": curr_time,
+        "@timestamp": get_str_from_naive_datetime(curr_time),
         "prodt_name": consume_name,
         "prodt_money": convert_numeric(consume_cash)
     });
@@ -65,64 +66,108 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
 /*
     command handler: Checks how much you have consumed during a month -> /cm
 */
-// pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
-//     let args = &text[3..];
-//     let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    let args = &text[3..];
+    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
 
-//     let (cur_date_start, cur_date_end, one_mon_ago_date_start, one_mon_ago_date_end) = match split_args_vec.len() {
-//         1 => {
-//             let start = get_current_kor_naivedate_first_date()?;
-//             let end = get_lastday_naivedate(start)?;
-//             let one_month_ago_start = get_one_month_ago_kr_str(&start, "%Y-%m-01")?;
-//             let one_month_ago_end = get_last_date_str(&one_month_ago_start, "%Y-%m-%d")?;
-//             (start, end, one_month_ago_start, one_month_ago_end)
-//         },
-//         2 if split_args_vec.get(1).map_or(false, |d| validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)) => {
-//             let start = format!("{}-01", split_args_vec[1]);
-//             let end = get_last_date_str(&start, "%Y-%m-%d")?;
-//             let one_month_ago_start = get_one_month_ago_kr_str(&start, "%Y-%m-%d")?;
-//             let one_month_ago_end = get_last_date_str(&one_month_ago_start, "%Y-%m-%d")?;
-//             (start, end, one_month_ago_start, one_month_ago_end)
-//         },
-//         _ => {
-//             send_message_confirm(bot, message.chat.id, true, "Invalid date format. Please use format YYYY.MM like /cm 2023.07", "").await?;
-//             return Err(anyhow!("Invalid input: {}", text));
-//         }
-//     };
+    let (cur_date_start, cur_date_end, one_mon_ago_date_start, one_mon_ago_date_end) = match split_args_vec.len() {
+        1 => {
+            let start = get_current_kor_naivedate_first_date()?;
+            let end = get_lastday_naivedate(start)?;
+            let one_month_ago_start = get_add_month_from_naivedate(start, -1)?;
+            let one_month_ago_end = get_lastday_naivedate(one_month_ago_start)?;
+            (start, end, one_month_ago_start, one_month_ago_end)
+        },
+        2 if split_args_vec.get(1).map_or(false, |d| validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)) => {
+            
+            let year: i32 = split_args_vec
+                                .get(0)
+                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_mon(): There is a problem with the first element of the 'split_args_vec' vector."))?
+                                .parse()?;
+            
+            let month: u32 = split_args_vec
+                                .get(1)
+                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_mon(): There is a problem with the second element of the 'split_args_vec' vector."))?
+                                .parse()?;
+            
+            let start = get_naivedate(year, month, 1)?;
+            let end = get_lastday_naivedate(start)?;
+            let one_month_ago_start = get_add_month_from_naivedate(start, -1)?;
+            let one_month_ago_end = get_lastday_naivedate(one_month_ago_start)?;
+            (start, end, one_month_ago_start, one_month_ago_end)
+        },
+        _ => {
+            send_message_confirm(bot, message.chat.id, true, "Invalid date format. Please use format YYYY.MM like /cm 2023.07", "").await?;
+            return Err(anyhow!("Invalid input: {}", text));
+        }
+    };
     
-//     let consume_type_vec = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
-//     let cur_mon_total_cost_infos = total_cost_detail_specific_period(&cur_date_start, &cur_date_end, es_client, "consuming_index_prod_new", &consume_type_vec).await?;
-//     let pre_mon_total_cost_infos = total_cost_detail_specific_period(&one_mon_ago_date_start, &one_mon_ago_date_end, es_client, "consuming_index_prod_new", &consume_type_vec).await?;
+
+    let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
+    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(cur_date_start, 
+                                                                                             cur_date_end, 
+                                                                                             es_client, 
+                                                                                             "consuming_index_prod_new", 
+                                                                                             &consume_type_vec).await?;
     
-//     // Hand over the consumption details to Telegram bot.
-//     send_message_consume_split(bot, message.chat.id, &cur_mon_total_cost_infos.1, *(&cur_mon_total_cost_infos.0), &cur_date_start, &cur_date_end).await?;  
-
-//     println!("1");
-
-//     // ( consumption type information, consumption type graph storage path )
-//     let comsume_type_infos = get_consume_type_graph(*(&cur_mon_total_cost_infos.0), &cur_date_start, &cur_date_end, &cur_mon_total_cost_infos.1).await?;
-//     println!("{:?} // {:?} // {:?} // {:?}", &cur_date_start, &cur_date_end, cur_mon_total_cost_infos.0, cur_mon_total_cost_infos.1);
-//     let python_graph_line_info_cur = ToPythonGraphLine::new("cur", &cur_date_start, &cur_date_end, cur_mon_total_cost_infos.0, cur_mon_total_cost_infos.1)?;
-//     println!("2");
-//     let python_graph_line_info_pre = ToPythonGraphLine::new("pre", &one_mon_ago_date_start, &one_mon_ago_date_end, pre_mon_total_cost_infos.0, pre_mon_total_cost_infos.1)?;
-//     println!("3");
-//     let graph_path = get_consume_detail_graph_double(python_graph_line_info_cur, python_graph_line_info_pre).await?;
-//     println!("4");
-
-
-//     println!("{:?}", comsume_type_infos.1);
-//     println!("{:?}", graph_path);
-
-//     //send_photo_confirm(bot, message.chat.id, &graph_path).await?;
-//     //send_photo_confirm(bot, message.chat.id, &comsume_type_infos.1).await?;
     
-//     //send_message_consume_type(bot, message.chat.id, &comsume_type_infos.0, *(&cur_mon_total_cost_infos.0), &cur_date_start, &cur_date_end).await?;  
-
+    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(one_mon_ago_date_start, 
+                                                                                             one_mon_ago_date_end, es_client, 
+                                                                                             "consuming_index_prod_new", 
+                                                                                             &consume_type_vec).await?;
     
-//     Ok(())
+    // Hand over the consumption details to Telegram bot.
+    send_message_consume_split(bot, 
+                        message.chat.id, 
+                        &cur_mon_total_cost_infos.1, 
+                        *(&cur_mon_total_cost_infos.0), 
+                        cur_date_start, 
+                        cur_date_end).await?;  
+    
+    // ( consumption type information, consumption type graph storage path )
+    let comsume_type_infos = get_consume_type_graph(
+                                                                *(&cur_mon_total_cost_infos.0), 
+                                                                cur_date_start, 
+                                                                cur_date_end, 
+                                                                &cur_mon_total_cost_infos.1).await?;
+    let consume_type_img = comsume_type_infos.1;
+    
+    let python_graph_line_info_cur = ToPythonGraphLine::new(
+                                                                "cur", 
+                                                                get_str_from_naivedate(cur_date_start).as_str(), 
+                                                                get_str_from_naivedate(cur_date_end).as_str(), 
+                                                                cur_mon_total_cost_infos.0, 
+                                                                cur_mon_total_cost_infos.1)?;
 
-// }
+
+    let python_graph_line_info_pre = ToPythonGraphLine::new(
+                                                            "pre", 
+                                                            get_str_from_naivedate(one_mon_ago_date_start).as_str(), 
+                                                            get_str_from_naivedate(one_mon_ago_date_end).as_str(), 
+                                                            pre_mon_total_cost_infos.0, 
+                                                            pre_mon_total_cost_infos.1)?;
+    
+    let graph_path = get_consume_detail_graph_double(python_graph_line_info_cur, python_graph_line_info_pre).await?;
+    
+
+    send_photo_confirm(bot, message.chat.id, &graph_path).await?;
+    send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
+    
+    send_message_consume_type(bot, 
+                            message.chat.id, 
+                            &comsume_type_infos.0, 
+                            *(&cur_mon_total_cost_infos.0), 
+                            cur_date_start, 
+                            cur_date_end).await?;  
+    
+    
+    let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
+    delete_file(delete_target_vec)?;
+
+    Ok(())
+
+}
 
 
 
