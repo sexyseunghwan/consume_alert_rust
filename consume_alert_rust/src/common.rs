@@ -9,7 +9,7 @@ pub use log::{info, error};
 
 pub use flexi_logger::{Logger, FileSpec, Criterion, Age, Naming, Cleanup, Record};
 
-pub use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate, Timelike, Datelike, TimeZone};
+pub use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate, NaiveTime, Timelike, Datelike, TimeZone};
 pub use chrono_tz::Asia::Seoul;
 pub use chrono::offset::LocalResult;
 

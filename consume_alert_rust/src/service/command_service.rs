@@ -195,13 +195,13 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
             
             let date_start: String = split_bar_vec
                                     .get(0)
-                                    .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_term(): There is a problem with the first element of the 'split_args_vec' vector."))?
+                                    .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_term(): There is a problem with 'date_start' variable."))?
                                     .parse()?;
             let date_start_form = get_naive_date_from_str(&date_start, "%Y.%m.%d")?;
 
             let date_end: String = split_bar_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_term(): There is a problem with the first element of the 'split_args_vec' vector."))?
+                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_term(): There is a problem with 'date_end' variable."))?
                                 .parse()?;
             let date_end_form = get_naive_date_from_str(&date_end, "%Y.%m.%d")?;
 
@@ -263,4 +263,153 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
 
     Ok(())
 
+}
+
+
+
+/*
+    command handler: Checks how much you have consumed during a day -> /ct
+*/
+pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+
+    let args = &text[3..];
+    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    
+    let (start_dt, end_dt) = match split_args_vec.len() {
+        1 => {
+            let start = get_current_kor_naivedate_first_date()?;
+            let end = get_current_kor_naivedate_first_date()?;
+            (start, end)
+        },
+        2 if split_args_vec.get(1).map_or(false, |d| validate_date_format(d, r"^\d{4}\.\d{2}\.\d{2}$").unwrap_or(false)) => {
+            
+            let year: i32 = split_args_vec
+                                .get(0)
+                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_day(): There is a problem with 'year' variable."))?
+                                .parse()?;
+            
+            let month: u32 = split_args_vec
+                                .get(1)
+                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_day(): There is a problem with 'month' variable."))?
+                                .parse()?;
+
+            let day: u32 = split_args_vec
+                .get(2)
+                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_day(): There is a problem with 'day' variable."))?
+                .parse()?;
+            
+            let start_dt = get_naivedate(year, month, day)?;
+            let end_dt = get_naivedate(year, month, day)?;
+            
+
+            (start_dt, end_dt)
+        },
+        _ => {
+            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /ct or /ct 2023.11.11").await?;
+            return Err(anyhow!("Invalid input: {}", text));
+        }
+    };
+    
+    let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
+    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(start_dt, 
+                                                    end_dt, 
+                                                    es_client, 
+                                                    "consuming_index_prod_new", 
+                                                    &consume_type_vec).await?;
+    
+    send_message_consume_split(bot, 
+                        message.chat.id, 
+                        &cur_mon_total_cost_infos.1, 
+                        *(&cur_mon_total_cost_infos.0), 
+                        start_dt, 
+                        end_dt).await?;  
+    
+    // ( consumption type information, consumption type graph storage path )
+    let comsume_type_infos = get_consume_type_graph(
+                                                                *(&cur_mon_total_cost_infos.0), 
+                                                                start_dt, 
+                                                                end_dt, 
+                                                                &cur_mon_total_cost_infos.1).await?;
+    let consume_type_img = comsume_type_infos.1;
+
+    send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
+        
+    send_message_consume_type(bot, 
+                            message.chat.id, 
+                            &comsume_type_infos.0, 
+                            *(&cur_mon_total_cost_infos.0), 
+                            start_dt, 
+                            end_dt).await?;  
+    
+    
+    let delete_target_vec: Vec<String> = vec![consume_type_img];
+    delete_file(delete_target_vec)?;
+    
+    
+    Ok(())
+}
+
+
+/*
+    command handler: Check the consumption details from the date of payment to the next payment. -> /cs
+*/
+pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+
+    let args = &text[3..];
+    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    
+    let (start_dt, end_dt) = match split_args_vec.len() {
+        
+        1 => {
+            let cur_day = get_current_kor_naivedate_first_date()?;
+            let cur_year = cur_day.year();
+            let cur_month = cur_day.month();
+            let cur_date = cur_day.day();
+            
+            let start_dt  = if cur_date < 25 { 
+                let date = get_naivedate(cur_year, cur_month, 25)?;
+                get_add_month_from_naivedate(date, -1)?
+            } else { 
+                get_naivedate(cur_year, cur_month, 25)?
+            };
+            
+            let end_dt  = if cur_date < 25 { 
+                get_naivedate(cur_year, cur_month, 25)?
+            } else { 
+                let date = get_naivedate(cur_year, cur_month, 25)?;
+                get_add_month_from_naivedate(date, 1)?
+            };
+            
+            (start_dt, end_dt)
+        },
+        // 2 if split_args_vec.get(1).map_or(false, |d| validate_date_format(d, r"^\d{4}\.\d{2}\.\d{2}$").unwrap_or(false)) => {
+            
+        //     let year: i32 = split_args_vec
+        //                         .get(0)
+        //                         .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_salary(): There is a problem with 'year' variable."))?
+        //                         .parse()?;
+            
+        //     let month: u32 = split_args_vec
+        //                         .get(1)
+        //                         .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_salary(): There is a problem with 'month' variable."))?
+        //                         .parse()?;
+
+        //     let day: u32 = split_args_vec
+        //                     .get(2)
+        //                     .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_salary(): There is a problem with 'day' variable."))?
+        //                     .parse()?;
+            
+        //     let start_dt = get_naivedate(year, month, day)?;
+        //     let end_dt = get_naivedate(year, month, day)?;
+            
+        //     (start_dt, end_dt)
+        // },
+        _ => {
+            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /ct or /ct 2023.11.11").await?;
+            return Err(anyhow!("Invalid input: {}", text));
+        }
+    };
+    
+
+    Ok(())
 }

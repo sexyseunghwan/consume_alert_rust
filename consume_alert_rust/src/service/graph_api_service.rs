@@ -38,8 +38,10 @@ pub async fn call_python_matplot_consume_type(consume_type_list: &Vec<ConsumeTyp
 }
 
 
+
+
 /*
-        
+    Function that calls python api to draw a line chart
 */
 pub async fn call_python_matplot_consume_detail(comparison_info: &Vec<ToPythonGraphLine>) -> Result<String, anyhow::Error> {
     

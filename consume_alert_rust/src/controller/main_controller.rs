@@ -31,23 +31,27 @@ pub async fn test_controller() {
             panic!("Failed to create mysql client: {:?}", err);
         }
     };
+    
+    //let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
+    
+    // let start_dt = NaiveDate::from_ymd_opt(2024, 6, 1).unwrap();
+    // let end_dt = NaiveDate::from_ymd_opt(2024, 6, 15).unwrap();
+    // let pre_start_dt = NaiveDate::from_ymd_opt(2024, 5, 1).unwrap();
+    // let pre_end_dt = NaiveDate::from_ymd_opt(2024, 5, 15).unwrap();
 
-    let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
+    // let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
+    // let (total_cost, consume_list) = total_cost_detail_specific_period(start_dt, end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
+    // let (total_cost_pre, consume_list_pre) = total_cost_detail_specific_period(pre_start_dt, pre_end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
     
-    let start_dt = NaiveDate::from_ymd_opt(2024, 6, 1).unwrap();
-    let end_dt = NaiveDate::from_ymd_opt(2024, 6, 15).unwrap();
-    let pre_start_dt = NaiveDate::from_ymd_opt(2024, 5, 1).unwrap();
-    let pre_end_dt = NaiveDate::from_ymd_opt(2024, 5, 15).unwrap();
+    // let python_graph_line_info_cur = ToPythonGraphLine::new("cur", &get_str_from_naivedate(start_dt), &get_str_from_naivedate(end_dt), total_cost, consume_list).unwrap();
+    // let python_graph_line_info_pre = ToPythonGraphLine::new("pre", &get_str_from_naivedate(pre_start_dt), &get_str_from_naivedate(pre_end_dt), total_cost_pre, consume_list_pre).unwrap();
+    
+    // get_consume_detail_graph_double(python_graph_line_info_cur, python_graph_line_info_pre).await.unwrap();
+    
 
-    let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
-    let (total_cost, consume_list) = total_cost_detail_specific_period(start_dt, end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
-    let (total_cost_pre, consume_list_pre) = total_cost_detail_specific_period(pre_start_dt, pre_end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
+    // ======================================================================================================================================================
     
-    let python_graph_line_info_cur = ToPythonGraphLine::new("cur", &get_str_from_naivedate(start_dt), &get_str_from_naivedate(end_dt), total_cost, consume_list).unwrap();
-    let python_graph_line_info_pre = ToPythonGraphLine::new("pre", &get_str_from_naivedate(pre_start_dt), &get_str_from_naivedate(pre_end_dt), total_cost_pre, consume_list_pre).unwrap();
-    
-    get_consume_detail_graph_double(python_graph_line_info_cur, python_graph_line_info_pre).await.unwrap();
-    
+
     //let (consume_type_list, png_path) = get_consume_type_graph(total_cost, "2024-06-01", "2024-06-15", consume_list).await.unwrap();
     
     // 텔래그램으로 전송
@@ -162,6 +166,9 @@ async fn handle_command(message: &Message, bot: &Bot, arc_es_client_clone: &Arc<
         }
         else if text.starts_with("/ctr") {
             command_consumption_per_term(message, text, bot, arc_es_client_clone).await?;
+        }
+        else if text.starts_with("/ct") {
+            command_consumption_per_day(message, text, bot, arc_es_client_clone).await?;
         }
         else {
             bot.send_message(message.chat.id, "Hello! Use /c <args> to interact.")

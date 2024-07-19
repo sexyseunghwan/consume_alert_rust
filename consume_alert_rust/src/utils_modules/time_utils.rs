@@ -31,6 +31,9 @@ pub fn get_naive_date_from_str(date: &str, format: &str) -> Result<NaiveDate, an
 }
 
 
+
+
+
 /*
     Functions that make the current date (Korean time) a 'NaiveDateTime' data type
 */
@@ -127,3 +130,5 @@ pub fn validate_date_format(date_str: &str, format: &str) -> Result<bool, anyhow
     let re = Regex::new(format)?;
     Ok(re.is_match(date_str))
 }
+
+
