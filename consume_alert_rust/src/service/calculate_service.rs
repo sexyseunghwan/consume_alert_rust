@@ -87,10 +87,7 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
     Functions that show the details of total consumption and consumption over a specific period of time
 */
 pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, es_client: &Arc<EsHelper>, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<(f64, Vec<ConsumeInfo>), anyhow::Error> {
-
-    info!("start_date = {:?}", get_str_from_naivedate(start_date));
-    info!("end_date = {:?}", get_str_from_naivedate(end_date));
-
+    
     let query = json!({
         "size": 10000,
         "query": {
@@ -114,7 +111,7 @@ pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: 
     });
     
     let mut consume_info_list:Vec<ConsumeInfo> = Vec::new();
-
+    
     let es_cur_res = es_client.cluster_search_query(query, index_name).await?;
     let total_cost = match &es_cur_res["aggregations"]["total_prodt_money"]["value"].as_f64() {
         Some(total_cost) => *total_cost,
@@ -274,13 +271,13 @@ pub async fn get_consume_detail_graph_double(python_graph_line_info_cur: &mut To
         
     } else if python_graph_line_info_cur_len < python_graph_line_info_pre_len {
 
-        let last_elem_cur = python_graph_line_info_pre.consume_accumulate_list.get(python_graph_line_info_pre_len - 1)
+        let last_elem_cur = python_graph_line_info_cur.consume_accumulate_list.get(python_graph_line_info_cur_len - 1)
             .ok_or_else(|| anyhow!("An 'index out of bounds error' has occurred. - get_consume_detail_graph_double() - last_elem_pre"))?;
-        
+
             python_graph_line_info_cur.add_to_consume_accumulate_list(*last_elem_cur);
 
     }
-    
+
     let mut python_graph_line_vec: Vec<ToPythonGraphLine> = Vec::new();
     python_graph_line_vec.push(python_graph_line_info_cur.clone());
     python_graph_line_vec.push(python_graph_line_info_pre.clone());

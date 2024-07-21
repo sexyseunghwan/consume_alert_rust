@@ -581,3 +581,52 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
     
     Ok(())
 }
+
+
+
+/*
+
+*/
+pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> { 
+
+    let args = &text[3..];
+    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+
+
+    let (meal_time) = match split_args_vec.len() {
+        1 => {
+            let meal_time = get_current_kor_naive_datetime();
+
+            meal_time
+        },
+        2 if split_args_vec.get(1).map_or(false, |d| validate_date_format(d, r"^\d{2}\:\d{2}$").unwrap_or(false)) => {
+            
+            let split_bar_vec: Vec<String> = split_args_vec
+                                .get(1)
+                                .ok_or_else(|| anyhow!("Invalid date - command_check_fasting_time(): There is a problem with the first element of the 'split_args_vec' vector."))?
+                                .split(":")
+                                .map(String::from)
+                                .collect();
+
+            let hour = split_bar_vec.get(0)
+                .ok_or_else(|| anyhow!("Invalid date - command_check_fasting_time(): There is a problem with the 'hour' variable."))?;
+
+            let min = split_bar_vec.get(1)
+                .ok_or_else(|| anyhow!("Invalid date - command_check_fasting_time(): There is a problem with the 'min' variable."))?; 
+            
+            let mut meal_time = get_current_kor_naive_datetime();
+            //let meal_datetime = 
+
+
+            meal_time
+
+        },
+        _ => {
+            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX01) /mc 22:30 \nEX02) /mc").await?;
+            return Err(anyhow!("Invalid input: {}", text));
+        }
+    };
+
+    
+    Ok(())
+}

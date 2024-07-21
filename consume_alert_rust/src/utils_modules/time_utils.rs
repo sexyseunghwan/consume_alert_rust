@@ -32,8 +32,6 @@ pub fn get_naive_date_from_str(date: &str, format: &str) -> Result<NaiveDate, an
 
 
 
-
-
 /*
     Functions that make the current date (Korean time) a 'NaiveDateTime' data type
 */
