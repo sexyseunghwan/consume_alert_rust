@@ -52,8 +52,9 @@ pub struct ToPythonGraphLine {
     start_dt: String,
     end_dt: String,
     total_cost: f64,
-    consume_accumulate_list: Vec<i32>
+    pub consume_accumulate_list: Vec<i32>
 }
+
 
 impl ToPythonGraphLine {
     
@@ -73,10 +74,7 @@ impl ToPythonGraphLine {
                 .and_modify(|e| *e += prodt_money)
                 .or_insert(prodt_money);
         }
-        
-        // for (key, value) in &date_consume {
-        //     println!("key: {:?} // value: {:?}", key, value);
-        // }
+    
         
         let mut sorted_dates: Vec<_> = date_consume.iter().collect();
         sorted_dates.sort_by(|a, b| a.0.cmp(b.0));
@@ -90,10 +88,6 @@ impl ToPythonGraphLine {
             consume_accumulate_list.push(accumulate_cost);
         }
         
-        // println!("==============================");
-        // for cost in &consume_accumulate_list {
-        //     println!("{:?}", cost);
-        // }
         
         Ok(
             ToPythonGraphLine {
@@ -105,4 +99,20 @@ impl ToPythonGraphLine {
             }
         )
     }
+
+/*
+
+*/
+pub fn add_to_consume_accumulate_list(&mut self, value: i32) {
+    self.consume_accumulate_list.push(value);
+}
+
+/*
+
+*/
+pub fn get_consume_accumulate_list_len(&self) -> usize {  
+    self.consume_accumulate_list.len()
+}
+
+
 }

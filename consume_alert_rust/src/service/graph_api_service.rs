@@ -51,7 +51,7 @@ pub async fn call_python_matplot_consume_detail(comparison_info: &Vec<ToPythonGr
         .json(&comparison_info)
         .send()
         .await?;
-
+    
     if res.status().is_success() {
         let response_body = res.text().await?;
         Ok(response_body)

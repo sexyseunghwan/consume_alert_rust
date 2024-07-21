@@ -148,7 +148,7 @@ pub async fn send_message_consume_type(
         format!(
             "category name : {}\ncost : {}\ncost(%) : {}%\n",
             item.prodt_type(),
-            item.prodt_cost(),
+            item.prodt_cost().to_formatted_string(&Locale::ko),
             item.prodt_per()
         )
     }).await

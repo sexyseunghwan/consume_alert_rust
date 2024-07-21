@@ -170,6 +170,12 @@ async fn handle_command(message: &Message, bot: &Bot, arc_es_client_clone: &Arc<
         else if text.starts_with("/ct") {
             command_consumption_per_day(message, text, bot, arc_es_client_clone).await?;
         }
+        else if text.starts_with("/cs") {
+            command_consumption_per_salary(message, text, bot, arc_es_client_clone).await?;
+        }
+        else if text.starts_with("/cw") {
+            command_consumption_per_week(message, text, bot, arc_es_client_clone).await?;
+        }
         else {
             bot.send_message(message.chat.id, "Hello! Use /c <args> to interact.")
                 .await
