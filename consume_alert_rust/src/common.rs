@@ -14,8 +14,9 @@ pub use chrono_tz::Asia::Seoul;
 pub use chrono::offset::LocalResult;
 
 pub use serde::{Serialize, Deserialize};
-pub use serde_json::{json, Value};
+pub use serde_json::{json, Value, from_value};
 pub use serde_json::ser::State;
+pub use serde::de::DeserializeOwned;
 
 pub use dotenv::dotenv;
 

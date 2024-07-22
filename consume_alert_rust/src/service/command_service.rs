@@ -1,3 +1,4 @@
+use chrono::format::parse;
 use teloxide::dispatching::dialogue::GetChatId;
 
 use crate::common::*;
@@ -478,7 +479,7 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
 
 
 /*
-    command handler: command handler: Checks how much you have consumed during a week -> /cw
+    command handler: Checks how much you have consumed during a week -> /cw
 */
 pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
@@ -501,11 +502,6 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
             let date_end = monday + chrono::Duration::days(6);  
             let one_pre_week_start = date_start - chrono::Duration::days(7);
             let one_pre_week_end = date_end - chrono::Duration::days(7);
-
-            println!("date_start = {:?}", date_start);
-            println!("date_end = {:?}", date_end);
-            println!("one_pre_week_start = {:?}", one_pre_week_start);
-            println!("one_pre_week_end = {:?}", one_pre_week_end);
 
             (date_start, date_end, one_pre_week_start, one_pre_week_end)
         },
@@ -585,41 +581,47 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
 
 
 /*
-
+    command handler: Function for recording meal times -> /mc
 */
-pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> { 
+pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> { 
 
     let args = &text[3..];
     let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
-
-
-    let (meal_time) = match split_args_vec.len() {
+    
+    let meal_time = match split_args_vec.len() {
         1 => {
             let meal_time = get_current_kor_naive_datetime();
-
+            
             meal_time
         },
         2 if split_args_vec.get(1).map_or(false, |d| validate_date_format(d, r"^\d{2}\:\d{2}$").unwrap_or(false)) => {
             
             let split_bar_vec: Vec<String> = split_args_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("Invalid date - command_check_fasting_time(): There is a problem with the first element of the 'split_args_vec' vector."))?
+                                .ok_or_else(|| anyhow!("[Invalid date ERROR] - command_check_fasting_time(): There is a problem with the first element of the 'split_args_vec' vector."))?
                                 .split(":")
                                 .map(String::from)
                                 .collect();
 
-            let hour = split_bar_vec.get(0)
-                .ok_or_else(|| anyhow!("Invalid date - command_check_fasting_time(): There is a problem with the 'hour' variable."))?;
-
-            let min = split_bar_vec.get(1)
-                .ok_or_else(|| anyhow!("Invalid date - command_check_fasting_time(): There is a problem with the 'min' variable."))?; 
+            let hour = match split_bar_vec.get(0)
+                .ok_or_else(|| anyhow!("[Invalid date ERROR] - command_check_fasting_time(): There is a problem with the 'hour' variable."))?
+                .parse::<u32>() {
+                    Ok(hour) => hour,
+                    Err(e) => return Err(anyhow!("[Parsing ERROR] - command_check_fasting_time(): There was a problem parsing the 'hour' variable. // {:?}", e))
+                };
             
-            let mut meal_time = get_current_kor_naive_datetime();
-            //let meal_datetime = 
-
+            let min = match split_bar_vec.get(1)
+                .ok_or_else(|| anyhow!("[Invalid date ERROR] - command_check_fasting_time(): There is a problem with the 'min' variable."))?
+                .parse::<u32>() {
+                    Ok(min) => min,
+                    Err(e) => return Err(anyhow!("[Parsing ERROR] - command_check_fasting_time(): There was a problem parsing the 'hour' variable. // {:?}", e))
+                };
+            
+            let meal_time_cur = get_current_kor_naive_datetime();
+            let meal_time = meal_time_cur.date().and_hms_opt(hour, min, 0)
+                .ok_or_else(|| anyhow!("[Invalid date ERROR] - command_check_fasting_time(): There was a problem parsing the 'meal_time' variable."))?;
 
             meal_time
-
         },
         _ => {
             send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX01) /mc 22:30 \nEX02) /mc").await?;
@@ -627,6 +629,92 @@ pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot
         }
     };
 
+    // Brings the data of the most recent meal time of today's meal time.
+    let current_date = get_str_from_naivedate(get_current_kor_naivedate());
+
+    let es_query = json!({
+        "size": 1,
+        "query": {
+          "range": {
+            "@timestamp": {
+              "gte": &current_date,
+              "lte": &current_date
+            }
+          }
+        },
+        "sort": [
+          { "@timestamp": { "order": "desc" }}
+        ]
+    });
+
+    let last_stamp: i64 = get_recent_mealtime_data_from_elastic(es_client, "meal_check_index", "laststamp", es_query, 0).await?;
+
+    let es_doc = json!({
+        "@timestamp": get_str_from_naive_datetime(meal_time),
+        "laststamp": last_stamp + 1,
+        "alarminfo": 0
+    });
+
+    es_client.cluster_post_query(es_doc, "meal_check_index").await?;
+    
+    send_message_confirm(bot, 
+                    message.chat.id, 
+                    false, 
+                    &format!("The [{}] meal was finished at [ {} ]", 
+                        last_stamp + 1, 
+                        get_str_from_naive_datetime(meal_time))).await?;
     
     Ok(())
 }
+
+
+/*
+    command handler: Check the fasting time. -> /mt
+*/
+pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+    
+    let args = &text[3..];
+    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    
+    let current_datetime = match split_args_vec.len() {
+        1 => {
+            let current_datetime = get_current_kor_naive_datetime();
+            current_datetime
+        },
+        _ => {
+            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /mt").await?;
+            return Err(anyhow!("Invalid input: {}", text));
+        }
+    };
+
+    let es_query = json!({
+        "size": 1,
+        "sort": [
+          { "@timestamp": { "order": "desc" }}
+        ]
+    });
+    
+    let get_datetime: String = get_recent_mealtime_data_from_elastic(es_client, 
+            "meal_check_index", 
+            "@timestamp", 
+            es_query, 
+            String::from("")).await?;
+    
+    let final_mealtime = get_naive_datetime_from_str(&get_datetime, "%Y-%m-%dT%H:%M:%SZ")?;
+
+    let duration = current_datetime - final_mealtime;
+
+    let laps_day = duration.num_days();
+    let laps_hours = duration.num_hours();
+    let laps_min = duration.num_minutes();
+    
+    send_message_confirm(bot, 
+        message.chat.id, 
+        false, 
+        &format!("It's been {} days and {} hours and {} minutes since I kept the current fasting time.", 
+            laps_day, 
+            laps_hours,
+            laps_min)).await?;
+    
+    Ok(())
+} 

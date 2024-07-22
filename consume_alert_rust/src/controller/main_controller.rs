@@ -31,8 +31,12 @@ pub async fn test_controller() {
             panic!("Failed to create mysql client: {:?}", err);
         }
     };
+
+    let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
+
+    //get_recent_mealtime_data_from_elastic(&arc_es_client, "meal_check_index", "laststamp").await.unwrap();
     
-    //let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
+    
     
     // let start_dt = NaiveDate::from_ymd_opt(2024, 6, 1).unwrap();
     // let end_dt = NaiveDate::from_ymd_opt(2024, 6, 15).unwrap();
@@ -177,6 +181,9 @@ async fn handle_command(message: &Message, bot: &Bot, arc_es_client_clone: &Arc<
             command_consumption_per_week(message, text, bot, arc_es_client_clone).await?;
         }
         else if text.starts_with("/mc") {
+            command_record_fasting_time(message, text, bot, arc_es_client_clone).await?;
+        }
+        else if text.starts_with("/mt") {
             command_check_fasting_time(message, text, bot, arc_es_client_clone).await?;
         }
         else {

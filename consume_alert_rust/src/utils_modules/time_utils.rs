@@ -20,16 +20,21 @@ pub fn get_str_from_naive_datetime(naive_datetime: NaiveDateTime) -> String {
 /*
 
 */
-pub fn get_naive_date_from_str(date: &str, format: &str) -> Result<NaiveDate, anyhow::Error> {
+pub fn get_naive_datetime_from_str(date: &str, format: &str) -> Result<NaiveDateTime, anyhow::Error> {
     
-    let date = match NaiveDate::parse_from_str(date, format) {
-        Ok(date) => date,
-        Err(e) => return Err(anyhow!(format!("ERROR in 'get_naive_date_from_str()' : {:?}", e)))
-    };
-
-    Ok(date)
+    NaiveDateTime::parse_from_str(date, format)
+        .map_err(|e| anyhow!("[Datetime Parsing Error] Failed to parse date string: {} - get_naive_datetime_from_str() // {:?}", date, e)) 
 }
 
+/*
+
+*/
+pub fn get_naive_date_from_str(date: &str, format: &str) -> Result<NaiveDate, anyhow::Error> {
+    
+    NaiveDate::parse_from_str(date, format)
+        .map_err(|e| anyhow!("[Datetime Parsing Error] Failed to parse date string: {} - get_naive_date_from_str() // {:?}", date, e))
+
+}
 
 
 /*
@@ -64,8 +69,12 @@ pub fn get_current_kor_naivedate_first_date() -> Result<NaiveDate, anyhow::Error
     let utc_now: DateTime<Utc> = Utc::now();
     let kst_time: DateTime<chrono_tz::Tz> = utc_now.with_timezone(&Seoul);
 
+    //anyhow!("[Datetime Parsing Error] Failed to parse date string: {} - get_naive_date_from_str() // {:?}", date, e)
+
     NaiveDate::from_ymd_opt(kst_time.year(), kst_time.month(), 1)
-        .ok_or_else(|| anyhow!("Invalid date - get_current_kor_naivedate_first_date() => year: {}, month: {}, day: 1", kst_time.year(), kst_time.month()))
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error] Invalid date => year: {}, month: {}, day: 1 - get_current_kor_naivedate_first_date()", 
+            kst_time.year(), 
+            kst_time.month()))
     
 }
 
@@ -80,10 +89,10 @@ pub fn get_lastday_naivedate(naive_date: NaiveDate) -> Result<NaiveDate, anyhow:
     } else {
         NaiveDate::from_ymd_opt(naive_date.year(), naive_date.month() + 1, 1)
     }
-    .ok_or_else(|| anyhow!("Invalid date when calculating the first day of the next month. - get_lastday_naivedate()"))?;
+    .ok_or_else(|| anyhow!("[Datetime Parsing Error] Invalid date when calculating the first day of the next month. - get_lastday_naivedate()"))?;
     
     let last_day_of_month = next_month.pred_opt()
-        .ok_or_else(|| anyhow!("Unable to import the previous date for that date. - get_lastday_naivedate()"))?;
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error] Unable to import the previous date for that date. - get_lastday_naivedate()"))?;
     
     Ok(last_day_of_month)
 }
@@ -95,7 +104,7 @@ pub fn get_lastday_naivedate(naive_date: NaiveDate) -> Result<NaiveDate, anyhow:
 pub fn get_naivedate(year: i32, month: u32, date: u32) -> Result<NaiveDate, anyhow::Error> {
 
     let date = NaiveDate::from_ymd_opt(year, month, date)
-        .ok_or_else(|| anyhow!("Invalid date - get_naivedate() => year: {}, month: {}, day: {}", year, month, date))?;
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error] Invalid date => year: {}, month: {}, day: {} - get_naivedate() ", year, month, date))?;
     
     Ok(date)
 }
@@ -116,7 +125,10 @@ pub fn get_add_month_from_naivedate(naive_date: NaiveDate, add_month: i32) -> Re
     }
     
     NaiveDate::from_ymd_opt(new_year, new_month as u32, naive_date.day())
-        .ok_or_else(|| anyhow!("Invalid date. - get_add_month_from_naivedate() => new_year: {:?}, new_month: {:?}, day: {:?}", new_year, new_month, naive_date.day()))
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error] Invalid date. => new_year: {:?}, new_month: {:?}, day: {:?} - get_add_month_from_naivedate() ", 
+            new_year, 
+            new_month, 
+            naive_date.day()))
 }
 
 

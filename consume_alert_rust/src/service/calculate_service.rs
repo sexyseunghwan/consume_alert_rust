@@ -300,3 +300,28 @@ pub async fn get_consume_detail_graph_single(python_graph_line_info: &ToPythonGr
 
     Ok(path)
 }
+
+
+/*
+    Function that determines the number of meals today
+*/
+pub async fn get_recent_mealtime_data_from_elastic<T: DeserializeOwned>(es_client: &Arc<EsHelper>, index_name: &str, col_name: &str, es_query: Value, default_val: T) -> Result<T, anyhow::Error> {
+    
+    let es_res = es_client.cluster_search_query(es_query, index_name).await?;
+
+    if let Some(meal_info) = es_res["hits"]["hits"].as_array() {
+        for elem in meal_info {
+            if let Some(source) = elem.get("_source") {
+                if let Some(value) = source.get(col_name) {
+                    
+                    let get_data: T = from_value(value.clone())
+                        .map_err(|e| anyhow!("[Json Parsing Error] Failed to parse '{}' - get_recent_mealtime_data_from_elastic() // {:?}", col_name, e))?;
+
+                    return Ok(get_data);
+                }
+            }
+        }
+    }
+    
+    Ok(default_val)
+}
