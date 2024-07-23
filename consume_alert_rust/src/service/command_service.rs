@@ -717,4 +717,42 @@ pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot
             laps_min)).await?;
     
     Ok(())
-} 
+}
+
+
+
+/*
+    command handler: Delete the last fasting time data. -> /md
+*/
+pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+
+    let args = &text[3..];
+    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    
+    let _ = match split_args_vec.len() {
+        1 => {
+            ()
+        },
+        _ => {
+            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /md").await?;
+            return Err(anyhow!("Invalid input: {}", text));
+        }
+    };
+
+    let es_query = json!({
+        "size": 1,
+        "sort": [
+          { "@timestamp": { "order": "desc" }}
+        ]
+    });
+    
+    let get_doc_id: String = get_recent_mealtime_data_from_elastic(es_client, 
+        "meal_check_index", 
+        "_id", 
+        es_query, 
+        String::from("")).await?;
+    
+    es_client.cluster_delete_query(&get_doc_id, "meal_check_index").await?;
+    
+    Ok(())
+}

@@ -25,7 +25,8 @@ pub use elasticsearch::{
 };
 pub use elasticsearch::http::transport::TransportBuilder;
 pub use elasticsearch::http::Url;
-pub use elasticsearch::{SearchParts, IndexParts, CountParts};
+pub use elasticsearch::{SearchParts, IndexParts, CountParts, DeleteParts};
+
 
 pub use anyhow::{Result, anyhow, Context};
 

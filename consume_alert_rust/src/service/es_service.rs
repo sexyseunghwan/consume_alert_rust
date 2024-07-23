@@ -83,8 +83,27 @@ impl EsHelper {
         Err(anyhow!("All Elasticsearch connections failed"))
 
     }
-    
 
+
+    /*
+        Functions that handle queries at the Elasticsearch Cluster LEVEL - DELETE
+    */
+    pub async fn cluster_delete_query(&self, doc_id: &str, index_name: &str) -> Result<(), anyhow::Error> {
+
+        for es_obj in self.mon_es_pool.iter() {
+
+            match es_obj.node_delete_query(doc_id, index_name).await {
+                Ok(resp) => return Ok(resp),
+                Err(err) => {
+                    error!("{:?}", err);      
+                    continue;
+                }
+            }   
+        }
+        
+        Err(anyhow!("All Elasticsearch connections failed"))                
+    }
+    
 }
 
 
@@ -132,6 +151,27 @@ impl EsObj {
             Err(anyhow!(error_message))
         }
 
+    }
+    
+    
+    /*
+        Function that EXECUTES elasticsearch queries - delete
+    */
+    pub async fn node_delete_query(&self, doc_id: &str, index_name: &str) -> Result<(), anyhow::Error> {
+
+        let response = self.es_pool
+            .delete(DeleteParts::IndexId(index_name, doc_id))
+            .send()
+            .await?;
+        
+        
+        if response.status_code().is_success() {
+            Ok(())
+        } else {
+            let error_message = format!("Failed to delete document: Status Code: {}, Document ID: {}", response.status_code(), doc_id);
+            Err(anyhow!(error_message))
+        }
+        
     }
     
 
