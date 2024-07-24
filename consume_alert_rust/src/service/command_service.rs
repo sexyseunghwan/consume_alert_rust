@@ -32,7 +32,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
                             true, 
                             "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000").await?;
 
-        return Err(anyhow!(format!("ERROR in 'command_consumption()' function - input_data : {}", text)));
+        return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
     } 
 
     if let Some(cons_name) = split_args_vec.get(0) {
@@ -41,7 +41,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
             
             if !is_numeric(&price) {
                 send_message_confirm(bot, message.chat.id, true, "The second parameter must be numeric. \nEX) /c snack:15000").await?;
-                return Err(anyhow!(format!("ERROR in 'command_consumption()' function - input_data : {}", text)));
+                return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
             }
 
             consume_name = cons_name;
@@ -50,8 +50,12 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
 
     } else {
         
-        send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000").await?;
-        return Err(anyhow!("ERROR in 'command_consumption()' function - input_data : {}", text));
+        send_message_confirm(bot, 
+                        message.chat.id, 
+                        true, 
+                        "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000").await?;
+
+        return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
     }
     
     let curr_time = get_current_kor_naive_datetime();
@@ -88,12 +92,12 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
             
             let year: i32 = split_args_vec
                                 .get(0)
-                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_mon(): There is a problem with the first element of the 'split_args_vec' vector."))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 0th data of 'split_args_vec' vector does not exist. - command_consumption_per_mon()"))?
                                 .parse()?;
             
             let month: u32 = split_args_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_mon(): There is a problem with the second element of the 'split_args_vec' vector."))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_args_vec' vector does not exist. - command_consumption_per_mon()"))?
                                 .parse()?;
             
             let start = get_naivedate(year, month, 1)?;
@@ -104,7 +108,7 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
         },
         _ => {
             send_message_confirm(bot, message.chat.id, true, "Invalid date format. Please use format YYYY.MM like /cm 2023.07").await?;
-            return Err(anyhow!("Invalid input: {}", text));
+            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text));
         }
     };
         
@@ -189,28 +193,29 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
 
             let split_bar_vec: Vec<String> = split_args_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_term(): There is a problem with the first element of the 'split_args_vec' vector."))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_args_vec' vector does not exist. - command_consumption_per_term()"))?
                                 .split("-")
                                 .map(String::from)
                                 .collect();
             
             let date_start: String = split_bar_vec
                                     .get(0)
-                                    .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_term(): There is a problem with 'date_start' variable."))?
+                                    .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 0th data of 'split_bar_vec' vector does not exist. - command_consumption_per_term()"))?
                                     .parse()?;
             let date_start_form = get_naive_date_from_str(&date_start, "%Y.%m.%d")?;
 
             let date_end: String = split_bar_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_term(): There is a problem with 'date_end' variable."))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_bar_vec' vector does not exist. - command_consumption_per_term()"))?
                                 .parse()?;
+            
             let date_end_form = get_naive_date_from_str(&date_end, "%Y.%m.%d")?;
-
+            
             (date_start_form, date_end_form)
         },
         _ => {
             send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /ctr 2023.07.07-2023.08.01").await?;
-            return Err(anyhow!("Invalid input: {}", text));
+            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_term() // {:?}", text));
         }
     };
     
@@ -285,17 +290,17 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
             
             let year: i32 = split_args_vec
                                 .get(0)
-                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_day(): There is a problem with 'year' variable."))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 0th data of 'split_args_vec' vector does not exist. - command_consumption_per_day()"))?
                                 .parse()?;
             
             let month: u32 = split_args_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_day(): There is a problem with 'month' variable."))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_args_vec' vector does not exist. - command_consumption_per_day()"))?
                                 .parse()?;
 
             let day: u32 = split_args_vec
                 .get(2)
-                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_day(): There is a problem with 'day' variable."))?
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 2nd data of 'split_args_vec' vector does not exist. - command_consumption_per_day()"))?
                 .parse()?;
             
             let start_dt = get_naivedate(year, month, day)?;
@@ -305,7 +310,7 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
         },
         _ => {
             send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /ct or /ct 2023.11.11").await?;
-            return Err(anyhow!("Invalid input: {}", text));
+            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_day() // {:?}", text));
         }
     };
     
@@ -389,12 +394,12 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
             
             let year: i32 = split_args_vec
                                 .get(0)
-                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_salary(): There is a problem with 'year' variable."))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 0th data of 'split_args_vec' vector does not exist. - command_consumption_per_salary()"))?
                                 .parse()?;
             
             let month: u32 = split_args_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("Invalid date - command_consumption_per_salary(): There is a problem with 'month' variable."))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_args_vec' vector does not exist. - command_consumption_per_salary()"))?
                                 .parse()?;
             
             let cur_date_end = get_naivedate(year, month, 25)?;
@@ -407,7 +412,7 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
         },
         _ => {
             send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /ct or /ct 2023.11.11").await?;
-            return Err(anyhow!("Invalid input: {}", text));
+            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_salary() // {:?}", text));
         }
     };
     
@@ -507,7 +512,7 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
         },
         _ => {
             send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /cw").await?;
-            return Err(anyhow!("Invalid input: {}", text));
+            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_week() // {:?}", text));
         }
     };
 
@@ -598,34 +603,34 @@ pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bo
             
             let split_bar_vec: Vec<String> = split_args_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("[Invalid date ERROR] - command_check_fasting_time(): There is a problem with the first element of the 'split_args_vec' vector."))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_bar_vec' vector does not exist. - command_record_fasting_time()"))?
                                 .split(":")
                                 .map(String::from)
                                 .collect();
 
             let hour = match split_bar_vec.get(0)
-                .ok_or_else(|| anyhow!("[Invalid date ERROR] - command_check_fasting_time(): There is a problem with the 'hour' variable."))?
-                .parse::<u32>() {
-                    Ok(hour) => hour,
-                    Err(e) => return Err(anyhow!("[Parsing ERROR] - command_check_fasting_time(): There was a problem parsing the 'hour' variable. // {:?}", e))
-                };
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_bar_vec' vector does not exist. - command_record_fasting_time()"))?
+                                .parse::<u32>() {
+                                    Ok(hour) => hour,
+                                    Err(e) => return Err(anyhow!("[Parsing Error] There was a problem parsing the 'hour' variable. - command_record_fasting_time() // {:?}", e))
+                                };
             
             let min = match split_bar_vec.get(1)
-                .ok_or_else(|| anyhow!("[Invalid date ERROR] - command_check_fasting_time(): There is a problem with the 'min' variable."))?
-                .parse::<u32>() {
-                    Ok(min) => min,
-                    Err(e) => return Err(anyhow!("[Parsing ERROR] - command_check_fasting_time(): There was a problem parsing the 'hour' variable. // {:?}", e))
-                };
+                                .ok_or_else(|| anyhow!("[Invalid date ERROR] - command_check_fasting_time(): There is a problem with the 'min' variable."))?
+                                .parse::<u32>() {
+                                    Ok(min) => min,
+                                    Err(e) => return Err(anyhow!("[Parsing ERROR] There was a problem parsing the 'hour' variable. - command_record_fasting_time() // {:?}", e))
+                                };
             
             let meal_time_cur = get_current_kor_naive_datetime();
             let meal_time = meal_time_cur.date().and_hms_opt(hour, min, 0)
-                .ok_or_else(|| anyhow!("[Invalid date ERROR] - command_check_fasting_time(): There was a problem parsing the 'meal_time' variable."))?;
+                .ok_or_else(|| anyhow!("[Invalid date ERROR] There was a problem parsing the 'meal_time' variable. - command_record_fasting_time()"))?;
 
             meal_time
         },
         _ => {
             send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX01) /mc 22:30 \nEX02) /mc").await?;
-            return Err(anyhow!("Invalid input: {}", text));
+            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_record_fasting_time() // {:?}", text));
         }
     };
 
@@ -683,7 +688,7 @@ pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot
         },
         _ => {
             send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /mt").await?;
-            return Err(anyhow!("Invalid input: {}", text));
+            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_check_fasting_time() // {:?}", text));
         }
     };
 
@@ -735,7 +740,7 @@ pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bo
         },
         _ => {
             send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /md").await?;
-            return Err(anyhow!("Invalid input: {}", text));
+            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_delete_fasting_time() // {:?}", text));
         }
     };
 
@@ -753,6 +758,104 @@ pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bo
         String::from("")).await?;
     
     es_client.cluster_delete_query(&get_doc_id, "meal_check_index").await?;
+    
+    Ok(())
+}
+
+
+/*
+    command handler: Checks how much you have consumed during one year -> /cy
+*/
+pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+
+    let args = &text[3..];
+    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+
+    let (date_start, date_end, one_year_pre_date_start, one_year_pre_date_end) = match split_args_vec.len() {
+        1 => {
+            
+            let cur_year = get_current_kor_naivedate();
+
+            let start_date = get_naivedate(cur_year.year(), 1, 1)?;  
+            let end_date = get_naivedate(cur_year.year(), 12, 31)?;   
+            let one_year_pre_date_start = get_naivedate(cur_year.year() - 1, 1, 1)?;  
+            let one_year_pre_date_end = get_naivedate(cur_year.year() - 1, 12, 31)?;   
+             
+            (start_date, end_date, one_year_pre_date_start, one_year_pre_date_end)
+        },
+        2 if split_args_vec.get(1).map_or(false, |d| validate_date_format(d, r"^\d{4}$").unwrap_or(false)) => {
+            
+            let year: i32 = split_args_vec
+                .get(0)
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 0th data of 'split_bar_vec' vector does not exist. - command_consumption_per_year()"))?
+                .parse()?;
+
+            let start_date = get_naivedate(year, 1, 1)?;  
+            let end_date = get_naivedate(year, 12, 31)?;  
+            let one_year_pre_date_start = get_naivedate(year - 1, 1, 1)?;  
+            let one_year_pre_date_end = get_naivedate(year - 1, 12, 31)?;
+            
+            (start_date, end_date, one_year_pre_date_start, one_year_pre_date_end)
+        },
+        _ => {
+            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX01) /cy\nEX02) /cy 2023").await?;
+            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_year() // {:?}", text));
+        }
+    };
+
+    
+    let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
+    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(date_start, 
+                                                                                            date_end, 
+                                                                                             es_client, 
+                                                                                             "consuming_index_prod_new", 
+                                                                                             &consume_type_vec).await?;
+    
+    
+    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(one_year_pre_date_start, 
+                                                                                            one_year_pre_date_end, 
+                                                                                             es_client, 
+                                                                                             "consuming_index_prod_new", 
+                                                                                             &consume_type_vec).await?;
+    
+    // ( consumption type information, consumption type graph storage path )
+    let comsume_type_infos = get_consume_type_graph(
+                                                                *(&cur_mon_total_cost_infos.0), 
+                                                                date_start, 
+                                                                date_end, 
+                                                                &cur_mon_total_cost_infos.1).await?;
+    let consume_type_img = comsume_type_infos.1;
+    
+    let mut python_graph_line_info_cur = ToPythonGraphLine::new(
+                                                                "cur", 
+                                                                get_str_from_naivedate(date_start).as_str(), 
+                                                                get_str_from_naivedate(date_end).as_str(), 
+                                                                cur_mon_total_cost_infos.0, 
+                                                                cur_mon_total_cost_infos.1)?;
+    
+    let mut python_graph_line_info_pre = ToPythonGraphLine::new(
+                                                            "pre", 
+                                                            get_str_from_naivedate(one_year_pre_date_start).as_str(), 
+                                                            get_str_from_naivedate(one_year_pre_date_end).as_str(), 
+                                                            pre_mon_total_cost_infos.0, 
+                                                            pre_mon_total_cost_infos.1)?;
+    
+    let graph_path = get_consume_detail_graph_double(&mut python_graph_line_info_cur, &mut python_graph_line_info_pre).await?;
+    
+
+    send_photo_confirm(bot, message.chat.id, &graph_path).await?;
+    send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
+    
+    send_message_consume_type(bot, 
+                            message.chat.id, 
+                            &comsume_type_infos.0, 
+                            *(&cur_mon_total_cost_infos.0), 
+                            date_start, 
+                            date_end).await?;  
+    
+    
+    let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
+    delete_file(delete_target_vec)?;
     
     Ok(())
 }

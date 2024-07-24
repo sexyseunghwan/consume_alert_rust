@@ -87,8 +87,6 @@ impl ToPythonGraphLine {
             accumulate_cost += cost;
             consume_accumulate_list.push(accumulate_cost);
         }
-        
-        println!("{:?}", accumulate_cost);
 
         Ok(
             ToPythonGraphLine {

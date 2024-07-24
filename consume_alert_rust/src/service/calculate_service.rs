@@ -49,7 +49,7 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
                     },
                 "size" : 1000
             });
-
+            
             let inner_res = es_client.cluster_search_query(inner_query, index_name).await?;
             let mut keyword_vec: Vec<ProdtDetailInfo> = Vec::new();
 
@@ -65,7 +65,7 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
                                 keyword_vec.push(prodt_detail);
                             },
                             _ => {
-                                error!("Error: Missing or invalid 'keyword' or 'bias_value'.");
+                                error!("[Parsing Error] Missing or invalid 'keyword' or 'bias_value' - get_classification_consumption_type()");
                                 continue;
                             }
                         }
@@ -115,7 +115,7 @@ pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: 
     let es_cur_res = es_client.cluster_search_query(query, index_name).await?;
     let total_cost = match &es_cur_res["aggregations"]["total_prodt_money"]["value"].as_f64() {
         Some(total_cost) => *total_cost,
-        None => return Err(anyhow!(format!("ERROR in 'total_cost_specific_period()'")))
+        None => return Err(anyhow!("ERROR in 'total_cost_specific_period()'"))
     };
     
     if let Some(prodt_infos) = es_cur_res["hits"]["hits"].as_array() {
@@ -127,7 +127,7 @@ pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: 
                 let timestamp = match source.get("@timestamp").and_then(Value::as_str) {
                     Some(timestamp) => timestamp,
                     None => {
-                        error!("'@timestamp' is empty!");
+                        error!("[Error] '@timestamp' is empty! - total_cost_detail_specific_period()");
                         continue
                     }
                 };
@@ -135,7 +135,7 @@ pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: 
                 let prodt_money = match source.get("prodt_money").and_then(Value::as_i64).map(|v| v as i32) {
                     Some(timestamp) => timestamp,
                     None => {
-                        error!("'prodt_money' is empty!");
+                        error!("[Error] 'prodt_money' is empty! - total_cost_detail_specific_period()");
                         continue
                     }
                 };
@@ -143,7 +143,7 @@ pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: 
                 let prodt_name = match source.get("prodt_name").and_then(Value::as_str) {
                     Some(timestamp) => timestamp,
                     None => {
-                        error!("'prodt_name' is empty!");
+                        error!("[Error] 'prodt_name' is empty! - total_cost_detail_specific_period()");
                         continue
                     }
                 };
@@ -265,14 +265,15 @@ pub async fn get_consume_detail_graph_double(python_graph_line_info_cur: &mut To
     if python_graph_line_info_cur_len > python_graph_line_info_pre_len {
 
         let last_elem_pre = python_graph_line_info_pre.consume_accumulate_list.get(python_graph_line_info_pre_len - 1)
-            .ok_or_else(|| anyhow!("An 'index out of bounds error' has occurred. - get_consume_detail_graph_double() - last_elem_pre"))?;
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error] The {}th data of 'python_graph_line_info_pre.consume_accumulate_list' vector does not exist. - get_consume_detail_graph_double()", python_graph_line_info_pre_len - 1))?;
         
         python_graph_line_info_pre.add_to_consume_accumulate_list(*last_elem_pre);
         
     } else if python_graph_line_info_cur_len < python_graph_line_info_pre_len {
 
         let last_elem_cur = python_graph_line_info_cur.consume_accumulate_list.get(python_graph_line_info_cur_len - 1)
-            .ok_or_else(|| anyhow!("An 'index out of bounds error' has occurred. - get_consume_detail_graph_double() - last_elem_pre"))?;
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error] The {}th data of 'python_graph_line_info_pre.consume_accumulate_list' vector does not exist. - get_consume_detail_graph_double()", python_graph_line_info_pre_len - 1))?;
+        
 
             python_graph_line_info_cur.add_to_consume_accumulate_list(*last_elem_cur);
 

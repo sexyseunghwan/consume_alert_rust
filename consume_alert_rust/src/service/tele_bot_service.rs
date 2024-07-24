@@ -16,7 +16,7 @@ where
         match operation().await {
             Ok(_) => return Ok(()),
             Err(e) if attempts == max_retries => {
-                error!("Max attempts reached. Last error: {:?}", e);
+                error!("[Error] Max attempts reached. - try_send_operation() // {:?}", e);
                 return Err(e)
             }
             Err(e) => {
@@ -26,8 +26,8 @@ where
             }
         }
     }
-    
-    Err(anyhow::anyhow!("Failed after retrying {} times", max_retries))
+       
+    Err(anyhow!("[Error] Failed after retrying {} times - try_send_operation()", max_retries))
 }
 
 /*
@@ -35,8 +35,8 @@ where
 */
 async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str) -> Result<(), anyhow::Error> {
     
-    if ! err_yn { info!("{:?}", msg) }
-    bot.send_message(chat_id, msg).await.context("Failed to send command response")?;
+    //if ! err_yn { info!("{:?}", msg) }
+    bot.send_message(chat_id, msg).await.context("[Error] Failed to send command response - tele_bot_send_msg()")?;
 
     Ok(())
 }
@@ -53,7 +53,7 @@ pub async fn send_message_confirm(bot: &Bot, chat_id: ChatId, err_yn: bool, msg:
 */
 async fn tele_bot_send_photo(bot: &Bot, chat_id: ChatId, image_path: &str) -> Result<(), anyhow::Error> {
     let photo = InputFile::file(Path::new(image_path));
-    bot.send_photo(chat_id, photo).await.context("Failed to send Photo")?;
+    bot.send_photo(chat_id, photo).await.context("[Error] Failed to send Photo - tele_bot_send_photo()")?;
     Ok(())
 }
 
@@ -153,172 +153,3 @@ pub async fn send_message_consume_type(
         )
     }).await
 }
-
-
-
-// /*
-//     When sending multiple messages via Telegram bot, a function to resolve the problem of transmission failure      
-// */
-// pub async fn send_message_consume_split(bot: &Bot, chat_id: ChatId, consume_list: &Vec<ConsumeInfo>, total_cost: f64, start_dt: &str, end_dt: &str) -> Result<(), anyhow::Error> {
-
-//     let total_cost_i32 = total_cost as i32;
-//     let cnt = 10;
-//     let consume_list_len = consume_list.len();
-//     let mut loop_cnt: usize = 0;
-//     let consume_q = consume_list_len / cnt;
-//     let consume_r = consume_list_len % cnt;
-
-//     if consume_r != 0 { loop_cnt += consume_q + 1 }
-//     else { loop_cnt = consume_q }
-    
-//     if consume_list_len == 0 {
-//         // If there is no consumption details
-//         send_message_confirm(bot, chat_id, false, &format!("The money you spent from [{} ~ {}] is [ {} won ] \nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost), "").await?;
-//     }
-    
-//     for idx in 0..loop_cnt {
-
-//         let mut send_text = String::new();
-//         let end_idx = cmp::min(consume_list_len, (idx+1)*cnt);
-        
-//         if idx == 0 {
-//             send_text.push_str(&format!("The money you spent from [{} ~ {}] is [ {} won ] \n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)));
-//         } 
-        
-//         for inner_idx in (cnt*idx)..end_idx {
-//             send_text.push_str("---------------------------------\n");
-//             send_text.push_str(&format!("name : {}\n", consume_list[inner_idx].prodt_name()));
-//             send_text.push_str(&format!("date : {}\n", consume_list[inner_idx].timestamp()));
-//             send_text.push_str(&format!("cost : {}\n", consume_list[inner_idx].prodt_money().to_formatted_string(&Locale::ko)));
-//         }
-
-//         send_message_confirm(bot, chat_id, false, &send_text, "").await?;
-//     }
-    
-//     Ok(())
-// }
-
-
-// /*
-
-// */
-// pub async fn send_message_consume_type(bot: &Bot, chat_id: ChatId, consume_type_list: &Vec<ConsumeTypeInfo>, total_cost: f64, start_dt: &str, end_dt: &str) -> Result<(), anyhow::Error> {
-
-//     let total_cost_i32 = total_cost as i32;
-//     let cnt = 10;
-//     let consume_list_len = consume_type_list.len();
-//     let mut loop_cnt: usize = 0;
-//     let consume_q = consume_list_len / cnt;
-//     let consume_r = consume_list_len % cnt;
-    
-//     if consume_r != 0 { loop_cnt += consume_q + 1 }
-//     else { loop_cnt = consume_q }
-    
-//     if consume_list_len == 0 {
-//         // If there is no consumption details
-//         send_message_confirm(bot, chat_id, false, &format!("The money you spent from [{} ~ {}] is [ {} won ] \nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost), "").await?;
-//     }
-    
-//     for idx in 0..loop_cnt {
-
-//         let mut send_text = String::new();
-//         let end_idx = cmp::min(consume_list_len, (idx+1)*cnt);
-        
-//         if idx == 0 {
-//             send_text.push_str(&format!("The money you spent from [{} ~ {}] is [ {} won ] \n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)));
-//         } 
-        
-//         for inner_idx in (cnt*idx)..end_idx {
-//             send_text.push_str("---------------------------------\n");
-//             send_text.push_str(&format!("category name : {}\n", consume_type_list[inner_idx].prodt_type()));
-//             send_text.push_str(&format!("cost : {}\n", consume_type_list[inner_idx].prodt_cost()));
-//             send_text.push_str(&format!("cost(%) : {}%\n", consume_type_list[inner_idx].prodt_per()));
-//         }
-        
-//         send_message_confirm(bot, chat_id, false, &send_text, "").await?;
-//     }
-    
-//     Ok(())
-// }
-
-
-
-
-
-
-
-// /*
-//     Functions that attempt to relay messages from telegram bot until successful (up to 6 times)
-// */
-// pub async fn send_message_confirm(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str, log_msg: &str) -> Result<(), anyhow::Error> {
-
-//     let mut flag = true;
-//     let mut try_cnt = 0;
-    
-//     while flag {
-        
-//         if try_cnt > 6 { 
-//             error!("You can no longer connect to telegram bot.");
-//             break; 
-//         }
-        
-//         match tele_bot_send_msg(bot, chat_id, err_yn, msg, log_msg).await {
-//             Ok(_) => {
-//                 flag = false;
-//                 ()
-//             },
-//             Err(e) => {
-//                 error!("{:?}", e);
-//                 try_cnt += 1;
-//                 thread::sleep(Duration::from_secs(40));
-//             }
-//         };
-//     }
-    
-//     Ok(())
-
-// }
-
-
-// pub async fn send_photo_confirm(bot: &Bot, chat_id: ChatId, image_path: &str) -> Result<(), anyhow::Error> {
-
-//     let mut flag = true;
-//     let mut try_cnt = 0;
-    
-//     while flag {
-        
-//         if try_cnt > 6 { 
-//             error!("You can no longer connect to telegram bot.");
-//             break; 
-//         }
-        
-//         match tele_bot_send_photo(bot, chat_id, image_path).await {
-//             Ok(_) => {
-//                 flag = false;
-//                 ()
-//             },
-//             Err(e) => {
-//                 error!("{:?}", e);
-//                 try_cnt += 1;
-//                 thread::sleep(Duration::from_secs(40));
-//             }
-//         };
-//     }
-    
-//     Ok(())
-
-// }
-
-// /*
-//     Function to send photo message via Telegram Bot
-// */
-// pub async fn tele_bot_send_photo(bot: &Bot, chat_id: ChatId, image_path: &str) -> Result<(), anyhow::Error> {
-
-//     let photo = InputFile::file(Path::new(image_path));
-
-//     bot.send_photo(chat_id, photo)
-//         .await
-//         .context("Failed to send Photo")?;
-    
-//     Ok(())
-// }

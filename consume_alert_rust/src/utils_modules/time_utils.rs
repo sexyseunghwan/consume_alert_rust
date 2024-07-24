@@ -23,7 +23,7 @@ pub fn get_str_from_naive_datetime(naive_datetime: NaiveDateTime) -> String {
 pub fn get_naive_datetime_from_str(date: &str, format: &str) -> Result<NaiveDateTime, anyhow::Error> {
     
     NaiveDateTime::parse_from_str(date, format)
-        .map_err(|e| anyhow!("[Datetime Parsing Error] Failed to parse date string: {} - get_naive_datetime_from_str() // {:?}", date, e)) 
+        .map_err(|e| anyhow!("[Datetime Parsing Error] Failed to parse date string: {:?} - get_naive_datetime_from_str() // {:?}", date, e)) 
 }
 
 /*
@@ -32,7 +32,7 @@ pub fn get_naive_datetime_from_str(date: &str, format: &str) -> Result<NaiveDate
 pub fn get_naive_date_from_str(date: &str, format: &str) -> Result<NaiveDate, anyhow::Error> {
     
     NaiveDate::parse_from_str(date, format)
-        .map_err(|e| anyhow!("[Datetime Parsing Error] Failed to parse date string: {} - get_naive_date_from_str() // {:?}", date, e))
+        .map_err(|e| anyhow!("[Datetime Parsing Error] Failed to parse date string: {:?} - get_naive_date_from_str() // {:?}", date, e))
 
 }
 
