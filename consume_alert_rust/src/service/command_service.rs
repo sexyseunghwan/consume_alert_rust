@@ -1,6 +1,3 @@
-use chrono::format::parse;
-use teloxide::dispatching::dialogue::GetChatId;
-
 use crate::common::*;
 
 use crate::service::calculate_service::*;
@@ -21,7 +18,7 @@ use crate::dtos::dto::*;
 pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
     let args = &text[3..];
-    let split_args_vec: Vec<String> = args.split(":").map(|s| s.to_string()).collect();
+    let split_args_vec: Vec<String> = args.split(':').map(|s| s.to_string()).collect();
     let mut consume_name = "";
     let mut consume_cash = "";
 
@@ -39,7 +36,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
 
         if let Some(price) = split_args_vec.get(1) {
             
-            if !is_numeric(&price) {
+            if !is_numeric(price) {
                 send_message_confirm(bot, message.chat.id, true, "The second parameter must be numeric. \nEX) /c snack:15000").await?;
                 return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
             }
@@ -78,7 +75,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
 pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
     let args = &text[3..];
-    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
 
     let (cur_date_start, cur_date_end, one_mon_ago_date_start, one_mon_ago_date_end) = match split_args_vec.len() {
         1 => {
@@ -130,13 +127,13 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
     send_message_consume_split(bot, 
                         message.chat.id, 
                         &cur_mon_total_cost_infos.1, 
-                        *(&cur_mon_total_cost_infos.0), 
+                        cur_mon_total_cost_infos.0, 
                         cur_date_start, 
                         cur_date_end).await?;  
     
     // ( consumption type information, consumption type graph storage path )
     let comsume_type_infos = get_consume_type_graph(
-                                                                *(&cur_mon_total_cost_infos.0), 
+                                                                cur_mon_total_cost_infos.0, 
                                                                 cur_date_start, 
                                                                 cur_date_end, 
                                                                 &cur_mon_total_cost_infos.1).await?;
@@ -166,7 +163,7 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
     send_message_consume_type(bot, 
                             message.chat.id, 
                             &comsume_type_infos.0, 
-                            *(&cur_mon_total_cost_infos.0), 
+                            cur_mon_total_cost_infos.0, 
                             cur_date_start, 
                             cur_date_end).await?;  
     
@@ -185,7 +182,7 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
 pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
     let args = &text[3..];
-    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let (date_start, date_end) = match split_args_vec.len() {
         
@@ -194,7 +191,7 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
             let split_bar_vec: Vec<String> = split_args_vec
                                 .get(1)
                                 .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_args_vec' vector does not exist. - command_consumption_per_term()"))?
-                                .split("-")
+                                .split('-')
                                 .map(String::from)
                                 .collect();
             
@@ -231,13 +228,13 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
     send_message_consume_split(bot, 
         message.chat.id, 
         &cur_mon_total_cost_infos.1, 
-        *(&cur_mon_total_cost_infos.0), 
+        cur_mon_total_cost_infos.0, 
         date_start, 
         date_end).await?;  
     
     // ( consumption type information, consumption type graph storage path )
     let comsume_type_infos = get_consume_type_graph(
-        *(&cur_mon_total_cost_infos.0), 
+        cur_mon_total_cost_infos.0, 
         date_start, 
         date_end, 
         &cur_mon_total_cost_infos.1).await?;
@@ -259,7 +256,7 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
     send_message_consume_type(bot, 
         message.chat.id, 
         &comsume_type_infos.0, 
-        *(&cur_mon_total_cost_infos.0), 
+        cur_mon_total_cost_infos.0, 
         date_start, 
         date_end).await?;  
     
@@ -278,7 +275,7 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
 pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
     
     let args = &text[3..];
-    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let (start_dt, end_dt) = match split_args_vec.len() {
         1 => {
@@ -324,13 +321,13 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
     send_message_consume_split(bot, 
                         message.chat.id, 
                         &cur_mon_total_cost_infos.1, 
-                        *(&cur_mon_total_cost_infos.0), 
+                        cur_mon_total_cost_infos.0, 
                         start_dt, 
                         end_dt).await?;  
     
     // ( consumption type information, consumption type graph storage path )
     let comsume_type_infos = get_consume_type_graph(
-                                                                *(&cur_mon_total_cost_infos.0), 
+                                                                cur_mon_total_cost_infos.0, 
                                                                 start_dt, 
                                                                 end_dt, 
                                                                 &cur_mon_total_cost_infos.1).await?;
@@ -341,7 +338,7 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
     send_message_consume_type(bot, 
                             message.chat.id, 
                             &comsume_type_infos.0, 
-                            *(&cur_mon_total_cost_infos.0), 
+                            cur_mon_total_cost_infos.0, 
                             start_dt, 
                             end_dt).await?;  
     
@@ -360,12 +357,12 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
 pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
     let args = &text[3..];
-    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let (cur_date_start, cur_date_end, one_mon_ago_date_start, one_mon_ago_date_end) = match split_args_vec.len() {
         
         1 => {
-            let cur_day = get_current_kor_naivedate_first_date()?;
+            let cur_day = get_current_kor_naivedate();
             let cur_year = cur_day.year();
             let cur_month = cur_day.month();
             let cur_date = cur_day.day();
@@ -433,13 +430,13 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
     send_message_consume_split(bot, 
                         message.chat.id, 
                         &cur_mon_total_cost_infos.1, 
-                        *(&cur_mon_total_cost_infos.0), 
+                        cur_mon_total_cost_infos.0, 
                         cur_date_start, 
                         cur_date_end).await?;  
     
     // ( consumption type information, consumption type graph storage path )
     let comsume_type_infos = get_consume_type_graph(
-                                                                *(&cur_mon_total_cost_infos.0), 
+                                                                cur_mon_total_cost_infos.0, 
                                                                 cur_date_start, 
                                                                 cur_date_end, 
                                                                 &cur_mon_total_cost_infos.1).await?;
@@ -469,7 +466,7 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
     send_message_consume_type(bot, 
                             message.chat.id, 
                             &comsume_type_infos.0, 
-                            *(&cur_mon_total_cost_infos.0), 
+                            cur_mon_total_cost_infos.0, 
                             cur_date_start, 
                             cur_date_end).await?;  
     
@@ -489,7 +486,7 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
 pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
     let args = &text[3..];
-    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let (date_start, date_end, one_pre_week_start, one_pre_week_end) = match split_args_vec.len() {
         
@@ -535,13 +532,13 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
     send_message_consume_split(bot, 
                         message.chat.id, 
                         &cur_mon_total_cost_infos.1, 
-                        *(&cur_mon_total_cost_infos.0), 
+                        cur_mon_total_cost_infos.0, 
                         date_start, 
                         date_end).await?;  
     
     // ( consumption type information, consumption type graph storage path )
     let comsume_type_infos = get_consume_type_graph(
-                                                                *(&cur_mon_total_cost_infos.0), 
+                                                                cur_mon_total_cost_infos.0, 
                                                                 date_start, 
                                                                 date_end, 
                                                                 &cur_mon_total_cost_infos.1).await?;
@@ -571,7 +568,7 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
     send_message_consume_type(bot, 
                             message.chat.id, 
                             &comsume_type_infos.0, 
-                            *(&cur_mon_total_cost_infos.0), 
+                            cur_mon_total_cost_infos.0, 
                             date_start, 
                             date_end).await?;  
     
@@ -591,20 +588,18 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
 pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> { 
 
     let args = &text[3..];
-    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let meal_time = match split_args_vec.len() {
         1 => {
-            let meal_time = get_current_kor_naive_datetime();
-            
-            meal_time
+            get_current_kor_naive_datetime()
         },
         2 if split_args_vec.get(1).map_or(false, |d| validate_date_format(d, r"^\d{2}\:\d{2}$").unwrap_or(false)) => {
             
             let split_bar_vec: Vec<String> = split_args_vec
                                 .get(1)
                                 .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_bar_vec' vector does not exist. - command_record_fasting_time()"))?
-                                .split(":")
+                                .split(':')
                                 .map(String::from)
                                 .collect();
 
@@ -623,17 +618,17 @@ pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bo
                                 };
             
             let meal_time_cur = get_current_kor_naive_datetime();
-            let meal_time = meal_time_cur.date().and_hms_opt(hour, min, 0)
-                .ok_or_else(|| anyhow!("[Invalid date ERROR] There was a problem parsing the 'meal_time' variable. - command_record_fasting_time()"))?;
 
-            meal_time
+            meal_time_cur.date().and_hms_opt(hour, min, 0)
+                .ok_or_else(|| anyhow!("[Invalid date ERROR] There was a problem parsing the 'meal_time' variable. - command_record_fasting_time()"))?
+
         },
         _ => {
             send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX01) /mc 22:30 \nEX02) /mc").await?;
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_record_fasting_time() // {:?}", text));
         }
     };
-
+    
     // Brings the data of the most recent meal time of today's meal time.
     let current_date = get_str_from_naivedate(get_current_kor_naivedate());
 
@@ -679,12 +674,11 @@ pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bo
 pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
     
     let args = &text[3..];
-    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let current_datetime = match split_args_vec.len() {
         1 => {
-            let current_datetime = get_current_kor_naive_datetime();
-            current_datetime
+            get_current_kor_naive_datetime()
         },
         _ => {
             send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /mt").await?;
@@ -732,17 +726,15 @@ pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot
 pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
     let args = &text[3..];
-    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
-    let _ = match split_args_vec.len() {
-        1 => {
-            ()
-        },
+    match split_args_vec.len() {
+        1 => { },
         _ => {
             send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) /md").await?;
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_delete_fasting_time() // {:?}", text));
         }
-    };
+    }
 
     let es_query = json!({
         "size": 1,
@@ -769,7 +761,7 @@ pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bo
 pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
     let args = &text[3..];
-    let split_args_vec: Vec<String> = args.split(" ").map(String::from).collect();
+    let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
 
     let (date_start, date_end, one_year_pre_date_start, one_year_pre_date_end) = match split_args_vec.len() {
         1 => {
@@ -820,7 +812,7 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
     
     // ( consumption type information, consumption type graph storage path )
     let comsume_type_infos = get_consume_type_graph(
-                                                                *(&cur_mon_total_cost_infos.0), 
+                                                                cur_mon_total_cost_infos.0, 
                                                                 date_start, 
                                                                 date_end, 
                                                                 &cur_mon_total_cost_infos.1).await?;
@@ -849,7 +841,7 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
     send_message_consume_type(bot, 
                             message.chat.id, 
                             &comsume_type_infos.0, 
-                            *(&cur_mon_total_cost_infos.0), 
+                            cur_mon_total_cost_infos.0, 
                             date_start, 
                             date_end).await?;  
     

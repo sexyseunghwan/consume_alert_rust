@@ -226,7 +226,7 @@ pub async fn get_consume_type_graph(total_cost: f64, start_dt: NaiveDate, end_dt
     for consume_info in consume_list {
         
         let prodt_money = consume_info.prodt_money;
-        let prodt_type = (&consume_info.prodt_type).to_string();
+        let prodt_type = consume_info.prodt_type.to_string();
 
         type_scores.entry(prodt_type)
             .and_modify(|e| *e += prodt_money)
@@ -262,27 +262,25 @@ pub async fn get_consume_detail_graph_double(python_graph_line_info_cur: &mut To
     let python_graph_line_info_cur_len = python_graph_line_info_cur.get_consume_accumulate_list_len();
     let python_graph_line_info_pre_len = python_graph_line_info_pre.get_consume_accumulate_list_len();
 
-    if python_graph_line_info_cur_len > python_graph_line_info_pre_len {
-
-        let last_elem_pre = python_graph_line_info_pre.consume_accumulate_list.get(python_graph_line_info_pre_len - 1)
-            .ok_or_else(|| anyhow!("[Index Out Of Range Error] The {}th data of 'python_graph_line_info_pre.consume_accumulate_list' vector does not exist. - get_consume_detail_graph_double()", python_graph_line_info_pre_len - 1))?;
-        
-        python_graph_line_info_pre.add_to_consume_accumulate_list(*last_elem_pre);
-        
-    } else if python_graph_line_info_cur_len < python_graph_line_info_pre_len {
-
-        let last_elem_cur = python_graph_line_info_cur.consume_accumulate_list.get(python_graph_line_info_cur_len - 1)
-            .ok_or_else(|| anyhow!("[Index Out Of Range Error] The {}th data of 'python_graph_line_info_pre.consume_accumulate_list' vector does not exist. - get_consume_detail_graph_double()", python_graph_line_info_pre_len - 1))?;
-        
-
+    match python_graph_line_info_cur_len.cmp(&python_graph_line_info_pre_len) {
+        Ordering::Greater => {
+            let last_elem_pre = python_graph_line_info_pre.consume_accumulate_list.get(python_graph_line_info_pre_len - 1)
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The {}th data of 'python_graph_line_info_pre.consume_accumulate_list' vector does not exist. - get_consume_detail_graph_double()", python_graph_line_info_pre_len - 1))?;
+            
+            python_graph_line_info_pre.add_to_consume_accumulate_list(*last_elem_pre);
+        },
+        Ordering::Less => {
+            let last_elem_cur = python_graph_line_info_cur.consume_accumulate_list.get(python_graph_line_info_cur_len - 1)
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The {}th data of 'python_graph_line_info_cur.consume_accumulate_list' vector does not exist. - get_consume_detail_graph_double()", python_graph_line_info_cur_len - 1))?;
+            
             python_graph_line_info_cur.add_to_consume_accumulate_list(*last_elem_cur);
-
+        },
+        Ordering::Equal => {
+            
+        }
     }
 
-    let mut python_graph_line_vec: Vec<ToPythonGraphLine> = Vec::new();
-    python_graph_line_vec.push(python_graph_line_info_cur.clone());
-    python_graph_line_vec.push(python_graph_line_info_pre.clone());
-    
+    let python_graph_line_vec: Vec<ToPythonGraphLine> = vec![python_graph_line_info_cur.clone(), python_graph_line_info_pre.clone()];
     let path = call_python_matplot_consume_detail(&python_graph_line_vec).await?;
     
     Ok(path)
@@ -294,11 +292,9 @@ pub async fn get_consume_detail_graph_double(python_graph_line_info_cur: &mut To
 */
 pub async fn get_consume_detail_graph_single(python_graph_line_info: &ToPythonGraphLine) -> Result<String, anyhow::Error> {
 
-    let mut python_graph_line_vec: Vec<ToPythonGraphLine> = Vec::new();
-    python_graph_line_vec.push(python_graph_line_info.clone());
-
+    let python_graph_line_vec: Vec<ToPythonGraphLine> = vec![python_graph_line_info.clone()];
     let path = call_python_matplot_consume_detail(&python_graph_line_vec).await?;
-
+    
     Ok(path)
 }
 

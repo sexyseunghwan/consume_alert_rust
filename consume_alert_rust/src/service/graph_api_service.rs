@@ -32,7 +32,7 @@ pub async fn call_python_matplot_consume_type(consume_type_list: &Vec<ConsumeTyp
         let response_body = res.text().await?;
         Ok(response_body)
     } else {
-        return Err(anyhow!("[Error] in call_python_matplot() - call_python_matplot_consume_type()"));
+        Err(anyhow!("[Error] in call_python_matplot() - call_python_matplot_consume_type()"))
     }
     
 }
@@ -56,6 +56,6 @@ pub async fn call_python_matplot_consume_detail(comparison_info: &Vec<ToPythonGr
         let response_body = res.text().await?;
         Ok(response_body)
     } else {
-        return Err(anyhow!("[Error] in call_python_matplot() - call_python_matplot_consume_detail()"));
+        Err(anyhow!("[Error] in call_python_matplot() - call_python_matplot_consume_detail()"))
     } 
 }

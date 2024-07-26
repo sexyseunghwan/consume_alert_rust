@@ -35,7 +35,7 @@ where
 */
 async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str) -> Result<(), anyhow::Error> {
     
-    //if ! err_yn { info!("{:?}", msg) }
+    if ! err_yn { info!("{:?}", msg) }
     bot.send_message(chat_id, msg).await.context("[Error] Failed to send command response - tele_bot_send_msg()")?;
 
     Ok(())
@@ -98,7 +98,7 @@ async fn send_consumption_message<T>(
         if idx == 0 {
             send_text.push_str(&format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)));
         }
-        
+       
         for inner_idx in (cnt * idx)..end_idx {
             send_text.push_str("---------------------------------\n");
             send_text.push_str(&message_builder(&items[inner_idx]));

@@ -1,12 +1,12 @@
 
 use crate::common::*;
-use crate::dtos::dto::*;
+//use crate::dtos::dto::*;
 use crate::service::es_service::*;
-use crate::service::command_service::*;
-use crate::service::calculate_service::*;
-use crate::service::graph_api_service::*;
+//use crate::service::command_service::*;
+//use crate::service::calculate_service::*;
+//use crate::service::graph_api_service::*;
 
-use crate::utils_modules::time_utils::*;
+//use crate::utils_modules::time_utils::*;
 
 
 /*
@@ -19,7 +19,7 @@ pub async fn test_controller() {
     // Select compilation environment
     dotenv().ok();
     
-    let es_host: Vec<String> = env::var("ES_DB_URL").expect("'ES_DB_URL' must be set").split(",").map(|s| s.to_string()).collect();
+    let es_host: Vec<String> = env::var("ES_DB_URL").expect("'ES_DB_URL' must be set").split(',').map(|s| s.to_string()).collect();
     let es_id = env::var("ES_ID").expect("'ES_ID' must be set");
     let es_pw = env::var("ES_PW").expect("'ES_PW' must be set");
 
