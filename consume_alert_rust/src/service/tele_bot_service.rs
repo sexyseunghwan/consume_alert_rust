@@ -77,6 +77,7 @@ async fn send_consumption_message<T>(
     end_dt: NaiveDate, 
     message_builder: fn(&T) -> String
 ) -> Result<(), anyhow::Error> {
+    
     let total_cost_i32 = total_cost as i32;
     let cnt = 10;
     let items_len = items.len();

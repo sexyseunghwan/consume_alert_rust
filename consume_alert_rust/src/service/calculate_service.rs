@@ -231,7 +231,7 @@ pub async fn get_consume_type_graph(total_cost: f64, start_dt: NaiveDate, end_dt
         
         let prodt_money = consume_info.prodt_money;
         let prodt_type = consume_info.prodt_type.to_string();
-
+        
         type_scores.entry(prodt_type)
             .and_modify(|e| *e += prodt_money)
             .or_insert(prodt_money);
@@ -243,6 +243,9 @@ pub async fn get_consume_type_graph(total_cost: f64, start_dt: NaiveDate, end_dt
         
         let prodt_type = key.to_string();
         let prodt_cost = *value;
+
+        if prodt_cost == 0 { continue; }
+
         let prodt_per = (prodt_cost as f64 / total_cost) * 100.0; 
         let prodt_per_rounded = (prodt_per * 10.0).round() / 10.0; // Round to the second decimal place
 
@@ -265,7 +268,8 @@ pub async fn get_consume_detail_graph_double(python_graph_line_info_cur: &mut To
     
     let python_graph_line_info_cur_len = python_graph_line_info_cur.get_consume_accumulate_list_len();
     let python_graph_line_info_pre_len = python_graph_line_info_pre.get_consume_accumulate_list_len();
-
+    
+    // Sorting Algorithm
     match python_graph_line_info_cur_len.cmp(&python_graph_line_info_pre_len) {
         Ordering::Greater => {
             let last_elem_pre = python_graph_line_info_pre.consume_accumulate_list.get(python_graph_line_info_pre_len - 1)
@@ -279,11 +283,9 @@ pub async fn get_consume_detail_graph_double(python_graph_line_info_cur: &mut To
             
             python_graph_line_info_cur.add_to_consume_accumulate_list(*last_elem_cur);
         },
-        Ordering::Equal => {
-            
-        }
+        Ordering::Equal => { }
     }
-
+    
     let python_graph_line_vec: Vec<ToPythonGraphLine> = vec![python_graph_line_info_cur.clone(), python_graph_line_info_pre.clone()];
     let path = call_python_matplot_consume_detail(&python_graph_line_vec).await?;
     

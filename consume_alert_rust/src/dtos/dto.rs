@@ -96,19 +96,18 @@ impl ToPythonGraphLine {
         )
     }
 
-/*
+    /*
 
-*/
-pub fn add_to_consume_accumulate_list(&mut self, value: i32) {
-    self.consume_accumulate_list.push(value);
-}
+    */
+    pub fn add_to_consume_accumulate_list(&mut self, value: i32) {
+        self.consume_accumulate_list.push(value);
+    }
 
-/*
+    /*
 
-*/
-pub fn get_consume_accumulate_list_len(&self) -> usize {  
-    self.consume_accumulate_list.len()
-}
-
+    */
+    pub fn get_consume_accumulate_list_len(&self) -> usize {  
+        self.consume_accumulate_list.len()
+    }
 
 }

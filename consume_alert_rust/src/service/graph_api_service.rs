@@ -39,7 +39,6 @@ pub async fn call_python_matplot_consume_type(consume_type_list: &Vec<ConsumeTyp
 
 
 
-
 /*
     Function that calls python api to draw a line chart
 */

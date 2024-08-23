@@ -44,7 +44,7 @@ History     : 2023-05-04 Seunghwan Shin       # first create
               2024-05-30 Seunghwan Shin       # Developing a function to graph consumption trends.      
               2024-06-02 Seunghwan Shin       # Increase the size of the consumption graph. 
               2024-06-22 Seunghwan Shin       # Increase the size of the consumption graph. 
-              2024-07-24 Seunghwan Shin       # Increase the size of the consumption graph. 
+              2024-08-24 Seunghwan Shin       # Add code to exclude from aggregation if consumption by category is zero
 
 */ 
 mod common;
