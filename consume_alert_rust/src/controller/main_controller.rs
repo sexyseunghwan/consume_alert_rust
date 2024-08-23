@@ -30,7 +30,7 @@ pub async fn main_controller() {
     
     // Telegram Bot - Read bot information from the ".env" file.
     let bot = Bot::from_env();
-
+    
     // It wraps the Elasticsearch connection object with "Arc" for secure use in multiple threads.
     let arc_es_client: Arc<EsHelper> = Arc::new(es_client);
 

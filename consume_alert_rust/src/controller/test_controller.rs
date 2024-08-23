@@ -1,12 +1,12 @@
 
 use crate::common::*;
-//use crate::dtos::dto::*;
 use crate::service::es_service::*;
-//use crate::service::command_service::*;
-//use crate::service::calculate_service::*;
-//use crate::service::graph_api_service::*;
+use crate::dtos::dto::*;
+use crate::service::command_service::*;
+use crate::service::calculate_service::*;
+use crate::service::graph_api_service::*;
 
-//use crate::utils_modules::time_utils::*;
+use crate::utils_modules::time_utils::*;
 
 
 /*
@@ -36,20 +36,21 @@ pub async fn test_controller() {
 
     //get_recent_mealtime_data_from_elastic(&arc_es_client, "meal_check_index", "laststamp").await.unwrap();
     
-    
-    
-    // let start_dt = NaiveDate::from_ymd_opt(2024, 6, 1).unwrap();
-    // let end_dt = NaiveDate::from_ymd_opt(2024, 6, 15).unwrap();
-    // let pre_start_dt = NaiveDate::from_ymd_opt(2024, 5, 1).unwrap();
-    // let pre_end_dt = NaiveDate::from_ymd_opt(2024, 5, 15).unwrap();
+    let start_dt = NaiveDate::from_ymd_opt(2024, 6, 1).unwrap();
+    let end_dt = NaiveDate::from_ymd_opt(2024, 6, 15).unwrap();
+    let pre_start_dt = NaiveDate::from_ymd_opt(2024, 5, 1).unwrap();
+    let pre_end_dt = NaiveDate::from_ymd_opt(2024, 5, 15).unwrap();
 
-    // let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
-    // let (total_cost, consume_list) = total_cost_detail_specific_period(start_dt, end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
-    // let (total_cost_pre, consume_list_pre) = total_cost_detail_specific_period(pre_start_dt, pre_end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
+    let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(&arc_es_client, "consuming_index_prod_type").await.unwrap();
+    let (total_cost, consume_list) = total_cost_detail_specific_period(start_dt, end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
+    let (total_cost_pre, consume_list_pre) = total_cost_detail_specific_period(pre_start_dt, pre_end_dt, &arc_es_client, "consuming_index_prod_new", &consume_type_vec).await.unwrap();
     
-    // let python_graph_line_info_cur = ToPythonGraphLine::new("cur", &get_str_from_naivedate(start_dt), &get_str_from_naivedate(end_dt), total_cost, consume_list).unwrap();
-    // let python_graph_line_info_pre = ToPythonGraphLine::new("pre", &get_str_from_naivedate(pre_start_dt), &get_str_from_naivedate(pre_end_dt), total_cost_pre, consume_list_pre).unwrap();
+    let python_graph_line_info_cur = ToPythonGraphLine::new("cur", &get_str_from_naivedate(start_dt), &get_str_from_naivedate(end_dt), total_cost, consume_list).unwrap();
+    let python_graph_line_info_pre = ToPythonGraphLine::new("pre", &get_str_from_naivedate(pre_start_dt), &get_str_from_naivedate(pre_end_dt), total_cost_pre, consume_list_pre).unwrap();
     
+    println!("python_graph_line_info_cur = {:?}", python_graph_line_info_cur);
+    println!("python_graph_line_info_pre = {:?}", python_graph_line_info_pre);
+
     // get_consume_detail_graph_double(python_graph_line_info_cur, python_graph_line_info_pre).await.unwrap();
     
 

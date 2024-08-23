@@ -26,7 +26,7 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
           }
         }
     });
-
+    
     let res = es_client.cluster_search_query(query, index_name).await?;
     let mut keyword_type_vec: Vec<ProdtTypeInfo> = Vec::new();
 
@@ -38,7 +38,9 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
                 Some(k_type) => k_type,
                 None => continue
             };
-
+            
+            println!("k_type: {:?}", k_type);
+            
             let inner_query = json!({
                 "query": {
                     "term": {
@@ -73,6 +75,8 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
                 }
             }
             
+            println!("keyword_vec: {:?}", keyword_vec);
+
             let keyword_type_obj = ProdtTypeInfo::new(k_type.to_string(), keyword_vec);
             keyword_type_vec.push(keyword_type_obj);
         }

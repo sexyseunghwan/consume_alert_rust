@@ -21,7 +21,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
     let split_args_vec: Vec<String> = args.split(':').map(|s| s.to_string()).collect();
     let mut consume_name = "";
     let mut consume_cash = "";
-
+    
     if split_args_vec.len() != 2 {
         
         send_message_confirm(bot, 
@@ -31,7 +31,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
 
         return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
     } 
-
+    
     if let Some(cons_name) = split_args_vec.get(0) {
 
         if let Some(price) = split_args_vec.get(1) {

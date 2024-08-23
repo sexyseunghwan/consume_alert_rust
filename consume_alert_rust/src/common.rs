@@ -40,3 +40,6 @@ pub use teloxide::types::InputFile;
 pub use regex::Regex;
 
 pub use num_format::{Locale, ToFormattedString};
+
+//7404904428:AAGVs_oJ-ompIG20Bs6l6XmRhFUK-ieeX_g
+//https://api.telegram.org/7404904428/getUpdates
