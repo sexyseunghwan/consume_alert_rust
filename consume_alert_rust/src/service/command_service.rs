@@ -111,14 +111,14 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
         
     
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
-    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(cur_date_start, 
+    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(cur_date_start, 
                                                                                              cur_date_end, 
                                                                                              es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
     
     
-    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(one_mon_ago_date_start, 
+    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(one_mon_ago_date_start, 
                                                                                              one_mon_ago_date_end, es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
@@ -129,7 +129,9 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
                         &cur_mon_total_cost_infos.1, 
                         cur_mon_total_cost_infos.0, 
                         cur_date_start, 
-                        cur_date_end).await?;  
+                        cur_date_end,
+                        cur_mon_total_cost_infos.2
+                    ).await?;  
     
     // ( consumption type information, consumption type graph storage path )
     let comsume_type_infos = get_consume_type_graph(
@@ -165,8 +167,10 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
                             &comsume_type_infos.0, 
                             cur_mon_total_cost_infos.0, 
                             cur_date_start, 
-                            cur_date_end).await?;  
-    
+                            cur_date_end,
+                            cur_mon_total_cost_infos.2
+                        ).await?;  
+
     
     let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
     delete_file(delete_target_vec)?;
@@ -218,7 +222,7 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
     
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
     
-    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(date_start, 
+    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(date_start, 
                                                     date_end, 
                                                     es_client, 
                                                     "consuming_index_prod_new", 
@@ -230,7 +234,9 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
         &cur_mon_total_cost_infos.1, 
         cur_mon_total_cost_infos.0, 
         date_start, 
-        date_end).await?;  
+        date_end,
+        cur_mon_total_cost_infos.2
+    ).await?;  
     
     // ( consumption type information, consumption type graph storage path )
     let comsume_type_infos = get_consume_type_graph(
@@ -258,7 +264,9 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
         &comsume_type_infos.0, 
         cur_mon_total_cost_infos.0, 
         date_start, 
-        date_end).await?;  
+        date_end,
+        cur_mon_total_cost_infos.2
+    ).await?;  
     
     let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
     delete_file(delete_target_vec)?;
@@ -312,7 +320,7 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
     };
     
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
-    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(start_dt, 
+    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(start_dt, 
                                                     end_dt, 
                                                     es_client, 
                                                     "consuming_index_prod_new", 
@@ -323,7 +331,9 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
                         &cur_mon_total_cost_infos.1, 
                         cur_mon_total_cost_infos.0, 
                         start_dt, 
-                        end_dt).await?;  
+                        end_dt,
+                        cur_mon_total_cost_infos.2
+                    ).await?;  
     
     // ( consumption type information, consumption type graph storage path )
     let comsume_type_infos = get_consume_type_graph(
@@ -340,7 +350,9 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
                             &comsume_type_infos.0, 
                             cur_mon_total_cost_infos.0, 
                             start_dt, 
-                            end_dt).await?;  
+                            end_dt,
+                            cur_mon_total_cost_infos.2
+                        ).await?;  
     
     
     let delete_target_vec: Vec<String> = vec![consume_type_img];
@@ -414,14 +426,14 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
     };
     
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
-    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(cur_date_start, 
+    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(cur_date_start, 
                                                                                              cur_date_end, 
                                                                                              es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
     
     
-    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(one_mon_ago_date_start, 
+    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(one_mon_ago_date_start, 
                                                                                              one_mon_ago_date_end, es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
@@ -432,7 +444,9 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
                         &cur_mon_total_cost_infos.1, 
                         cur_mon_total_cost_infos.0, 
                         cur_date_start, 
-                        cur_date_end).await?;  
+                        cur_date_end,
+                        cur_mon_total_cost_infos.2
+                    ).await?;  
     
     // ( consumption type information, consumption type graph storage path )
     let comsume_type_infos = get_consume_type_graph(
@@ -468,7 +482,9 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
                             &comsume_type_infos.0, 
                             cur_mon_total_cost_infos.0, 
                             cur_date_start, 
-                            cur_date_end).await?;  
+                            cur_date_end,
+                        cur_mon_total_cost_infos.2
+                        ).await?;  
     
     
     let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
@@ -515,14 +531,14 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
 
     
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
-    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(date_start, 
+    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(date_start, 
                                                                                             date_end, 
                                                                                              es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
     
     
-    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(one_pre_week_start, 
+    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(one_pre_week_start, 
                                                                                             one_pre_week_end, 
                                                                                              es_client, 
                                                                                              "consuming_index_prod_new", 
@@ -534,7 +550,9 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
                         &cur_mon_total_cost_infos.1, 
                         cur_mon_total_cost_infos.0, 
                         date_start, 
-                        date_end).await?;  
+                        date_end,
+                        cur_mon_total_cost_infos.2
+                    ).await?;  
     
     // ( consumption type information, consumption type graph storage path )
     let comsume_type_infos = get_consume_type_graph(
@@ -570,7 +588,9 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
                             &comsume_type_infos.0, 
                             cur_mon_total_cost_infos.0, 
                             date_start, 
-                            date_end).await?;  
+                            date_end,
+                            cur_mon_total_cost_infos.2
+                        ).await?;  
     
     
     let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
@@ -797,14 +817,14 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
 
     
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
-    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(date_start, 
+    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(date_start, 
                                                                                             date_end, 
                                                                                              es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
     
     
-    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>) = total_cost_detail_specific_period(one_year_pre_date_start, 
+    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(one_year_pre_date_start, 
                                                                                             one_year_pre_date_end, 
                                                                                              es_client, 
                                                                                              "consuming_index_prod_new", 
@@ -843,7 +863,9 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
                             &comsume_type_infos.0, 
                             cur_mon_total_cost_infos.0, 
                             date_start, 
-                            date_end).await?;  
+                            date_end,
+                            cur_mon_total_cost_infos.2
+                        ).await?;  
     
     
     let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];

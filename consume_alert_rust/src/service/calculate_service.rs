@@ -39,7 +39,7 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
                 None => continue
             };
             
-            println!("k_type: {:?}", k_type);
+            //println!("k_type: {:?}", k_type);
             
             let inner_query = json!({
                 "query": {
@@ -75,7 +75,7 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
                 }
             }
             
-            println!("keyword_vec: {:?}", keyword_vec);
+            //println!("keyword_vec: {:?}", keyword_vec);
 
             let keyword_type_obj = ProdtTypeInfo::new(k_type.to_string(), keyword_vec);
             keyword_type_vec.push(keyword_type_obj);
@@ -90,7 +90,7 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
 /*
     Functions that show the details of total consumption and consumption over a specific period of time
 */
-pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, es_client: &Arc<EsHelper>, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<(f64, Vec<ConsumeInfo>), anyhow::Error> {
+pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, es_client: &Arc<EsHelper>, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<(f64, Vec<ConsumeInfo>, bool), anyhow::Error> {
     
     let query = json!({
         "size": 10000,
@@ -115,7 +115,8 @@ pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: 
     });
     
     let mut consume_info_list:Vec<ConsumeInfo> = Vec::new();
-    
+    let mut empty_flag = false;
+
     let es_cur_res = es_client.cluster_search_query(query, index_name).await?;
     let total_cost = match &es_cur_res["aggregations"]["total_prodt_money"]["value"].as_f64() {
         Some(total_cost) => *total_cost,
@@ -158,9 +159,18 @@ pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: 
                 consume_info_list.push(consume_info);
             }             
         }
-    } 
+    }
     
-    Ok((total_cost, consume_info_list))
+
+    if consume_info_list.len() == 0 {
+        let cur_time = get_str_from_naive_datetime(get_current_kor_naive_datetime());
+        let consume_info = ConsumeInfo::new(cur_time, String::from("empty"), 0, String::from("etc"));
+
+        consume_info_list.push(consume_info);
+        empty_flag = true;
+    }
+    
+    Ok((total_cost, consume_info_list, empty_flag))
 }
 
 

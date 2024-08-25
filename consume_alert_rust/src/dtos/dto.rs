@@ -71,7 +71,6 @@ impl ToPythonGraphLine {
                 .and_modify(|e| *e += prodt_money)
                 .or_insert(prodt_money);
         }
-    
         
         let mut sorted_dates: Vec<_> = date_consume.iter().collect();
         sorted_dates.sort_by(|a, b| a.0.cmp(b.0));
@@ -84,7 +83,7 @@ impl ToPythonGraphLine {
             accumulate_cost += cost;
             consume_accumulate_list.push(accumulate_cost);
         }
-
+        
         Ok(
             ToPythonGraphLine {
                 line_type: line_type.to_string(),
