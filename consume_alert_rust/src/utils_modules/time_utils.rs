@@ -18,7 +18,7 @@ pub fn get_str_from_naive_datetime(naive_datetime: NaiveDateTime) -> String {
 
 
 /*
-
+    Function to change 'string' data format to 'NaiveDateTime' format
 */
 pub fn get_naive_datetime_from_str(date: &str, format: &str) -> Result<NaiveDateTime, anyhow::Error> {
     
@@ -27,7 +27,7 @@ pub fn get_naive_datetime_from_str(date: &str, format: &str) -> Result<NaiveDate
 }
 
 /*
-
+    Function to change 'string' data format to 'NaiveDate' format
 */
 pub fn get_naive_date_from_str(date: &str, format: &str) -> Result<NaiveDate, anyhow::Error> {
     
