@@ -319,13 +319,14 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
         }
     };
     
-    let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
+    let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?; 
+
     let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(start_dt, 
                                                     end_dt, 
                                                     es_client, 
                                                     "consuming_index_prod_new", 
                                                     &consume_type_vec).await?;
-    
+
     send_message_consume_split(bot, 
                         message.chat.id, 
                         &cur_mon_total_cost_infos.1, 
@@ -334,31 +335,34 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
                         end_dt,
                         cur_mon_total_cost_infos.2
                     ).await?;  
-    
-    // ( consumption type information, consumption type graph storage path )
-    let comsume_type_infos = get_consume_type_graph(
-                                                                cur_mon_total_cost_infos.0, 
-                                                                start_dt, 
-                                                                end_dt, 
-                                                                &cur_mon_total_cost_infos.1).await?;
-    let consume_type_img = comsume_type_infos.1;
 
-    send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
+
+    if cur_mon_total_cost_infos.0 > 0.0 {
+        // ( consumption type information, consumption type graph storage path )
+        let comsume_type_infos = get_consume_type_graph(
+            cur_mon_total_cost_infos.0, 
+            start_dt, 
+            end_dt, 
+            &cur_mon_total_cost_infos.1).await?;
         
-    send_message_consume_type(bot, 
-                            message.chat.id, 
-                            &comsume_type_infos.0, 
-                            cur_mon_total_cost_infos.0, 
-                            start_dt, 
-                            end_dt,
-                            cur_mon_total_cost_infos.2
-                        ).await?;  
-    
-    
-    let delete_target_vec: Vec<String> = vec![consume_type_img];
-    delete_file(delete_target_vec)?;
-    
-    
+        let consume_type_img = comsume_type_infos.1;
+
+        send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
+
+        send_message_consume_type(bot, 
+            message.chat.id, 
+            &comsume_type_infos.0, 
+            cur_mon_total_cost_infos.0, 
+            start_dt, 
+            end_dt,
+            cur_mon_total_cost_infos.2
+        ).await?;  
+
+
+        let delete_target_vec: Vec<String> = vec![consume_type_img];
+        delete_file(delete_target_vec)?;
+    }
+
     Ok(())
 }
 

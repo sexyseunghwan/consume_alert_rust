@@ -45,7 +45,7 @@ History     : 2023-05-04 Seunghwan Shin       # first create
               2024-06-02 Seunghwan Shin       # Increase the size of the consumption graph. 
               2024-06-22 Seunghwan Shin       # Increase the size of the consumption graph. 
               2024-08-24 Seunghwan Shin       # Add code to exclude from aggregation if consumption by category is zero
-              2024-08-25 Seunghwan Shin       # 
+              2024-09-01 Seunghwan Shin       # If there is no consumption details during the entered period, do not show consumption-related graphs
 
 */ 
 mod common;

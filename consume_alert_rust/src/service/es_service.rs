@@ -59,7 +59,6 @@ impl EsHelper {
         Err(anyhow!("All Elasticsearch connections failed"))
     }
 
-
     /*
         Functions that handle queries at the Elasticsearch Cluster LEVEL - INDEXING
     */
@@ -111,23 +110,22 @@ impl EsObj {
     */
     pub async fn node_search_query(&self, es_query: &Value, index_name: &str) -> Result<Value, anyhow::Error> {
 
-        //info!("{} host executed the query.",self.es_host);
-        
         // Response Of ES-Query
         let response = self.es_pool
             .search(SearchParts::Index(&[index_name]))
             .body(es_query)
             .send()
             .await?;
-    
+
         if response.status_code().is_success() { 
             let response_body = response.json::<Value>().await?;
             Ok(response_body)
         } else {
+            let error_body = response.text().await?;
+            println!("{:?}", error_body);
             Err(anyhow!("response status is failed"))
         }
     }
-
 
     /*
         Function that EXECUTES elasticsearch queries - indexing
@@ -146,7 +144,6 @@ impl EsObj {
             let error_message = format!("Failed to index document: Status Code: {}", response.status_code());
             Err(anyhow!(error_message))
         }
-
     }
     
     
