@@ -39,8 +39,6 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
                 None => continue
             };
             
-            //println!("k_type: {:?}", k_type);
-            
             let inner_query = json!({
                 "query": {
                     "term": {

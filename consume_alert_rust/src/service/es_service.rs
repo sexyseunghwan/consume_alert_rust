@@ -122,7 +122,6 @@ impl EsObj {
             Ok(response_body)
         } else {
             let error_body = response.text().await?;
-            println!("{:?}", error_body);
             Err(anyhow!("response status is failed"))
         }
     }
