@@ -92,42 +92,31 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
 */
 pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, es_client: &Arc<EsHelper>, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<(f64, Vec<ConsumeInfo>, bool), anyhow::Error> {
     
-    // let query = json!({
-    //     "size": 10000,
-    //     "query": {
-    //         "range": {
-    //             "@timestamp": {
-    //                 "gte": get_str_from_naivedate(start_date),
-    //                 "lte": get_str_from_naivedate(end_date)
-    //             }
-    //         }
-    //     },
-    //     "aggs": {
-    //         "total_prodt_money": {
-    //             "sum": {
-    //                 "field": "prodt_money"
-    //             }
-    //         }
-    //     },
-    //     "sort": {
-    //         "@timestamp": { "order": "asc" }
-    //     }
-    // });
-    
     let query = json!({
-        "id": "consume_range_query",
-        "params": {
-            "size": 10000,
-            "start_date": get_str_from_naivedate(start_date),
-            "end_date": get_str_from_naivedate(end_date)
+        "size": 10000,
+        "query": {
+            "range": {
+                "@timestamp": {
+                    "gte": get_str_from_naivedate(start_date),
+                    "lte": get_str_from_naivedate(end_date)
+                }
+            }
+        },
+        "aggs": {
+            "total_prodt_money": {
+                "sum": {
+                    "field": "prodt_money"
+                }
+            }
+        },
+        "sort": {
+            "@timestamp": { "order": "asc" }
         }
     });
-
+    
     let mut consume_info_list:Vec<ConsumeInfo> = Vec::new();
     let mut empty_flag = false;
-
-    println!("??");
-
+    
     let es_cur_res = es_client.cluster_search_query(query, index_name).await?;
 
     println!("es_cur_res: {:?}", es_cur_res);

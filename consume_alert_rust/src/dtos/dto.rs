@@ -3,8 +3,8 @@ use crate::common::*;
 #[derive(Debug, Getters, Serialize, Deserialize, Clone, new)]
 #[getset(get = "pub")]
 pub struct ConsumeInfo {
-    pub timestamp: String,
-    pub prodt_name: String,
+    pub timestamp: String, /* timestamp */
+    pub prodt_name: String, /*  */
     pub prodt_money: i32,
     pub prodt_type: String
 }
@@ -72,11 +72,11 @@ impl ToPythonGraphLine {
                 .or_insert(prodt_money);
         }
         
-        let mut sorted_dates: Vec<_> = date_consume.iter().collect();
+        let mut sorted_dates: Vec<_> = date_consume.iter().collect(); /* HashMap -> Vector */ 
         sorted_dates.sort_by(|a, b| a.0.cmp(b.0));
         
         let sorted_dates_list: Vec<i32> = sorted_dates.into_iter().map(|(_, v)| *v).collect();
-        let mut consume_accumulate_list = Vec::new();
+        let mut consume_accumulate_list = Vec::new(); /* cumulative consumption vector */
         let mut accumulate_cost = 0;
 
         for cost in sorted_dates_list {
@@ -94,16 +94,16 @@ impl ToPythonGraphLine {
             }
         )
     }
-
+    
     /*
-
+        Function that adds an amount to the 'Cumulative Consumption Vector'
     */
     pub fn add_to_consume_accumulate_list(&mut self, value: i32) {
         self.consume_accumulate_list.push(value);
     }
 
     /*
-
+        Function that returns the size of the 'Cumulative Consumption Vector'  
     */
     pub fn get_consume_accumulate_list_len(&self) -> usize {  
         self.consume_accumulate_list.len()
