@@ -42,6 +42,17 @@ pub struct ToPythonGraphCircle {
 }
 
 
+#[derive(Debug, Getters, new)]
+#[getset(get = "pub")]
+pub struct TotalCostInfo {
+    pub total_cost: f64,
+    pub consume_list: Vec<ConsumeInfo>,
+    pub empty_flag: bool,
+    pub start_dt: NaiveDate,
+    pub end_dt: NaiveDate
+}
+
+
 #[derive(Debug, Getters, Serialize, Deserialize, Clone)]
 #[getset(get = "pub")]
 pub struct ToPythonGraphLine {
@@ -51,7 +62,6 @@ pub struct ToPythonGraphLine {
     total_cost: f64,
     pub consume_accumulate_list: Vec<i32>
 }
-
 
 impl ToPythonGraphLine {
     

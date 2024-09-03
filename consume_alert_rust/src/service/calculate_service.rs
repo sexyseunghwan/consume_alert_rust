@@ -73,8 +73,6 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
                 }
             }
             
-            //println!("keyword_vec: {:?}", keyword_vec);
-
             let keyword_type_obj = ProdtTypeInfo::new(k_type.to_string(), keyword_vec);
             keyword_type_vec.push(keyword_type_obj);
         }
@@ -88,7 +86,7 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
 /*
     Functions that show the details of total consumption and consumption over a specific period of time
 */
-pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, es_client: &Arc<EsHelper>, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<(f64, Vec<ConsumeInfo>, bool), anyhow::Error> {
+pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, es_client: &Arc<EsHelper>, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<TotalCostInfo, anyhow::Error> {
     
     let query = json!({
         "size": 10000,
@@ -116,8 +114,6 @@ pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: 
     let mut empty_flag = false;
     
     let es_cur_res = es_client.cluster_search_query(query, index_name).await?;
-
-    println!("es_cur_res: {:?}", es_cur_res);
 
     let total_cost = match &es_cur_res["aggregations"]["total_prodt_money"]["value"].as_f64() {
         Some(total_cost) => *total_cost,
@@ -171,7 +167,9 @@ pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: 
         empty_flag = true;
     }
     
-    Ok((total_cost, consume_info_list, empty_flag))
+    let total_cost_info = TotalCostInfo::new(total_cost, consume_info_list, empty_flag, start_date, end_date);
+
+    Ok(total_cost_info)
 }
 
 

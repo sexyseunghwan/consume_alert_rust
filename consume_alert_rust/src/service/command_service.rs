@@ -12,14 +12,119 @@ use crate::dtos::dto::*;
 
 
 /*
-
+    Common Command Function Without Comparison
 */
-async fn command_common(cur_total_cost_infos: (f64, Vec<ConsumeInfo>, bool), pre_total_cost_infos: (f64, Vec<ConsumeInfo>, bool)) -> Result<(), anyhow::Error> {
+async fn command_common_single(bot: &Bot, message: &Message, cur_total_cost_infos: TotalCostInfo) -> Result<(), anyhow::Error> {
     
-    
+    let cur_total_cost = cur_total_cost_infos.total_cost;
+    let cur_consume_list = cur_total_cost_infos.consume_list();
+    let cur_empty_flag = cur_total_cost_infos.empty_flag;
+    let cur_start_dt = cur_total_cost_infos.start_dt;
+    let cur_end_dt = cur_total_cost_infos.end_dt;    
+
+    // Hand over the consumption details to Telegram bot.
+    send_message_consume_split(bot, 
+        message.chat.id, 
+        cur_consume_list, 
+        cur_total_cost, 
+        cur_start_dt, 
+        cur_end_dt,
+        cur_empty_flag
+    ).await?; 
+
+    if cur_total_cost > 0.0 { 
+
+        // ( consumption type information, consumption type graph storage path )
+        let comsume_type_infos = get_consume_type_graph(cur_total_cost, cur_start_dt, cur_end_dt, cur_consume_list).await?;
+        let consume_type_list = &comsume_type_infos.0;
+        let consume_type_img = comsume_type_infos.1;
+
+        send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
+
+        send_message_consume_type(bot, 
+            message.chat.id, 
+            consume_type_list, 
+            cur_total_cost, 
+            cur_start_dt, 
+            cur_end_dt,
+            cur_empty_flag).await?; 
+
+        let delete_target_vec: Vec<String> = vec![consume_type_img];
+        delete_file(delete_target_vec)?;
+    }
 
     Ok(())
 }
+
+
+/*
+    Common command function with comparison group
+*/
+async fn command_common_double(bot: &Bot, message: &Message, cur_total_cost_infos: TotalCostInfo, pre_total_cost_infos: TotalCostInfo) -> Result<(), anyhow::Error> {
+    
+
+    let cur_total_cost = cur_total_cost_infos.total_cost;
+    let cur_consume_list = cur_total_cost_infos.consume_list();
+    let cur_empty_flag = cur_total_cost_infos.empty_flag;
+    let cur_start_dt = cur_total_cost_infos.start_dt;
+    let cur_end_dt = cur_total_cost_infos.end_dt;
+    
+    let pre_total_cost = pre_total_cost_infos.total_cost;
+    let pre_consume_list = pre_total_cost_infos.consume_list();
+    let pre_start_dt = cur_total_cost_infos.start_dt;
+    let pre_end_dt = cur_total_cost_infos.end_dt;
+    
+
+    // Hand over the consumption details to Telegram bot.
+    send_message_consume_split(bot, 
+        message.chat.id, 
+        cur_consume_list, 
+        cur_total_cost, 
+        cur_start_dt, 
+        cur_end_dt,
+        cur_empty_flag
+    ).await?;  
+    
+    
+    // ( consumption type information, consumption type graph storage path )
+    let comsume_type_infos = get_consume_type_graph(cur_total_cost, cur_start_dt, cur_end_dt, cur_consume_list).await?;
+    let consume_type_list = &comsume_type_infos.0;
+    let consume_type_img = comsume_type_infos.1;
+
+    let mut python_graph_line_info_cur = ToPythonGraphLine::new(
+        "cur", 
+        get_str_from_naivedate(cur_start_dt).as_str(), 
+        get_str_from_naivedate(cur_end_dt).as_str(), 
+        cur_total_cost, 
+        cur_consume_list.clone())?;
+    
+    let mut python_graph_line_info_pre = ToPythonGraphLine::new(
+    "pre", 
+    get_str_from_naivedate(pre_start_dt).as_str(), 
+    get_str_from_naivedate(pre_end_dt).as_str(), 
+    pre_total_cost, 
+    pre_consume_list.clone())?;
+    
+    let graph_path = get_consume_detail_graph_double(&mut python_graph_line_info_cur, &mut python_graph_line_info_pre).await?;
+
+
+    send_photo_confirm(bot, message.chat.id, &graph_path).await?;
+    send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
+
+    send_message_consume_type(bot, 
+                        message.chat.id, 
+                        consume_type_list, 
+                        cur_total_cost, 
+                        cur_start_dt, 
+                        cur_end_dt,
+                        cur_empty_flag).await?;  
+    
+    let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
+    delete_file(delete_target_vec)?;
+
+    Ok(())
+}
+
 
 
 /*
@@ -120,72 +225,19 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
     };
     
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
-    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(cur_date_start, 
+    let cur_mon_total_cost_infos = total_cost_detail_specific_period(cur_date_start, 
                                                                                              cur_date_end, 
                                                                                              es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
     
     
-    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(one_mon_ago_date_start, 
+    let pre_mon_total_cost_infos = total_cost_detail_specific_period(one_mon_ago_date_start, 
                                                                                              one_mon_ago_date_end, es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
-    
-    // Hand over the consumption details to Telegram bot.
-    send_message_consume_split(bot, 
-                        message.chat.id, 
-                        &cur_mon_total_cost_infos.1, 
-                        cur_mon_total_cost_infos.0, 
-                        cur_date_start, 
-                        cur_date_end,
-                        cur_mon_total_cost_infos.2
-                    ).await?;  
-    
-    if cur_mon_total_cost_infos.0 > 0.0 {
-        
-        // ( consumption type information, consumption type graph storage path )
-        let comsume_type_infos = get_consume_type_graph(
-            cur_mon_total_cost_infos.0, 
-            cur_date_start, 
-            cur_date_end, 
-            &cur_mon_total_cost_infos.1).await?;
 
-        let consume_type_img = comsume_type_infos.1;
-
-        let mut python_graph_line_info_cur = ToPythonGraphLine::new(
-                "cur", 
-                get_str_from_naivedate(cur_date_start).as_str(), 
-                get_str_from_naivedate(cur_date_end).as_str(), 
-                cur_mon_total_cost_infos.0, 
-                cur_mon_total_cost_infos.1)?;
-
-
-        let mut python_graph_line_info_pre = ToPythonGraphLine::new(
-            "pre", 
-            get_str_from_naivedate(one_mon_ago_date_start).as_str(), 
-            get_str_from_naivedate(one_mon_ago_date_end).as_str(), 
-            pre_mon_total_cost_infos.0, 
-            pre_mon_total_cost_infos.1)?;
-
-        let graph_path = get_consume_detail_graph_double(&mut python_graph_line_info_cur, &mut python_graph_line_info_pre).await?;
-
-
-        send_photo_confirm(bot, message.chat.id, &graph_path).await?;
-        send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
-
-        send_message_consume_type(bot, 
-        message.chat.id, 
-        &comsume_type_infos.0, 
-        cur_mon_total_cost_infos.0, 
-        cur_date_start, 
-        cur_date_end,
-        cur_mon_total_cost_infos.2
-        ).await?;  
-        
-        let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
-        delete_file(delete_target_vec)?;
-    }
+    command_common_double(bot, message, cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
 
     Ok(())
 
@@ -237,67 +289,19 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
     
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
         
-    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(date_start, 
+    let cur_mon_total_cost_infos = total_cost_detail_specific_period(date_start, 
                                                                                                     date_end, 
                                                                                                     es_client, 
                                                                                                     "consuming_index_prod_new", 
                                                                                                     &consume_type_vec).await?;
     
-    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(pre_date_start, 
+    let pre_mon_total_cost_infos = total_cost_detail_specific_period(pre_date_start, 
                                                                                                     pre_date_end, 
                                                                                                     es_client, 
                                                                                                     "consuming_index_prod_new", 
                                                                                                     &consume_type_vec).await?;
-    // Hand over the consumption details to Telegram bot.
-    send_message_consume_split(bot, 
-        message.chat.id, 
-        &cur_mon_total_cost_infos.1, 
-        cur_mon_total_cost_infos.0, 
-        date_start, 
-        date_end,
-        cur_mon_total_cost_infos.2
-    ).await?;  
-    
-    // ( consumption type information, consumption type graph storage path )
-    let comsume_type_infos = get_consume_type_graph(
-        cur_mon_total_cost_infos.0, 
-        date_start, 
-        date_end, 
-        &cur_mon_total_cost_infos.1).await?;
-
-    let consume_type_img = comsume_type_infos.1;
-
-    let mut python_graph_line_info_cur = ToPythonGraphLine::new(
-        "cur", 
-        get_str_from_naivedate(date_start).as_str(), 
-        get_str_from_naivedate(date_end).as_str(), 
-        cur_mon_total_cost_infos.0, 
-        cur_mon_total_cost_infos.1)?;
-
-    let mut python_graph_line_info_pre = ToPythonGraphLine::new(
-        "pre", 
-        get_str_from_naivedate(pre_date_start).as_str(), 
-        get_str_from_naivedate(pre_date_end).as_str(), 
-        pre_mon_total_cost_infos.0, 
-        pre_mon_total_cost_infos.1)?;
-    
-    let graph_path = get_consume_detail_graph_double(&mut python_graph_line_info_cur, &mut python_graph_line_info_pre).await?;
-
-    send_photo_confirm(bot, message.chat.id, &graph_path).await?;
-    send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
-
-    send_message_consume_type(bot, 
-        message.chat.id, 
-        &comsume_type_infos.0, 
-        cur_mon_total_cost_infos.0, 
-        date_start, 
-        date_end,
-        cur_mon_total_cost_infos.2
-    ).await?;  
-
-    let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
-    delete_file(delete_target_vec)?;
-    
+                                                                                                    
+    command_common_double(bot, message, cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;    
     
     Ok(())
 
@@ -349,47 +353,13 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
     
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?; 
 
-    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(start_dt, 
+    let cur_mon_total_cost_infos = total_cost_detail_specific_period(start_dt, 
                                                     end_dt, 
                                                     es_client, 
                                                     "consuming_index_prod_new", 
                                                     &consume_type_vec).await?;
-
-    send_message_consume_split(bot, 
-                        message.chat.id, 
-                        &cur_mon_total_cost_infos.1, 
-                        cur_mon_total_cost_infos.0, 
-                        start_dt, 
-                        end_dt,
-                        cur_mon_total_cost_infos.2
-                    ).await?;  
-
-
-    if cur_mon_total_cost_infos.0 > 0.0 {
-        // ( consumption type information, consumption type graph storage path )
-        let comsume_type_infos = get_consume_type_graph(
-            cur_mon_total_cost_infos.0, 
-            start_dt, 
-            end_dt, 
-            &cur_mon_total_cost_infos.1).await?;
-        
-        let consume_type_img = comsume_type_infos.1;
-
-        send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
-
-        send_message_consume_type(bot, 
-            message.chat.id, 
-            &comsume_type_infos.0, 
-            cur_mon_total_cost_infos.0, 
-            start_dt, 
-            end_dt,
-            cur_mon_total_cost_infos.2
-        ).await?;  
-
-
-        let delete_target_vec: Vec<String> = vec![consume_type_img];
-        delete_file(delete_target_vec)?;
-    }
+    
+    command_common_single(bot, message, cur_mon_total_cost_infos).await?;
 
     Ok(())
 }
@@ -458,69 +428,19 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
     };
     
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
-    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(cur_date_start, 
+    let cur_mon_total_cost_infos = total_cost_detail_specific_period(cur_date_start, 
                                                                                              cur_date_end, 
                                                                                              es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
     
     
-    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(one_mon_ago_date_start, 
+    let pre_mon_total_cost_infos = total_cost_detail_specific_period(one_mon_ago_date_start, 
                                                                                              one_mon_ago_date_end, es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
     
-    // Hand over the consumption details to Telegram bot.
-    send_message_consume_split(bot, 
-                        message.chat.id, 
-                        &cur_mon_total_cost_infos.1, 
-                        cur_mon_total_cost_infos.0, 
-                        cur_date_start, 
-                        cur_date_end,
-                        cur_mon_total_cost_infos.2
-                    ).await?;  
-    
-    // ( consumption type information, consumption type graph storage path )
-    let comsume_type_infos = get_consume_type_graph(
-                                                                cur_mon_total_cost_infos.0, 
-                                                                cur_date_start, 
-                                                                cur_date_end, 
-                                                                &cur_mon_total_cost_infos.1).await?;
-    let consume_type_img = comsume_type_infos.1;
-    
-    let mut python_graph_line_info_cur = ToPythonGraphLine::new(
-                                                                "cur", 
-                                                                get_str_from_naivedate(cur_date_start).as_str(), 
-                                                                get_str_from_naivedate(cur_date_end).as_str(), 
-                                                                cur_mon_total_cost_infos.0, 
-                                                                cur_mon_total_cost_infos.1)?;
-
-
-    let mut python_graph_line_info_pre = ToPythonGraphLine::new(
-                                                            "pre", 
-                                                            get_str_from_naivedate(one_mon_ago_date_start).as_str(), 
-                                                            get_str_from_naivedate(one_mon_ago_date_end).as_str(), 
-                                                            pre_mon_total_cost_infos.0, 
-                                                            pre_mon_total_cost_infos.1)?;
-    
-    let graph_path = get_consume_detail_graph_double(&mut python_graph_line_info_cur, &mut python_graph_line_info_pre).await?;
-    
-
-    send_photo_confirm(bot, message.chat.id, &graph_path).await?;
-    send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
-    
-    send_message_consume_type(bot, 
-                            message.chat.id, 
-                            &comsume_type_infos.0, 
-                            cur_mon_total_cost_infos.0, 
-                            cur_date_start, 
-                            cur_date_end,
-                        cur_mon_total_cost_infos.2
-                        ).await?;  
-    
-    
-    let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
-    delete_file(delete_target_vec)?;
+    command_common_double(bot, message, cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;  
     
     Ok(())
 }
@@ -562,71 +482,20 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
 
     
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
-    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(date_start, 
+    let cur_mon_total_cost_infos = total_cost_detail_specific_period(date_start, 
                                                                                             date_end, 
                                                                                              es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
     
     
-    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(one_pre_week_start, 
+    let pre_mon_total_cost_infos = total_cost_detail_specific_period(one_pre_week_start, 
                                                                                             one_pre_week_end, 
                                                                                              es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
     
-    // Hand over the consumption details to Telegram bot.
-    send_message_consume_split(bot, 
-                        message.chat.id, 
-                        &cur_mon_total_cost_infos.1, 
-                        cur_mon_total_cost_infos.0, 
-                        date_start, 
-                        date_end,
-                        cur_mon_total_cost_infos.2
-                    ).await?;  
-    
-    // ( consumption type information, consumption type graph storage path )
-    let comsume_type_infos = get_consume_type_graph(
-                                                                cur_mon_total_cost_infos.0, 
-                                                                date_start, 
-                                                                date_end, 
-                                                                &cur_mon_total_cost_infos.1).await?;
-    let consume_type_img = comsume_type_infos.1;
-    
-    let mut python_graph_line_info_cur = ToPythonGraphLine::new(
-                                                                "cur", 
-                                                                get_str_from_naivedate(date_start).as_str(), 
-                                                                get_str_from_naivedate(date_end).as_str(), 
-                                                                cur_mon_total_cost_infos.0, 
-                                                                cur_mon_total_cost_infos.1)?;
-
-
-    let mut python_graph_line_info_pre = ToPythonGraphLine::new(
-                                                            "pre", 
-                                                            get_str_from_naivedate(one_pre_week_start).as_str(), 
-                                                            get_str_from_naivedate(one_pre_week_end).as_str(), 
-                                                            pre_mon_total_cost_infos.0, 
-                                                            pre_mon_total_cost_infos.1)?;
-    
-    let graph_path = get_consume_detail_graph_double(&mut python_graph_line_info_cur, &mut python_graph_line_info_pre).await?;
-    
-
-    send_photo_confirm(bot, message.chat.id, &graph_path).await?;
-    send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
-    
-    send_message_consume_type(bot, 
-                            message.chat.id, 
-                            &comsume_type_infos.0, 
-                            cur_mon_total_cost_infos.0, 
-                            date_start, 
-                            date_end,
-                            cur_mon_total_cost_infos.2
-                        ).await?;  
-    
-    
-    let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
-    delete_file(delete_target_vec)?;
-
+    command_common_double(bot, message, cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;  
     
     Ok(())
 }
@@ -848,59 +717,20 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
 
     
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
-    let cur_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(date_start, 
+    let cur_mon_total_cost_infos = total_cost_detail_specific_period(date_start, 
                                                                                             date_end, 
                                                                                              es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
     
     
-    let pre_mon_total_cost_infos: (f64, Vec<ConsumeInfo>, bool) = total_cost_detail_specific_period(one_year_pre_date_start, 
+    let pre_mon_total_cost_infos = total_cost_detail_specific_period(one_year_pre_date_start, 
                                                                                             one_year_pre_date_end, 
                                                                                              es_client, 
                                                                                              "consuming_index_prod_new", 
                                                                                              &consume_type_vec).await?;
     
-    // ( consumption type information, consumption type graph storage path )
-    let comsume_type_infos = get_consume_type_graph(
-                                                                cur_mon_total_cost_infos.0, 
-                                                                date_start, 
-                                                                date_end, 
-                                                                &cur_mon_total_cost_infos.1).await?;
-    let consume_type_img = comsume_type_infos.1;
-    
-    let mut python_graph_line_info_cur = ToPythonGraphLine::new(
-                                                                "cur", 
-                                                                get_str_from_naivedate(date_start).as_str(), 
-                                                                get_str_from_naivedate(date_end).as_str(), 
-                                                                cur_mon_total_cost_infos.0, 
-                                                                cur_mon_total_cost_infos.1)?;
-    
-    let mut python_graph_line_info_pre = ToPythonGraphLine::new(
-                                                            "pre", 
-                                                            get_str_from_naivedate(one_year_pre_date_start).as_str(), 
-                                                            get_str_from_naivedate(one_year_pre_date_end).as_str(), 
-                                                            pre_mon_total_cost_infos.0, 
-                                                            pre_mon_total_cost_infos.1)?;
-    
-    let graph_path = get_consume_detail_graph_double(&mut python_graph_line_info_cur, &mut python_graph_line_info_pre).await?;
-    
-
-    send_photo_confirm(bot, message.chat.id, &graph_path).await?;
-    send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
-    
-    send_message_consume_type(bot, 
-                            message.chat.id, 
-                            &comsume_type_infos.0, 
-                            cur_mon_total_cost_infos.0, 
-                            date_start, 
-                            date_end,
-                            cur_mon_total_cost_infos.2
-                        ).await?;  
-    
-    
-    let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
-    delete_file(delete_target_vec)?;
+    command_common_double(bot, message, cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;  
     
     Ok(())
 }
