@@ -133,6 +133,7 @@ async fn command_common_double(bot: &Bot, message: &Message, cur_total_cost_info
 pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
     let args = &text[3..];
+        
     let split_args_vec: Vec<String> = args.split(':').map(|s| s.to_string()).collect();
     let mut consume_name = "";
     let mut consume_cash = "";
@@ -150,7 +151,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
     if let Some(cons_name) = split_args_vec.get(0) {
 
         if let Some(price) = split_args_vec.get(1) {
-            
+
             if !is_numeric(price) {
                 send_message_confirm(bot, message.chat.id, true, "The second parameter must be numeric. \nEX) /c snack:15000").await?;
                 return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
@@ -731,6 +732,67 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
                                                                                              &consume_type_vec).await?;
     
     command_common_double(bot, message, cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;  
+    
+    Ok(())
+}
+
+
+/*
+    command handler: Writes the expenditure details to the index in ElasticSearch. -> /a
+*/
+pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+
+    let args = &text[3..];
+        
+    let split_args_vec: Vec<String> = args.split(':').map(|s| s.to_string()).collect();
+    
+    
+
+    // let mut consume_name = "";
+    // let mut consume_cash = "";
+    
+    // if split_args_vec.len() != 2 {
+        
+    //     send_message_confirm(bot, 
+    //                         message.chat.id, 
+    //                         true, 
+    //                         "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000").await?;
+
+    //     return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
+    // } 
+    
+    // if let Some(cons_name) = split_args_vec.get(0) {
+
+    //     if let Some(price) = split_args_vec.get(1) {
+
+    //         if !is_numeric(price) {
+    //             send_message_confirm(bot, message.chat.id, true, "The second parameter must be numeric. \nEX) /c snack:15000").await?;
+    //             return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
+    //         }
+
+    //         consume_name = cons_name;
+    //         consume_cash = price;
+    //     }        
+
+    // } else {
+        
+    //     send_message_confirm(bot, 
+    //                     message.chat.id, 
+    //                     true, 
+    //                     "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000").await?;
+
+    //     return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
+    // }
+    
+    // let curr_time = get_current_kor_naive_datetime();
+    
+    // let document = json!({
+    //     "@timestamp": get_str_from_naive_datetime(curr_time),
+    //     "prodt_name": consume_name,
+    //     "prodt_money": convert_numeric(consume_cash)
+    // });
+    
+    // es_client.cluster_post_query(document, "consuming_index_prod_new").await?;
     
     Ok(())
 }
