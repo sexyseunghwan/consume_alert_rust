@@ -743,11 +743,140 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
 pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
     let args = &text[3..];
-        
-    let split_args_vec: Vec<String> = args.split(':').map(|s| s.to_string()).collect();
-    
-    
 
+    let re = Regex::new(r"\[.*?\]\n?").unwrap();
+    let replcae_string = re.replace_all(&args, "").to_string();
+
+    let split_args_vec: Vec<String> = replcae_string.split('\n').map(|s| s.to_string()).collect();
+    
+    let card_comp = split_args_vec
+        .get(0)
+        .ok_or_else(|| anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter - command_consumption_auto() // {:?}", split_args_vec))?;
+    
+    if card_comp.contains("NH") {
+        
+        let consume_price_vec: Vec<String> = split_args_vec
+            .get(2)
+            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. - command_consumption_auto() // {:?}", 2, split_args_vec))?
+            .replace(",", "")
+            .replace("원", "")
+            .split(" ")
+            .map(|s| s.to_string())
+            .collect(); 
+        
+        let consume_price = consume_price_vec
+            .get(0)
+            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. - command_consumption_auto()", 0))?
+            .parse::<i32>()?;
+        
+        let consume_time_vec: Vec<String> = split_args_vec
+            .get(3)
+            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_vec' vector was accessed. - command_consumption_auto()", 3))?
+            .split(" ")
+            .map(|s| s.to_string())
+            .collect();
+        
+        let date_part: Vec<u32> = consume_time_vec
+            .get(0)
+            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_vec' vector was accessed. - command_consumption_auto()", 0))?
+            .split("/")
+            .map(|s| s.parse::<u32>())
+            .collect::<Result<Vec<_>, _>>()?;
+        
+        let time_part: Vec<u32> = consume_time_vec
+            .get(1)
+            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_vec' vector was accessed. - command_consumption_auto()", 1))?
+            .split(":")
+            .map(|s| s.parse::<u32>())
+            .collect::<Result<Vec<_>, _>>()?;
+        
+        let mon = date_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'date_part' vector was accessed. - command_consumption_auto()", 0))?;
+        let day = date_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'date_part' vector was accessed. - command_consumption_auto()", 1))?;
+        let hour = time_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'time_part' vector was accessed. - command_consumption_auto()", 0))?;
+        let min = time_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'time_part' vector was accessed. - command_consumption_auto()", 1))?;
+        
+        let consume_date = get_this_year_date_time(*mon, *day, *hour, *min)?;
+        
+        let consume_name = split_args_vec
+            .get(4)
+            .unwrap()
+            .trim();
+        
+        let document = json!({
+            "@timestamp": get_str_from_naive_datetime(consume_date),
+            "prodt_name": consume_name,
+            "prodt_money": consume_price
+        });
+        
+        es_client.cluster_post_query(document, "consuming_index_prod_new_bak").await?;
+        
+    } else if card_comp.contains("삼성") {
+
+        let consume_price_vec: Vec<String> = split_args_vec
+            .get(1)
+            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. - command_consumption_auto() // {:?}", 2, split_args_vec))?
+            .replace(",", "")
+            .replace("원", "")
+            .split(" ")
+            .map(|s| s.to_string())
+            .collect(); 
+        
+        let consume_price = consume_price_vec
+            .get(0)
+            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. - command_consumption_auto()", 0))?
+            .parse::<i32>()?;
+        
+        let consume_time_name_vec: Vec<String> = split_args_vec
+            .get(2)
+            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_vec' vector was accessed. - command_consumption_auto()", 3))?
+            .split(" ")
+            .map(|s| s.to_string())
+            .collect();
+        
+        let date_part: Vec<u32> = consume_time_name_vec
+            .get(0)
+            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_vec' vector was accessed. - command_consumption_auto()", 0))?
+            .split("/")
+            .map(|s| s.parse::<u32>())
+            .collect::<Result<Vec<_>, _>>()?;
+        
+        let time_part: Vec<u32> = consume_time_name_vec
+            .get(1)
+            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_vec' vector was accessed. - command_consumption_auto()", 1))?
+            .split(":")
+            .map(|s| s.parse::<u32>())
+            .collect::<Result<Vec<_>, _>>()?;
+        
+        let mon = date_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'date_part' vector was accessed. - command_consumption_auto()", 0))?;
+        let day = date_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'date_part' vector was accessed. - command_consumption_auto()", 1))?;
+        let hour = time_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'time_part' vector was accessed. - command_consumption_auto()", 0))?;
+        let min = time_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'time_part' vector was accessed. - command_consumption_auto()", 1))?;
+        
+        let consume_date = get_this_year_date_time(*mon, *day, *hour, *min)?;
+        let consume_name = consume_time_name_vec
+            .get(2)
+            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed. - command_consumption_auto()", 2))?
+            .trim();
+
+        let document = json!({
+            "@timestamp": get_str_from_naive_datetime(consume_date),
+            "prodt_name": consume_name,
+            "prodt_money": consume_price
+        });
+        
+        es_client.cluster_post_query(document, "consuming_index_prod_new_bak").await?;
+
+        
+    } else {
+
+        send_message_confirm(bot, 
+                message.chat.id, 
+                true, 
+                "There is a problem with the parameter you entered. Please check again. \nEX) /a ...").await?;
+        
+        return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_auto() // {:?}", text)));
+    }
+    
     // let mut consume_name = "";
     // let mut consume_cash = "";
     

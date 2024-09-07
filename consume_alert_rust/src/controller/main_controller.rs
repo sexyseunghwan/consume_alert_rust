@@ -91,7 +91,7 @@ async fn handle_command(message: &Message, bot: &Bot, arc_es_client_clone: &Arc<
             command_consumption_per_year(message, text, bot, arc_es_client_clone).await?;
         }
         else if text.starts_with("/a") {
-            command_consumption_per_year(message, text, bot, arc_es_client_clone).await?;
+            command_consumption_auto(message, text, bot, arc_es_client_clone).await?;
         }
         else 
         {

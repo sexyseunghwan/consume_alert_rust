@@ -56,7 +56,7 @@ mod dtos;
 
 use utils_modules::logger_utils::*;
 use controller::main_controller::*;
-//use controller::test_controller::*;
+use controller::test_controller::*;
 
 
 #[tokio::main]

@@ -142,3 +142,32 @@ pub fn validate_date_format(date_str: &str, format: &str) -> Result<bool, anyhow
 }
 
 
+/*
+
+*/
+pub fn get_this_year_date_time(mon: u32, day: u32, hour: u32, min: u32) -> Result<NaiveDateTime, anyhow::Error> {
+
+    let curr_date: NaiveDateTime = get_current_kor_naive_datetime();
+    
+    let date_part = curr_date.date();
+    let time_part = curr_date.time();
+
+    let now_year = date_part.year();                 
+    let now_second = time_part.second(); 
+
+    let new_date = NaiveDate::from_ymd_opt(now_year, mon, day)
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error] Invalid date. => year: {:?}, month: {:?}, day: {:?} - get_this_year_date_time() ", 
+        now_year, 
+        mon, 
+        day))?;
+    
+    let new_time = NaiveTime::from_hms_opt(hour, min, now_second)
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error] Invalid date. => hour: {:?}, min: {:?}, sec: {:?} - get_this_year_date_time() ", 
+        hour, 
+        min, 
+        now_second))?;
+    
+    let updated_date = NaiveDateTime::new(new_date, new_time);
+    
+    Ok(updated_date)
+}    
