@@ -752,7 +752,7 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
     let card_comp = split_args_vec
         .get(0)
         .ok_or_else(|| anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter - command_consumption_auto() // {:?}", split_args_vec))?;
-    
+
     if card_comp.contains("NH") {
         
         let consume_price_vec: Vec<String> = split_args_vec
@@ -795,7 +795,7 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
         let hour = time_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'time_part' vector was accessed. - command_consumption_auto()", 0))?;
         let min = time_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'time_part' vector was accessed. - command_consumption_auto()", 1))?;
         
-        let consume_date = get_this_year_date_time(*mon, *day, *hour, *min)?;
+        let consume_date = get_this_year_naivedatetime(*mon, *day, *hour, *min)?;
         
         let consume_name = split_args_vec
             .get(4)
@@ -852,12 +852,12 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
         let hour = time_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'time_part' vector was accessed. - command_consumption_auto()", 0))?;
         let min = time_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'time_part' vector was accessed. - command_consumption_auto()", 1))?;
         
-        let consume_date = get_this_year_date_time(*mon, *day, *hour, *min)?;
+        let consume_date = get_this_year_naivedatetime(*mon, *day, *hour, *min)?;
         let consume_name = consume_time_name_vec
             .get(2)
             .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed. - command_consumption_auto()", 2))?
             .trim();
-
+        
         let document = json!({
             "@timestamp": get_str_from_naive_datetime(consume_date),
             "prodt_name": consume_name,
@@ -865,8 +865,7 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
         });
         
         es_client.cluster_post_query(document, "consuming_index_prod_new_bak").await?;
-
-        
+                
     } else {
 
         send_message_confirm(bot, 
@@ -876,52 +875,6 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
         
         return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_auto() // {:?}", text)));
     }
-    
-    // let mut consume_name = "";
-    // let mut consume_cash = "";
-    
-    // if split_args_vec.len() != 2 {
-        
-    //     send_message_confirm(bot, 
-    //                         message.chat.id, 
-    //                         true, 
-    //                         "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000").await?;
-
-    //     return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
-    // } 
-    
-    // if let Some(cons_name) = split_args_vec.get(0) {
-
-    //     if let Some(price) = split_args_vec.get(1) {
-
-    //         if !is_numeric(price) {
-    //             send_message_confirm(bot, message.chat.id, true, "The second parameter must be numeric. \nEX) /c snack:15000").await?;
-    //             return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
-    //         }
-
-    //         consume_name = cons_name;
-    //         consume_cash = price;
-    //     }        
-
-    // } else {
-        
-    //     send_message_confirm(bot, 
-    //                     message.chat.id, 
-    //                     true, 
-    //                     "There is a problem with the parameter you entered. Please check again. \nEX) /c snack:15000").await?;
-
-    //     return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
-    // }
-    
-    // let curr_time = get_current_kor_naive_datetime();
-    
-    // let document = json!({
-    //     "@timestamp": get_str_from_naive_datetime(curr_time),
-    //     "prodt_name": consume_name,
-    //     "prodt_money": convert_numeric(consume_cash)
-    // });
-    
-    // es_client.cluster_post_query(document, "consuming_index_prod_new").await?;
     
     Ok(())
 }

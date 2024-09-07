@@ -111,6 +111,50 @@ pub fn get_naivedate(year: i32, month: u32, date: u32) -> Result<NaiveDate, anyh
 
 
 /*
+    Functions that return NaiveTime data with 'hour, min, sec' as parameters
+*/
+pub fn get_naivetime(hour: u32, min: u32, sec: u32) -> Result<NaiveTime, anyhow::Error> {
+    
+    let time = NaiveTime::from_hms_opt(hour, min, sec)
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error] Invalid date. => hour: {:?}, min: {:?}, sec: {:?} - get_naivetime()", hour, min, sec))?;
+    
+    Ok(time)
+}
+
+
+/*
+    Functions that return NaiveDateTime data with 'year, month, day, hour, min, sec' as parameters
+*/
+pub fn get_naivedatetime(year: i32, month: u32, date: u32, hour: u32, min: u32, sec: u32) -> Result<NaiveDateTime, anyhow::Error> {
+
+    let date = get_naivedate(year, month, date)?;
+    let time = get_naivetime(hour, min, sec)?;
+
+    let datetime = NaiveDateTime::new(date, time);
+
+    Ok(datetime)
+}
+
+
+/*
+    Functions that make NaiveDatetime objects when you add months, days, and hours to the parameters as of the current year
+*/
+pub fn get_this_year_naivedatetime(month: u32, date: u32, hour: u32, min: u32) -> Result<NaiveDateTime, anyhow::Error> {
+
+    let curr_date: NaiveDateTime = get_current_kor_naive_datetime();
+    
+    let date_part = curr_date.date();
+    let now_year = date_part.year();       
+
+    let datetime = get_naivedatetime(now_year, month, date, hour, min, 0)?;
+    
+    Ok(datetime)
+}    
+
+
+
+
+/*
     Function that returns date data a few months before and after a particular date
 */
 pub fn get_add_month_from_naivedate(naive_date: NaiveDate, add_month: i32) -> Result<NaiveDate, anyhow::Error> {
@@ -142,32 +186,3 @@ pub fn validate_date_format(date_str: &str, format: &str) -> Result<bool, anyhow
 }
 
 
-/*
-
-*/
-pub fn get_this_year_date_time(mon: u32, day: u32, hour: u32, min: u32) -> Result<NaiveDateTime, anyhow::Error> {
-
-    let curr_date: NaiveDateTime = get_current_kor_naive_datetime();
-    
-    let date_part = curr_date.date();
-    let time_part = curr_date.time();
-
-    let now_year = date_part.year();                 
-    let now_second = time_part.second(); 
-
-    let new_date = NaiveDate::from_ymd_opt(now_year, mon, day)
-        .ok_or_else(|| anyhow!("[Datetime Parsing Error] Invalid date. => year: {:?}, month: {:?}, day: {:?} - get_this_year_date_time() ", 
-        now_year, 
-        mon, 
-        day))?;
-    
-    let new_time = NaiveTime::from_hms_opt(hour, min, now_second)
-        .ok_or_else(|| anyhow!("[Datetime Parsing Error] Invalid date. => hour: {:?}, min: {:?}, sec: {:?} - get_this_year_date_time() ", 
-        hour, 
-        min, 
-        now_second))?;
-    
-    let updated_date = NaiveDateTime::new(new_date, new_time);
-    
-    Ok(updated_date)
-}    
