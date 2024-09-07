@@ -808,7 +808,7 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
             "prodt_money": consume_price
         });
         
-        es_client.cluster_post_query(document, "consuming_index_prod_new_bak").await?;
+        es_client.cluster_post_query(document, "consuming_index_prod_new").await?;
         
     } else if card_comp.contains("삼성") {
 
@@ -864,8 +864,8 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
             "prodt_money": consume_price
         });
         
-        es_client.cluster_post_query(document, "consuming_index_prod_new_bak").await?;
-                
+        es_client.cluster_post_query(document, "consuming_index_prod_new").await?;
+        
     } else {
 
         send_message_confirm(bot, 
