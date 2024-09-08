@@ -71,8 +71,8 @@ async fn command_common_double(bot: &Bot, message: &Message, cur_total_cost_info
     
     let pre_total_cost = pre_total_cost_infos.total_cost;
     let pre_consume_list = pre_total_cost_infos.consume_list();
-    let pre_start_dt = cur_total_cost_infos.start_dt;
-    let pre_end_dt = cur_total_cost_infos.end_dt;
+    let pre_start_dt = pre_total_cost_infos.start_dt;
+    let pre_end_dt = pre_total_cost_infos.end_dt;
     
 
     // Hand over the consumption details to Telegram bot.
@@ -128,11 +128,11 @@ async fn command_common_double(bot: &Bot, message: &Message, cur_total_cost_info
 
 
 /*
-    command handler: Writes the expenditure details to the index in ElasticSearch. -> /c
+    command handler: Writes the expenditure details to the index in ElasticSearch. -> c
 */
 pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
-    let args = &text[3..];
+    let args = &text[2..];
         
     let split_args_vec: Vec<String> = args.split(':').map(|s| s.to_string()).collect();
     let mut consume_name = "";
@@ -186,11 +186,11 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
 
 
 /*
-    command handler: Checks how much you have consumed during a month -> /cm
+    command handler: Checks how much you have consumed during a month -> cm
 */
 pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
-    let args = &text[3..];
+    let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let (cur_date_start, cur_date_end, one_mon_ago_date_start, one_mon_ago_date_end) = match split_args_vec.len() {
@@ -246,11 +246,11 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
 
 
 /*
-    command handler: Checks how much you have consumed during a specific periods -> /ctr
+    command handler: Checks how much you have consumed during a specific periods -> ctr
 */
 pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
-    let args = &text[3..];
+    let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let (date_start, date_end, pre_date_start, pre_date_end) = match split_args_vec.len() {
@@ -311,11 +311,11 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
 
 
 /*
-    command handler: Checks how much you have consumed during a day -> /ct
+    command handler: Checks how much you have consumed during a day -> ct
 */
 pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
     
-    let args = &text[3..];
+    let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let (start_dt, end_dt) = match split_args_vec.len() {
@@ -367,11 +367,11 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
 
 
 /*
-    command handler: Check the consumption details from the date of payment to the next payment. -> /cs
+    command handler: Check the consumption details from the date of payment to the next payment. -> cs
 */
 pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
-    let args = &text[3..];
+    let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let (cur_date_start, cur_date_end, one_mon_ago_date_start, one_mon_ago_date_end) = match split_args_vec.len() {
@@ -449,11 +449,11 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
 
 
 /*
-    command handler: Checks how much you have consumed during a week -> /cw
+    command handler: Checks how much you have consumed during a week -> cw
 */
 pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
-    let args = &text[3..];
+    let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let (date_start, date_end, one_pre_week_start, one_pre_week_end) = match split_args_vec.len() {
@@ -504,11 +504,11 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
 
 
 /*
-    command handler: Function for recording meal times -> /mc
+    command handler: Function for recording meal times -> mc
 */
 pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> { 
 
-    let args = &text[3..];
+    let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let meal_time = match split_args_vec.len() {
@@ -590,11 +590,11 @@ pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bo
 
 
 /*
-    command handler: Check the fasting time. -> /mt
+    command handler: Check the fasting time. -> mt
 */
 pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
     
-    let args = &text[3..];
+    let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     let current_datetime = match split_args_vec.len() {
@@ -642,11 +642,11 @@ pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot
 
 
 /*
-    command handler: Delete the last fasting time data. -> /md
+    command handler: Delete the last fasting time data. -> md
 */
 pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
-    let args = &text[3..];
+    let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
     
     match split_args_vec.len() {
@@ -677,11 +677,11 @@ pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bo
 
 
 /*
-    command handler: Checks how much you have consumed during one year -> /cy
+    command handler: Checks how much you have consumed during one year -> cy
 */
 pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
-    let args = &text[3..];
+    let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
 
     let (date_start, date_end, one_year_pre_date_start, one_year_pre_date_end) = match split_args_vec.len() {
@@ -738,14 +738,12 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
 
 
 /*
-    command handler: Writes the expenditure details to the index in ElasticSearch. -> /a
+    command handler: Writes the expenditure details to the index in ElasticSearch.
 */
 pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
-    let args = &text[3..];
-
     let re = Regex::new(r"\[.*?\]\n?").unwrap();
-    let replcae_string = re.replace_all(&args, "").to_string();
+    let replcae_string = re.replace_all(&text, "").to_string();
 
     let split_args_vec: Vec<String> = replcae_string.split('\n').map(|s| s.to_string()).collect();
     

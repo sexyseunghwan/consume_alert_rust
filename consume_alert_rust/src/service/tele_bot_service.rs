@@ -37,7 +37,7 @@ async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, err_yn: bool, msg: &str) 
     
     if ! err_yn { info!("{:?}", msg) }
     bot.send_message(chat_id, msg).await.context("[Error] Failed to send command response - tele_bot_send_msg()")?;
-
+    
     Ok(())
 }
 

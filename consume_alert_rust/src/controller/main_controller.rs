@@ -60,44 +60,42 @@ pub async fn main_controller() {
 async fn handle_command(message: &Message, bot: &Bot, arc_es_client_clone: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
     
     if let Some(text) = message.text() {
-        if text.starts_with("/c ") {
+        if text.starts_with("c ") {
             command_consumption(message, text, bot, arc_es_client_clone).await?;
         } 
-        else if text.starts_with("/cm") {
+        else if text.starts_with("cm") {
             command_consumption_per_mon(message, text, bot, arc_es_client_clone).await?;
         }
-        else if text.starts_with("/ctr") {
+        else if text.starts_with("ctr") {
             command_consumption_per_term(message, text, bot, arc_es_client_clone).await?;
         }
-        else if text.starts_with("/ct") {
+        else if text.starts_with("ct") {
             command_consumption_per_day(message, text, bot, arc_es_client_clone).await?;
         }
-        else if text.starts_with("/cs") {
+        else if text.starts_with("cs") {
             command_consumption_per_salary(message, text, bot, arc_es_client_clone).await?;
         }
-        else if text.starts_with("/cw") {
+        else if text.starts_with("cw") {
             command_consumption_per_week(message, text, bot, arc_es_client_clone).await?;
         }
-        else if text.starts_with("/mc") {
+        else if text.starts_with("mc") {
             command_record_fasting_time(message, text, bot, arc_es_client_clone).await?;
         }
-        else if text.starts_with("/mt") {
+        else if text.starts_with("mt") {
             command_check_fasting_time(message, text, bot, arc_es_client_clone).await?;
         }
-        else if text.starts_with("/md") {
+        else if text.starts_with("md") {
             command_delete_fasting_time(message, text, bot, arc_es_client_clone).await?;
         }
-        else if text.starts_with("/cy") {
+        else if text.starts_with("cy") {
             command_consumption_per_year(message, text, bot, arc_es_client_clone).await?;
-        }
-        else if text.starts_with("/a") {
-            command_consumption_auto(message, text, bot, arc_es_client_clone).await?;
         }
         else 
         {
-            bot.send_message(message.chat.id, "Hello! Use /c <args> to interact.")
-                .await
-                .context("[handle command Error] Failed to send default interaction message - handle_command() // {:?}")?;
+            command_consumption_auto(message, text, bot, arc_es_client_clone).await?;
+            // bot.send_message(message.chat.id, "Hello! Use /c <args> to interact.")
+            //     .await
+            //     .context("[handle command Error] Failed to send default interaction message - handle_command() // {:?}")?;
         }
     }
     Ok(())
