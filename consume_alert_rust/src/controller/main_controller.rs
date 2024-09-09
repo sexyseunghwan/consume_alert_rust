@@ -90,12 +90,12 @@ async fn handle_command(message: &Message, bot: &Bot, arc_es_client_clone: &Arc<
         else if text.starts_with("cy") {
             command_consumption_per_year(message, text, bot, arc_es_client_clone).await?;
         }
+        else if text.starts_with("list") {
+            command_get_consume_type_list(message, text, bot, arc_es_client_clone).await?;
+        }
         else 
         {
             command_consumption_auto(message, text, bot, arc_es_client_clone).await?;
-            // bot.send_message(message.chat.id, "Hello! Use /c <args> to interact.")
-            //     .await
-            //     .context("[handle command Error] Failed to send default interaction message - handle_command() // {:?}")?;
         }
     }
     Ok(())
