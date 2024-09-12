@@ -873,7 +873,7 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
 
 
 /*
-    command handler: Function that shows consumption type lists
+    command handler: Function that shows consumption type lists -> list
 */
 pub async fn command_get_consume_type_list(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
