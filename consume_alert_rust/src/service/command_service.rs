@@ -877,12 +877,11 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
 */
 pub async fn command_get_consume_type_list(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
-    let args = &text[2..];
-    let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
+    let args = &text[4..];
+    let split_args_vec: Vec<String> = args.trim().split(':').map(String::from).collect();
     
-    match split_args_vec.len() {
-        1 => { 
-
+    match args.len() {
+        0 => {
             let consume_type_list: Vec<String> = get_classification_type(es_client, "consuming_index_prod_type").await?;
             
             if consume_type_list.len() == 0 {
@@ -890,11 +889,45 @@ pub async fn command_get_consume_type_list(message: &Message, text: &str, bot: &
             } else {
                 send_message_consume_type_list(bot, message.chat.id, &consume_type_list, false).await?;
             }
-            
         },
         _ => {
-            send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) list").await?;
-            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_get_consume_type_list() // {:?}", text));
+            
+            if split_args_vec.len() == 0 {
+                send_message_confirm(bot, message.chat.id, "Please specify both 'keyword_type' and 'keyword.' EX) 식사:하남돼지집:2").await?;
+            } else {
+
+                let prodt_type_list: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
+
+                let input_keyword_type = split_args_vec
+                    .get(0)
+                    .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 0th data of 'split_args_vec' vector does not exist. - command_get_consume_type_list()"))?;
+
+                let input_keyword = split_args_vec
+                    .get(1)
+                    .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1st data of 'split_args_vec' vector does not exist. - command_get_consume_type_list()"))?;
+
+                let bias_val = split_args_vec
+                    .get(2)
+                    .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 2nd data of 'split_args_vec' vector does not exist. - command_get_consume_type_list()"))?
+                    .parse::<i32>()?;    
+
+                let keyword_exists = prodt_type_list.iter().any(|elem| {
+                    elem.keyword_type == *input_keyword_type && elem.prodt_detail_list.iter().any(|prodt_elem| prodt_elem.keyword == *input_keyword)
+                });
+                
+                if keyword_exists {
+                    send_message_confirm(bot, message.chat.id, "This is the type that already exists.").await?;
+                } else {
+
+                    let document = json!({
+                        "keyword_type": input_keyword_type,
+                        "keyword": input_keyword,
+                        "bias_value": bias_val
+                    });
+
+                    es_client.cluster_post_query(document, "consuming_index_prod_type").await?;
+                }
+            }        
         }
     }
     
