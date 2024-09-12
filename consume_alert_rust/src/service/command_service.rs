@@ -142,7 +142,6 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
         
         send_message_confirm(bot, 
                             message.chat.id, 
-                            true, 
                             "There is a problem with the parameter you entered. Please check again. \nEX) c snack:15000").await?;
 
         return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
@@ -153,7 +152,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
         if let Some(price) = split_args_vec.get(1) {
 
             if !is_numeric(price) {
-                send_message_confirm(bot, message.chat.id, true, "The second parameter must be numeric. \nEX) c snack:15000").await?;
+                send_message_confirm(bot, message.chat.id, "The second parameter must be numeric. \nEX) c snack:15000").await?;
                 return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
             }
 
@@ -165,7 +164,6 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
         
         send_message_confirm(bot, 
                         message.chat.id, 
-                        true, 
                         "There is a problem with the parameter you entered. Please check again. \nEX) c snack:15000").await?;
 
         return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
@@ -220,7 +218,7 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
             (start, end, one_month_ago_start, one_month_ago_end)
         },
         _ => {
-            send_message_confirm(bot, message.chat.id, true, "Invalid date format. Please use format YYYY.MM like cm 2023.07").await?;
+            send_message_confirm(bot, message.chat.id, "Invalid date format. Please use format YYYY.MM like cm 2023.07").await?;
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text));
         }
     };
@@ -283,7 +281,7 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
             (date_start_form, date_end_form, pre_date_start, pre_date_end)
         },
         _ => {
-            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) ctr 2023.07.07-2023.08.01").await?;
+            send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) ctr 2023.07.07-2023.08.01").await?;
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_term() // {:?}", text));
         }
     };
@@ -347,7 +345,7 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
             (start_dt, end_dt)
         },
         _ => {
-            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) ct or ct 2023.11.11").await?;
+            send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) ct or ct 2023.11.11").await?;
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_day() // {:?}", text));
         }
     };
@@ -423,7 +421,7 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
             (cur_date_start, cur_date_end, one_mon_ago_date_start, one_mon_ago_date_end)
         },
         _ => {
-            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) ct or ct 2023.11.11").await?;
+            send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) ct or ct 2023.11.11").await?;
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_salary() // {:?}", text));
         }
     };
@@ -476,7 +474,7 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
             (date_start, date_end, one_pre_week_start, one_pre_week_end)
         },
         _ => {
-            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) cw").await?;
+            send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) cw").await?;
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_week() // {:?}", text));
         }
     };
@@ -545,7 +543,7 @@ pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bo
 
         },
         _ => {
-            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX01) mc 22:30 \nEX02) mc").await?;
+            send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX01) mc 22:30 \nEX02) mc").await?;
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_record_fasting_time() // {:?}", text));
         }
     };
@@ -575,12 +573,11 @@ pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bo
         "laststamp": last_stamp + 1,
         "alarminfo": 0
     });
-
+    
     es_client.cluster_post_query(es_doc, "meal_check_index").await?;
     
     send_message_confirm(bot, 
-                    message.chat.id, 
-                    false, 
+                    message.chat.id,  
                     &format!("The [{}] meal was finished at [ {} ]", 
                         last_stamp + 1, 
                         get_str_from_naive_datetime(meal_time))).await?;
@@ -602,11 +599,11 @@ pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot
             get_current_kor_naive_datetime()
         },
         _ => {
-            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) mt").await?;
+            send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) mt").await?;
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_check_fasting_time() // {:?}", text));
         }
     };
-
+    
     let es_query = json!({
         "size": 1,
         "sort": [
@@ -630,7 +627,6 @@ pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot
     
     send_message_confirm(bot, 
         message.chat.id, 
-        false, 
         &format!("It's been {} days and {} hours and {} minutes since I kept the current fasting time.", 
             laps_day, 
             laps_hours,
@@ -652,7 +648,7 @@ pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bo
     match split_args_vec.len() {
         1 => { },
         _ => {
-            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) md").await?;
+            send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) md").await?;
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_delete_fasting_time() // {:?}", text));
         }
     }
@@ -711,7 +707,7 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
             (start_date, end_date, one_year_pre_date_start, one_year_pre_date_end)
         },
         _ => {
-            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX01) cy\nEX02) cy 2023").await?;
+            send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX01) cy\nEX02) cy 2023").await?;
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_year() // {:?}", text));
         }
     };
@@ -867,7 +863,6 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
 
         send_message_confirm(bot, 
                 message.chat.id, 
-                true, 
                 "There is a problem with the parameter you entered. Please check again.").await?;
         
         return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_auto() // {:?}", text)));
@@ -878,7 +873,7 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
 
 
 /*
-    
+    command handler: Function that shows consumption type lists
 */
 pub async fn command_get_consume_type_list(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
 
@@ -888,19 +883,20 @@ pub async fn command_get_consume_type_list(message: &Message, text: &str, bot: &
     match split_args_vec.len() {
         1 => { 
 
-            let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;        
+            let consume_type_list: Vec<String> = get_classification_type(es_client, "consuming_index_prod_type").await?;
             
-
-
+            if consume_type_list.len() == 0 {
+                send_message_consume_type_list(bot, message.chat.id, &consume_type_list, true).await?;
+            } else {
+                send_message_consume_type_list(bot, message.chat.id, &consume_type_list, false).await?;
+            }
+            
         },
         _ => {
-            send_message_confirm(bot, message.chat.id, true, "There is a problem with the parameter you entered. Please check again. \nEX) list").await?;
+            send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) list").await?;
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_get_consume_type_list() // {:?}", text));
         }
     }
     
-    
-
-
     Ok(())
 }

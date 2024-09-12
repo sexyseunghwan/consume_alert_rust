@@ -9,11 +9,10 @@ use crate::dtos::dto::*;
 
 
 
-
 /*
-    Function to get consumption classification information from Elasticsearch
+    Function to get ProdtTypeInfo keyword_type information from Elasticsearch
 */
-pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, index_name: &str) -> Result<Vec<ProdtTypeInfo>, anyhow::Error> {
+pub async fn get_classification_type(es_client: &Arc<EsHelper>, index_name: &str) -> Result<Vec<String>, anyhow::Error> {
 
     let query = json!({
         "size": 0,  
@@ -26,56 +25,75 @@ pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, inde
           }
         }
     });
-    
+
     let res = es_client.cluster_search_query(query, index_name).await?;
-    let mut keyword_type_vec: Vec<ProdtTypeInfo> = Vec::new();
+    let mut key_vec: Vec<String> = Vec::new();
 
     if let Some(keyword_types) = res["aggregations"]["unique_keyword_types"]["buckets"].as_array() {
-        
+
         for keyword_type in keyword_types {
             
             let k_type = match keyword_type.get("key").and_then(Value::as_str) {
                 Some(k_type) => k_type,
                 None => continue
             };
-            
-            let inner_query = json!({
-                "query": {
-                    "term": {
-                        "keyword_type": {   
-                            "value": k_type
-                            }
+
+            key_vec.push(k_type.to_string());
+        }
+    }
+    
+    Ok(key_vec)
+}
+
+
+/*
+    Function to get FULL ProdtTypeInfo keyword_type information from Elasticsearch
+*/
+pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, index_name: &str) -> Result<Vec<ProdtTypeInfo>, anyhow::Error> {
+
+    let key_vec = get_classification_type(es_client, index_name).await?;
+
+    let mut keyword_type_vec: Vec<ProdtTypeInfo> = Vec::new();
+
+    for keyword_type in key_vec {
+
+        let inner_query = json!({
+            "query": {
+                "term": {
+                    "keyword_type": {   
+                        "value": keyword_type
                         }
-                    },
-                "size" : 1000
-            });
-            
-            let inner_res = es_client.cluster_search_query(inner_query, index_name).await?;
-            let mut keyword_vec: Vec<ProdtDetailInfo> = Vec::new();
+                    }
+                },
+            "size" : 1000
+        });
 
-            if let Some(keywords) = inner_res["hits"]["hits"].as_array() {
-                for key_word in keywords {
-                    if let Some(keyword_src) = key_word.get("_source") {
-                        let k_word = keyword_src.get("keyword").and_then(Value::as_str);
-                        let bias_value = keyword_src.get("bias_value").and_then(Value::as_i64).map(|v| v as i32);
+        let inner_res = es_client.cluster_search_query(inner_query, index_name).await?;
+        let mut keyword_vec: Vec<ProdtDetailInfo> = Vec::new();
 
-                        match (k_word, bias_value) {
-                            (Some(word), Some(bias)) => {
-                                let prodt_detail = ProdtDetailInfo::new(word.to_string(), bias);
-                                keyword_vec.push(prodt_detail);
-                            },
-                            _ => {
-                                error!("[Parsing Error] Missing or invalid 'keyword' or 'bias_value' - get_classification_consumption_type()");
-                                continue;
-                            }
+        if let Some(keywords) = inner_res["hits"]["hits"].as_array() {
+            for key_word in keywords {
+                if let Some(keyword_src) = key_word.get("_source") {
+                    let k_word = keyword_src.get("keyword").and_then(Value::as_str);
+                    let bias_value = keyword_src.get("bias_value").and_then(Value::as_i64).map(|v| v as i32);
+
+                    match (k_word, bias_value) {
+                        (Some(word), Some(bias)) => {
+                            let prodt_detail = ProdtDetailInfo::new(word.to_string(), bias);
+                            keyword_vec.push(prodt_detail);
+                        },
+                        _ => {
+                            error!("[Parsing Error] Missing or invalid 'keyword' or 'bias_value' - get_classification_consumption_type()");
+                            continue;
                         }
                     }
                 }
             }
-            
-            let keyword_type_obj = ProdtTypeInfo::new(k_type.to_string(), keyword_vec);
-            keyword_type_vec.push(keyword_type_obj);
         }
+            
+        let keyword_type_obj = ProdtTypeInfo::new(keyword_type, keyword_vec);
+        keyword_type_vec.push(keyword_type_obj);
+
     }
     
     Ok(keyword_type_vec)
