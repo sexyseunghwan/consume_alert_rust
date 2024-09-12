@@ -188,6 +188,6 @@ pub async fn send_message_consume_type_list(
         format!("{}\n",item.to_string())},
         empty_flag,
         "'consume_type' does not exist.",
-        "ConsumeType\n=========[DETAIL]=========\n"
+        "ConsumeType List\n=========[DETAIL]=========\n"
     ).await
 }

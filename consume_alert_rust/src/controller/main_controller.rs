@@ -59,44 +59,48 @@ pub async fn main_controller() {
 */
 async fn handle_command(message: &Message, bot: &Bot, arc_es_client_clone: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
     
-    if let Some(text) = message.text() {
-        if text.starts_with("c ") {
-            command_consumption(message, text, bot, arc_es_client_clone).await?;
-        } 
-        else if text.starts_with("cm") {
-            command_consumption_per_mon(message, text, bot, arc_es_client_clone).await?;
-        }
-        else if text.starts_with("ctr") {
-            command_consumption_per_term(message, text, bot, arc_es_client_clone).await?;
-        }
-        else if text.starts_with("ct") {
-            command_consumption_per_day(message, text, bot, arc_es_client_clone).await?;
-        }
-        else if text.starts_with("cs") {
-            command_consumption_per_salary(message, text, bot, arc_es_client_clone).await?;
-        }
-        else if text.starts_with("cw") {
-            command_consumption_per_week(message, text, bot, arc_es_client_clone).await?;
-        }
-        else if text.starts_with("mc") {
-            command_record_fasting_time(message, text, bot, arc_es_client_clone).await?;
-        }
-        else if text.starts_with("mt") {
-            command_check_fasting_time(message, text, bot, arc_es_client_clone).await?;
-        }
-        else if text.starts_with("md") {
-            command_delete_fasting_time(message, text, bot, arc_es_client_clone).await?;
-        }
-        else if text.starts_with("cy") {
-            command_consumption_per_year(message, text, bot, arc_es_client_clone).await?;
-        }
-        else if text.starts_with("list") {
-            command_get_consume_type_list(message, text, bot, arc_es_client_clone).await?;
-        }
-        else 
-        {
-            command_consumption_auto(message, text, bot, arc_es_client_clone).await?;
-        }
+    let input_text = message
+        .text()
+        .ok_or_else(|| anyhow!("[Error] The entered value does not exist."))?
+        .to_lowercase();
+    
+    if input_text.starts_with("c ") {
+        command_consumption(message, &input_text, bot, arc_es_client_clone).await?;
+    } 
+    else if input_text.starts_with("cm") {
+        command_consumption_per_mon(message, &input_text, bot, arc_es_client_clone).await?;
     }
+    else if input_text.starts_with("ctr") {
+        command_consumption_per_term(message, &input_text, bot, arc_es_client_clone).await?;
+    }
+    else if input_text.starts_with("ct") {
+        command_consumption_per_day(message, &input_text, bot, arc_es_client_clone).await?;
+    }
+    else if input_text.starts_with("cs") {
+        command_consumption_per_salary(message, &input_text, bot, arc_es_client_clone).await?;
+    }
+    else if input_text.starts_with("cw") {
+        command_consumption_per_week(message, &input_text, bot, arc_es_client_clone).await?;
+    }
+    else if input_text.starts_with("mc") {
+        command_record_fasting_time(message, &input_text, bot, arc_es_client_clone).await?;
+    }
+    else if input_text.starts_with("mt") {
+        command_check_fasting_time(message, &input_text, bot, arc_es_client_clone).await?;
+    }
+    else if input_text.starts_with("md") {
+        command_delete_fasting_time(message, &input_text, bot, arc_es_client_clone).await?;
+    }
+    else if input_text.starts_with("cy") {
+        command_consumption_per_year(message, &input_text, bot, arc_es_client_clone).await?;
+    }
+    else if input_text.starts_with("list") {
+        command_get_consume_type_list(message, &input_text, bot, arc_es_client_clone).await?;
+    }
+    else 
+    {
+        command_consumption_auto(message, &input_text, bot, arc_es_client_clone).await?;
+    }
+    
     Ok(())
 }
