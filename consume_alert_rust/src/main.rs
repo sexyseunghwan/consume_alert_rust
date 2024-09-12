@@ -69,4 +69,6 @@ async fn main() {
 
     // Start Controller
     main_controller().await;
+
+    //test_controller().await;
 }
