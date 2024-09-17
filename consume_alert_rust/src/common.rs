@@ -6,6 +6,9 @@ pub use std::collections::HashMap;
 pub use std::path::Path;
 pub use std::cmp::Ordering;
 
+pub use tokio::sync::OnceCell;
+
+pub use futures::future::Lazy;
 pub use log::{info, error};
 
 pub use flexi_logger::{Logger, FileSpec, Criterion, Age, Naming, Cleanup, Record};
@@ -41,4 +44,16 @@ pub use regex::Regex;
 
 pub use num_format::{Locale, ToFormattedString};
 
+pub use rdkafka::config::ClientConfig;
+pub use rdkafka::consumer::Consumer;
+pub use rdkafka::producer::{FutureProducer, FutureRecord};
+pub use rdkafka::message::Message as KafkaMessage;
 
+
+use crate::service::es_service::EsHelper;
+use crate::service::kafka_service::ProduceBroker;
+pub static ELASTICSEARCH_CLIENT: OnceCell<Arc<EsHelper>> = OnceCell::const_new();
+pub static KAFKA_PRODUCER: OnceCell<Arc<ProduceBroker>> = OnceCell::const_new();
+
+
+pub use crate::utils_modules::logger_utils::*;

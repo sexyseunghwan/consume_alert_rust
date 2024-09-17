@@ -1,4 +1,6 @@
 use crate::common::*;
+use crate::service::kafka_service::*;
+
 
 /*
     Function responsible for logging
@@ -22,11 +24,57 @@ pub fn set_global_logger() {
 }
 
 
-// Custom Log Format Function
+/*
+    Custom Log Format Function
+*/
 fn custom_format(w: &mut dyn Write, now: &mut flexi_logger::DeferredNow, record: &Record) -> Result<(), std::io::Error> {
     write!(w, "[{}] [{}] T[{}] {}",
         now.now().format("%Y-%m-%d %H:%M:%S"),
         record.level(),
         std::thread::current().name().unwrap_or("unknown"),
         &record.args())
+}
+
+/*
+    error!
+*/
+pub async fn errork(err: anyhow::Error) {
+    
+    // file
+    error!("{:?}", err);
+
+    let kafka_client: Option<&Arc<ProduceBroker>> = match KAFKA_PRODUCER.get() {
+        Some(kafka) => Some(kafka),
+        None => {
+            error!("[DB Connection Error] Cannot connect Kafka cluster");
+            None
+        }
+    };
+    
+    if let Some(kafka_client) = kafka_client {
+        kafka_client.logging_kafka(&err.to_string()).await;
+    }
+}
+
+/*
+    info!
+*/
+pub async fn infok(info: &str) {
+    
+    // file
+    info!("{:?}", info);
+        
+    // kafka
+    let kafka_client: Option<&Arc<ProduceBroker>> = match KAFKA_PRODUCER.get() {
+        Some(kafka) => Some(kafka),
+        None => {
+            error!("[DB Connection Error] Cannot connect Kafka cluster");
+            None
+        }
+    };
+
+    if let Some(kafka_client) = kafka_client {
+        kafka_client.logging_kafka(info).await;
+    }
+    
 }

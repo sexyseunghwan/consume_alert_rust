@@ -1,7 +1,6 @@
 use crate::common::*;
 
 use crate::service::calculate_service::*;
-use crate::service::es_service::*;
 use crate::service::tele_bot_service::*;
 
 use crate::utils_modules::numeric_utils::*;
@@ -130,7 +129,7 @@ async fn command_common_double(bot: &Bot, message: &Message, cur_total_cost_info
 /*
     command handler: Writes the expenditure details to the index in ElasticSearch. -> c
 */
-pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+pub async fn command_consumption(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
 
     let args = &text[2..];
         
@@ -177,6 +176,10 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
         "prodt_money": convert_numeric(consume_cash)
     });
     
+    let es_client = ELASTICSEARCH_CLIENT
+        .get()
+        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+
     es_client.cluster_post_query(document, "consuming_index_prod_new").await?;
     
     Ok(())
@@ -186,7 +189,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot, es_cl
 /*
     command handler: Checks how much you have consumed during a month -> cm
 */
-pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
 
     let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -223,6 +226,10 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
         }
     };
     
+    let es_client = ELASTICSEARCH_CLIENT
+        .get()
+        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
     let cur_mon_total_cost_infos = total_cost_detail_specific_period(cur_date_start, 
                                                                                              cur_date_end, 
@@ -246,7 +253,7 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
 /*
     command handler: Checks how much you have consumed during a specific periods -> ctr
 */
-pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
 
     let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -286,6 +293,10 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
         }
     };
     
+    let es_client = ELASTICSEARCH_CLIENT
+        .get()
+        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
         
     let cur_mon_total_cost_infos = total_cost_detail_specific_period(date_start, 
@@ -311,7 +322,7 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
 /*
     command handler: Checks how much you have consumed during a day -> ct
 */
-pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
     
     let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -350,6 +361,10 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
         }
     };
     
+    let es_client = ELASTICSEARCH_CLIENT
+        .get()
+        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?; 
 
     let cur_mon_total_cost_infos = total_cost_detail_specific_period(start_dt, 
@@ -367,7 +382,7 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
 /*
     command handler: Check the consumption details from the date of payment to the next payment. -> cs
 */
-pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
 
     let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -426,6 +441,10 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
         }
     };
     
+    let es_client = ELASTICSEARCH_CLIENT
+        .get()
+        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
     let cur_mon_total_cost_infos = total_cost_detail_specific_period(cur_date_start, 
                                                                                              cur_date_end, 
@@ -449,7 +468,7 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
 /*
     command handler: Checks how much you have consumed during a week -> cw
 */
-pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
 
     let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -479,7 +498,10 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
         }
     };
 
-    
+    let es_client = ELASTICSEARCH_CLIENT
+        .get()
+        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
     let cur_mon_total_cost_infos = total_cost_detail_specific_period(date_start, 
                                                                                             date_end, 
@@ -504,7 +526,7 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
 /*
     command handler: Function for recording meal times -> mc
 */
-pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> { 
+pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> { 
 
     let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -548,6 +570,10 @@ pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bo
         }
     };
     
+    let es_client = ELASTICSEARCH_CLIENT
+        .get()
+        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+
     // Brings the data of the most recent meal time of today's meal time.
     let current_date = get_str_from_naivedate(get_current_kor_naivedate());
 
@@ -589,7 +615,7 @@ pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bo
 /*
     command handler: Check the fasting time. -> mt
 */
-pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
     
     let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -604,6 +630,10 @@ pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot
         }
     };
     
+    let es_client = ELASTICSEARCH_CLIENT
+        .get()
+        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+
     let es_query = json!({
         "size": 1,
         "sort": [
@@ -640,7 +670,7 @@ pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot
 /*
     command handler: Delete the last fasting time data. -> md
 */
-pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
 
     let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -652,6 +682,10 @@ pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bo
             return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_delete_fasting_time() // {:?}", text));
         }
     }
+
+    let es_client = ELASTICSEARCH_CLIENT
+        .get()
+        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
 
     let es_query = json!({
         "size": 1,
@@ -675,7 +709,7 @@ pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bo
 /*
     command handler: Checks how much you have consumed during one year -> cy
 */
-pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
 
     let args = &text[2..];
     let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -712,6 +746,10 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
         }
     };
         
+    let es_client = ELASTICSEARCH_CLIENT
+        .get()
+        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
     let cur_mon_total_cost_infos = total_cost_detail_specific_period(date_start, 
                                                                                             date_end, 
@@ -735,7 +773,7 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
 /*
     command handler: Writes the expenditure details to the index in ElasticSearch.
 */
-pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
 
     let re = Regex::new(r"\[.*?\]\n?").unwrap();
     let replcae_string = re.replace_all(&text, "").to_string();
@@ -745,6 +783,10 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
     let card_comp = split_args_vec
         .get(0)
         .ok_or_else(|| anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter - command_consumption_auto() // {:?}", split_args_vec))?;
+
+    let es_client = ELASTICSEARCH_CLIENT
+        .get()
+        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
 
     if card_comp.contains("NH") {
         
@@ -875,11 +917,15 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot, 
 /*
     command handler: Function that shows consumption type lists -> list
 */
-pub async fn command_get_consume_type_list(message: &Message, text: &str, bot: &Bot, es_client: &Arc<EsHelper>) -> Result<(), anyhow::Error> {
+pub async fn command_get_consume_type_list(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
 
     let args = &text[4..];
     let split_args_vec: Vec<String> = args.trim().split(':').map(String::from).collect();
     
+    let es_client = ELASTICSEARCH_CLIENT
+        .get()
+        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+
     match args.len() {
         0 => {
             let consume_type_list: Vec<String> = get_classification_type(es_client, "consuming_index_prod_type").await?;

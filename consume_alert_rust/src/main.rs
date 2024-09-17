@@ -48,7 +48,7 @@ History     : 2023-05-04 Seunghwan Shin       # first create
               2024-09-01 Seunghwan Shin       # If there is no consumption details during the entered period, do not show consumption-related graphs
               2024-09-08 Seunghwan Shin       # Change command calls in a simpler way
               2024-09-12 Seunghwan Shin       # Add list command
-
+              2024-09-17 Seunghwan Shin       # Manage logs with ''KAFKA''
 */ 
 mod common;
 mod controller;
