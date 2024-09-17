@@ -16,7 +16,7 @@ where
         match operation().await {
             Ok(_) => return Ok(()),
             Err(e) if attempts == max_retries => {
-                error!("[Error] Max attempts reached. - try_send_operation() // {:?}", e);
+                error!("[Telebot Error][try_send_operation()] Max attempts reached. : {:?}", e);
                 return Err(e)
             }
             Err(e) => {
@@ -27,7 +27,7 @@ where
         }
     }
        
-    Err(anyhow!("[Error] Failed after retrying {} times - try_send_operation()", max_retries))
+    Err(anyhow!("[Telebot Error][try_send_operation()] Failed after retrying {} times", max_retries))
 }
 
 /*
@@ -35,7 +35,7 @@ where
 */
 async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, msg: &str) -> Result<(), anyhow::Error> {
     
-    bot.send_message(chat_id, msg).await.context("[Error] Failed to send command response - tele_bot_send_msg()")?;
+    bot.send_message(chat_id, msg).await.context("[Telebot Error][tele_bot_send_msg()] Failed to send command response.")?;
     
     Ok(())
 }
@@ -52,7 +52,7 @@ pub async fn send_message_confirm(bot: &Bot, chat_id: ChatId, msg: &str) -> Resu
 */
 async fn tele_bot_send_photo(bot: &Bot, chat_id: ChatId, image_path: &str) -> Result<(), anyhow::Error> {
     let photo = InputFile::file(Path::new(image_path));
-    bot.send_photo(chat_id, photo).await.context("[Error] Failed to send Photo - tele_bot_send_photo()")?;
+    bot.send_photo(chat_id, photo).await.context("Telebot Error][tele_bot_send_photo()] Failed to send Photo.")?;
     Ok(())
 }
 

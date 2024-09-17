@@ -45,7 +45,7 @@ async fn handle_command(message: &Message, bot: &Bot) -> Result<(), anyhow::Erro
     
     let input_text = message
         .text()
-        .ok_or_else(|| anyhow!("[Error] The entered value does not exist."))?
+        .ok_or_else(|| anyhow!("[Error][handle_commandhandle_command()] The entered value does not exist."))?
         .to_lowercase();
     
     if input_text.starts_with("c ") {

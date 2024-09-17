@@ -46,7 +46,7 @@ pub async fn errork(err: anyhow::Error) {
     let kafka_client: Option<&Arc<ProduceBroker>> = match KAFKA_PRODUCER.get() {
         Some(kafka) => Some(kafka),
         None => {
-            error!("[DB Connection Error] Cannot connect Kafka cluster");
+            error!("[DB Connection Error][errork()] Cannot connect Kafka cluster");
             None
         }
     };
@@ -68,7 +68,7 @@ pub async fn infok(info: &str) {
     let kafka_client: Option<&Arc<ProduceBroker>> = match KAFKA_PRODUCER.get() {
         Some(kafka) => Some(kafka),
         None => {
-            error!("[DB Connection Error] Cannot connect Kafka cluster");
+            error!("[DB Connection Error][infok()] Cannot connect Kafka cluster");
             None
         }
     };

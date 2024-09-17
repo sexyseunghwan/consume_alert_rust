@@ -48,7 +48,7 @@ History     : 2023-05-04 Seunghwan Shin       # first create
               2024-09-01 Seunghwan Shin       # If there is no consumption details during the entered period, do not show consumption-related graphs
               2024-09-08 Seunghwan Shin       # Change command calls in a simpler way
               2024-09-12 Seunghwan Shin       # Add list command
-              2024-09-17 Seunghwan Shin       # Manage logs with ''KAFKA''
+              2024-09-17 Seunghwan Shin       # Manage logs with ''KAFKA'' -> Elasticsearch with 'logstash'
 */ 
 mod common;
 mod controller;
@@ -58,7 +58,7 @@ mod dtos;
 
 use utils_modules::logger_utils::*;
 use controller::main_controller::*;
-use controller::test_controller::*;
+//use controller::test_controller::*;
 
 
 #[tokio::main]

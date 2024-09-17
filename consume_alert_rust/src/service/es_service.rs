@@ -56,7 +56,7 @@ impl EsHelper {
             }   
         }
         
-        Err(anyhow!("All Elasticsearch connections failed"))
+        Err(anyhow!("[Elasticsearch Error][cluster_search_query()] All Elasticsearch connections failed"))
     }
 
     /*
@@ -75,7 +75,7 @@ impl EsHelper {
             }   
         }
         
-        Err(anyhow!("All Elasticsearch connections failed"))
+        Err(anyhow!("[Elasticsearch Error][cluster_post_query()] All Elasticsearch connections failed"))
 
     }
 
@@ -96,7 +96,7 @@ impl EsHelper {
             }   
         }
         
-        Err(anyhow!("All Elasticsearch connections failed"))                
+        Err(anyhow!("[Elasticsearch Error][cluster_delete_query()] All Elasticsearch connections failed"))                
     }
     
 }
@@ -122,7 +122,7 @@ impl EsObj {
             Ok(response_body)
         } else {
             let error_body = response.text().await?;
-            Err(anyhow!("response status is failed: {:?}", error_body))
+            Err(anyhow!("[Elasticsearch Error][node_search_query()] response status is failed: {:?}", error_body))
         }
     }
 
@@ -140,7 +140,7 @@ impl EsObj {
         if response.status_code().is_success() {
             Ok(())
         } else {
-            let error_message = format!("Failed to index document: Status Code: {}", response.status_code());
+            let error_message = format!("[Elasticsearch Error][node_post_query()] Failed to index document: Status Code: {}", response.status_code());
             Err(anyhow!(error_message))
         }
     }
@@ -160,7 +160,7 @@ impl EsObj {
         if response.status_code().is_success() {
             Ok(())
         } else {
-            let error_message = format!("Failed to delete document: Status Code: {}, Document ID: {}", response.status_code(), doc_id);
+            let error_message = format!("[Elasticsearch Error][node_delete_query()] Failed to delete document: Status Code: {}, Document ID: {}", response.status_code(), doc_id);
             Err(anyhow!(error_message))
         }
         

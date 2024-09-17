@@ -143,7 +143,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot) -> Re
                             message.chat.id, 
                             "There is a problem with the parameter you entered. Please check again. \nEX) c snack:15000").await?;
 
-        return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
+        return Err(anyhow!(format!("[Parameter Error][command_consumption()] Invalid format of 'text' variable entered as parameter. : {:?}", text)));
     } 
     
     if let Some(cons_name) = split_args_vec.get(0) {
@@ -152,7 +152,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot) -> Re
 
             if !is_numeric(price) {
                 send_message_confirm(bot, message.chat.id, "The second parameter must be numeric. \nEX) c snack:15000").await?;
-                return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
+                return Err(anyhow!(format!("[Parameter Error][command_consumption()] Invalid format of 'text' variable entered as parameter. : {:?}", text)));
             }
 
             consume_name = cons_name;
@@ -165,7 +165,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot) -> Re
                         message.chat.id, 
                         "There is a problem with the parameter you entered. Please check again. \nEX) c snack:15000").await?;
 
-        return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text)));
+        return Err(anyhow!(format!("[Parameter Error][command_consumption()] Invalid format of 'text' variable entered as parameter. : {:?}", text)));
     }
     
     let curr_time = get_current_kor_naive_datetime();
@@ -178,7 +178,7 @@ pub async fn command_consumption(message: &Message, text: &str, bot: &Bot) -> Re
     
     let es_client = ELASTICSEARCH_CLIENT
         .get()
-        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+        .ok_or_else(|| anyhow!("[DB Connection Error][command_consumption()] Cannot connect Elasticsearch"))?;
 
     es_client.cluster_post_query(document, "consuming_index_prod_new").await?;
     
@@ -206,12 +206,12 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
             
             let year: i32 = split_args_vec
                                 .get(0)
-                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 0th data of 'split_args_vec' vector does not exist. - command_consumption_per_mon()"))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_per_mon()] The 0th data of 'split_args_vec' vector does not exist."))?
                                 .parse()?;
             
             let month: u32 = split_args_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_args_vec' vector does not exist. - command_consumption_per_mon()"))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_per_mon()] The 1th data of 'split_args_vec' vector does not exist."))?
                                 .parse()?;
             
             let start = get_naivedate(year, month, 1)?;
@@ -222,13 +222,13 @@ pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bo
         },
         _ => {
             send_message_confirm(bot, message.chat.id, "Invalid date format. Please use format YYYY.MM like cm 2023.07").await?;
-            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption() // {:?}", text));
+            return Err(anyhow!("[Parameter Error][command_consumption_per_mon()] Invalid format of 'text' variable entered as parameter. : {:?}", text));
         }
     };
     
     let es_client = ELASTICSEARCH_CLIENT
         .get()
-        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+        .ok_or_else(|| anyhow!("[DB Connection Error][command_consumption_per_mon()] Cannot connect Elasticsearch"))?;
 
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
     let cur_mon_total_cost_infos = total_cost_detail_specific_period(cur_date_start, 
@@ -264,20 +264,20 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
 
             let split_bar_vec: Vec<String> = split_args_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_args_vec' vector does not exist. - command_consumption_per_term()"))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_per_term()] The 1th data of 'split_args_vec' vector does not exist."))?
                                 .split('-')
                                 .map(String::from)
                                 .collect();
             
             let date_start: String = split_bar_vec
                                     .get(0)
-                                    .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 0th data of 'split_bar_vec' vector does not exist. - command_consumption_per_term()"))?
+                                    .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_per_term()] The 0th data of 'split_bar_vec' vector does not exist."))?
                                     .parse()?;
             let date_start_form = get_naive_date_from_str(&date_start, "%Y.%m.%d")?;
 
             let date_end: String = split_bar_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_bar_vec' vector does not exist. - command_consumption_per_term()"))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_per_term()] The 1th data of 'split_bar_vec' vector does not exist."))?
                                 .parse()?;
             
             let date_end_form = get_naive_date_from_str(&date_end, "%Y.%m.%d")?;
@@ -289,13 +289,13 @@ pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &B
         },
         _ => {
             send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) ctr 2023.07.07-2023.08.01").await?;
-            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_term() // {:?}", text));
+            return Err(anyhow!("[Parameter Error][command_consumption_per_term()] Invalid format of 'text' variable entered as parameter. : {:?}", text));
         }
     };
     
     let es_client = ELASTICSEARCH_CLIENT
         .get()
-        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+        .ok_or_else(|| anyhow!("[DB Connection Error][command_consumption_per_term()] Cannot connect Elasticsearch"))?;
 
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
         
@@ -337,17 +337,17 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
             
             let year: i32 = split_args_vec
                                 .get(0)
-                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 0th data of 'split_args_vec' vector does not exist. - command_consumption_per_day()"))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_per_day()] The 0th data of 'split_args_vec' vector does not exist."))?
                                 .parse()?;
             
             let month: u32 = split_args_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_args_vec' vector does not exist. - command_consumption_per_day()"))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_per_day()] The 1th data of 'split_args_vec' vector does not exist."))?
                                 .parse()?;
 
             let day: u32 = split_args_vec
                 .get(2)
-                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 2nd data of 'split_args_vec' vector does not exist. - command_consumption_per_day()"))?
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_per_day()] The 2nd data of 'split_args_vec' vector does not exist."))?
                 .parse()?;
             
             let start_dt = get_naivedate(year, month, day)?;
@@ -357,13 +357,13 @@ pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bo
         },
         _ => {
             send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) ct or ct 2023.11.11").await?;
-            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_day() // {:?}", text));
+            return Err(anyhow!("[Parameter Error][command_consumption_per_day()] Invalid format of 'text' variable entered as parameter. : {:?}", text));
         }
     };
     
     let es_client = ELASTICSEARCH_CLIENT
         .get()
-        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+        .ok_or_else(|| anyhow!("[DB Connection Error][command_consumption_per_day()] Cannot connect Elasticsearch"))?;
 
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?; 
 
@@ -419,12 +419,12 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
             
             let year: i32 = split_args_vec
                                 .get(0)
-                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 0th data of 'split_args_vec' vector does not exist. - command_consumption_per_salary()"))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_per_salary()] The 0th data of 'split_args_vec' vector does not exist."))?
                                 .parse()?;
             
             let month: u32 = split_args_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_args_vec' vector does not exist. - command_consumption_per_salary()"))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_per_salary()] The 1th data of 'split_args_vec' vector does not exist."))?
                                 .parse()?;
             
             let cur_date_end = get_naivedate(year, month, 25)?;
@@ -437,13 +437,13 @@ pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: 
         },
         _ => {
             send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) ct or ct 2023.11.11").await?;
-            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_salary() // {:?}", text));
+            return Err(anyhow!("[Parameter Error][command_consumption_per_salary()] Invalid format of 'text' variable entered as parameter. : {:?}", text));
         }
     };
     
     let es_client = ELASTICSEARCH_CLIENT
         .get()
-        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+        .ok_or_else(|| anyhow!("[DB Connection Error][command_consumption_per_salary()] Cannot connect Elasticsearch"))?;
 
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
     let cur_mon_total_cost_infos = total_cost_detail_specific_period(cur_date_start, 
@@ -494,13 +494,13 @@ pub async fn command_consumption_per_week(message: &Message, text: &str, bot: &B
         },
         _ => {
             send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) cw").await?;
-            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_week() // {:?}", text));
+            return Err(anyhow!("[Parameter Error][command_consumption_per_week()] Invalid format of 'text' variable entered as parameter. : {:?}", text));
         }
     };
 
     let es_client = ELASTICSEARCH_CLIENT
         .get()
-        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+        .ok_or_else(|| anyhow!("[DB Connection Error][command_consumption_per_week()] Cannot connect Elasticsearch"))?;
 
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
     let cur_mon_total_cost_infos = total_cost_detail_specific_period(date_start, 
@@ -539,40 +539,40 @@ pub async fn command_record_fasting_time(message: &Message, text: &str, bot: &Bo
             
             let split_bar_vec: Vec<String> = split_args_vec
                                 .get(1)
-                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_bar_vec' vector does not exist. - command_record_fasting_time()"))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_record_fasting_time()] The 1th data of 'split_bar_vec' vector does not exist."))?
                                 .split(':')
                                 .map(String::from)
                                 .collect();
 
             let hour = match split_bar_vec.get(0)
-                                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1th data of 'split_bar_vec' vector does not exist. - command_record_fasting_time()"))?
+                                .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_record_fasting_time()] The 1th data of 'split_bar_vec' vector does not exist."))?
                                 .parse::<u32>() {
                                     Ok(hour) => hour,
-                                    Err(e) => return Err(anyhow!("[Parsing Error] There was a problem parsing the 'hour' variable. - command_record_fasting_time() // {:?}", e))
+                                    Err(e) => return Err(anyhow!("[Parsing Error][command_record_fasting_time()] There was a problem parsing the 'hour' variable. : {:?}", e))
                                 };
             
             let min = match split_bar_vec.get(1)
-                                .ok_or_else(|| anyhow!("[Invalid date ERROR] - command_check_fasting_time(): There is a problem with the 'min' variable."))?
+                                .ok_or_else(|| anyhow!("[Invalid date ERROR][command_record_fasting_time()] There is a problem with the 'min' variable."))?
                                 .parse::<u32>() {
                                     Ok(min) => min,
-                                    Err(e) => return Err(anyhow!("[Parsing ERROR] There was a problem parsing the 'hour' variable. - command_record_fasting_time() // {:?}", e))
+                                    Err(e) => return Err(anyhow!("[Parsing ERROR][command_record_fasting_time()] There was a problem parsing the 'hour' variable. : {:?}", e))
                                 };
             
             let meal_time_cur = get_current_kor_naive_datetime();
 
             meal_time_cur.date().and_hms_opt(hour, min, 0)
-                .ok_or_else(|| anyhow!("[Invalid date ERROR] There was a problem parsing the 'meal_time' variable. - command_record_fasting_time()"))?
+                .ok_or_else(|| anyhow!("[Invalid date ERROR][command_record_fasting_time()] There was a problem parsing the 'meal_time' variable."))?
 
         },
         _ => {
             send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX01) mc 22:30 \nEX02) mc").await?;
-            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_record_fasting_time() // {:?}", text));
+            return Err(anyhow!("[Parameter Error][command_record_fasting_time()] Invalid format of 'text' variable entered as parameter. : {:?}", text));
         }
     };
     
     let es_client = ELASTICSEARCH_CLIENT
         .get()
-        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+        .ok_or_else(|| anyhow!("[DB Connection Error][command_record_fasting_time()] Cannot connect Elasticsearch"))?;
 
     // Brings the data of the most recent meal time of today's meal time.
     let current_date = get_str_from_naivedate(get_current_kor_naivedate());
@@ -626,13 +626,13 @@ pub async fn command_check_fasting_time(message: &Message, text: &str, bot: &Bot
         },
         _ => {
             send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) mt").await?;
-            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_check_fasting_time() // {:?}", text));
+            return Err(anyhow!("[Parameter Error][command_check_fasting_time()] Invalid format of 'text' variable entered as parameter. : {:?}", text));
         }
     };
     
     let es_client = ELASTICSEARCH_CLIENT
         .get()
-        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+        .ok_or_else(|| anyhow!("[DB Connection Error][command_check_fasting_time()] Cannot connect Elasticsearch"))?;
 
     let es_query = json!({
         "size": 1,
@@ -679,13 +679,13 @@ pub async fn command_delete_fasting_time(message: &Message, text: &str, bot: &Bo
         1 => { },
         _ => {
             send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) md").await?;
-            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_delete_fasting_time() // {:?}", text));
+            return Err(anyhow!("[Parameter Error][command_delete_fasting_time()] Invalid format of 'text' variable entered as parameter. : {:?}", text));
         }
     }
 
     let es_client = ELASTICSEARCH_CLIENT
         .get()
-        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+        .ok_or_else(|| anyhow!("[DB Connection Error][command_delete_fasting_time()] Cannot connect Elasticsearch"))?;
 
     let es_query = json!({
         "size": 1,
@@ -730,7 +730,7 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
             
             let year: i32 = split_args_vec
                 .get(0)
-                .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 0th data of 'split_bar_vec' vector does not exist. - command_consumption_per_year()"))?
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_per_year()] The 0th data of 'split_bar_vec' vector does not exist."))?
                 .parse()?;
 
             let start_date = get_naivedate(year, 1, 1)?;  
@@ -742,13 +742,13 @@ pub async fn command_consumption_per_year(message: &Message, text: &str, bot: &B
         },
         _ => {
             send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX01) cy\nEX02) cy 2023").await?;
-            return Err(anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_per_year() // {:?}", text));
+            return Err(anyhow!("[Parameter Error][command_consumption_per_year()] Invalid format of 'text' variable entered as parameter. : {:?}", text));
         }
     };
         
     let es_client = ELASTICSEARCH_CLIENT
         .get()
-        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+        .ok_or_else(|| anyhow!("[DB Connection Error][command_consumption_per_year()] Cannot connect Elasticsearch"))?;
 
     let consume_type_vec: Vec<ProdtTypeInfo> = get_classification_consumption_type(es_client, "consuming_index_prod_type").await?;
     let cur_mon_total_cost_infos = total_cost_detail_specific_period(date_start, 
@@ -782,17 +782,17 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot) 
     
     let card_comp = split_args_vec
         .get(0)
-        .ok_or_else(|| anyhow!("[Parameter Error] Invalid format of 'text' variable entered as parameter - command_consumption_auto() // {:?}", split_args_vec))?;
+        .ok_or_else(|| anyhow!("[Parameter Error][command_consumption_auto()] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
 
     let es_client = ELASTICSEARCH_CLIENT
         .get()
-        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+        .ok_or_else(|| anyhow!("[DB Connection Error][command_consumption_auto()] Cannot connect Elasticsearch"))?;
 
     if card_comp.contains("NH") {
         
         let consume_price_vec: Vec<String> = split_args_vec
             .get(2)
-            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. - command_consumption_auto() // {:?}", 2, split_args_vec))?
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 2, split_args_vec))?
             .replace(",", "")
             .replace("원", "")
             .split(" ")
@@ -801,34 +801,34 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot) 
         
         let consume_price = consume_price_vec
             .get(0)
-            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. - command_consumption_auto()", 0))?
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed.", 0))?
             .parse::<i32>()?;
         
         let consume_time_vec: Vec<String> = split_args_vec
             .get(3)
-            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_vec' vector was accessed. - command_consumption_auto()", 3))?
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 3))?
             .split(" ")
             .map(|s| s.to_string())
             .collect();
         
         let date_part: Vec<u32> = consume_time_vec
             .get(0)
-            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_vec' vector was accessed. - command_consumption_auto()", 0))?
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 0))?
             .split("/")
             .map(|s| s.parse::<u32>())
             .collect::<Result<Vec<_>, _>>()?;
         
         let time_part: Vec<u32> = consume_time_vec
             .get(1)
-            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_vec' vector was accessed. - command_consumption_auto()", 1))?
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 1))?
             .split(":")
             .map(|s| s.parse::<u32>())
             .collect::<Result<Vec<_>, _>>()?;
         
-        let mon = date_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'date_part' vector was accessed. - command_consumption_auto()", 0))?;
-        let day = date_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'date_part' vector was accessed. - command_consumption_auto()", 1))?;
-        let hour = time_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'time_part' vector was accessed. - command_consumption_auto()", 0))?;
-        let min = time_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'time_part' vector was accessed. - command_consumption_auto()", 1))?;
+        let mon = date_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'date_part' vector was accessed.", 0))?;
+        let day = date_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()]] Invalid index '{:?}' of 'date_part' vector was accessed.", 1))?;
+        let hour = time_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'time_part' vector was accessed.", 0))?;
+        let min = time_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'time_part' vector was accessed.", 1))?;
         
         let consume_date = get_this_year_naivedatetime(*mon, *day, *hour, *min)?;
         
@@ -849,7 +849,7 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot) 
 
         let consume_price_vec: Vec<String> = split_args_vec
             .get(1)
-            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. - command_consumption_auto() // {:?}", 2, split_args_vec))?
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 2, split_args_vec))?
             .replace(",", "")
             .replace("원", "")
             .split(" ")
@@ -858,39 +858,39 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot) 
         
         let consume_price = consume_price_vec
             .get(0)
-            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. - command_consumption_auto()", 0))?
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed.", 0))?
             .parse::<i32>()?;
         
         let consume_time_name_vec: Vec<String> = split_args_vec
             .get(2)
-            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_vec' vector was accessed. - command_consumption_auto()", 3))?
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 3))?
             .split(" ")
             .map(|s| s.to_string())
             .collect();
         
         let date_part: Vec<u32> = consume_time_name_vec
             .get(0)
-            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_vec' vector was accessed. - command_consumption_auto()", 0))?
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 0))?
             .split("/")
             .map(|s| s.parse::<u32>())
             .collect::<Result<Vec<_>, _>>()?;
         
         let time_part: Vec<u32> = consume_time_name_vec
             .get(1)
-            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_vec' vector was accessed. - command_consumption_auto()", 1))?
+            .ok_or_else(|| anyhow!("[[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 1))?
             .split(":")
             .map(|s| s.parse::<u32>())
             .collect::<Result<Vec<_>, _>>()?;
         
-        let mon = date_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'date_part' vector was accessed. - command_consumption_auto()", 0))?;
-        let day = date_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'date_part' vector was accessed. - command_consumption_auto()", 1))?;
-        let hour = time_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'time_part' vector was accessed. - command_consumption_auto()", 0))?;
-        let min = time_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'time_part' vector was accessed. - command_consumption_auto()", 1))?;
+        let mon = date_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'date_part' vector was accessed.", 0))?;
+        let day = date_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'date_part' vector was accessed.", 1))?;
+        let hour = time_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'time_part' vector was accessed.", 0))?;
+        let min = time_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'time_part' vector was accessed.", 1))?;
         
         let consume_date = get_this_year_naivedatetime(*mon, *day, *hour, *min)?;
         let consume_name = consume_time_name_vec
             .get(2)
-            .ok_or_else(|| anyhow!("[Index Out Of Bounds] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed. - command_consumption_auto()", 2))?
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed. - command_consumption_auto()", 2))?
             .trim();
         
         let document = json!({
@@ -907,7 +907,7 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot) 
                 message.chat.id, 
                 "There is a problem with the parameter you entered. Please check again.").await?;
         
-        return Err(anyhow!(format!("[Parameter Error] Invalid format of 'text' variable entered as parameter. - command_consumption_auto() // {:?}", text)));
+        return Err(anyhow!(format!("[Parameter Error][command_consumption_auto()] Invalid format of 'text' variable entered as parameter. : {:?}", text)));
     }
     
     Ok(())
@@ -924,7 +924,7 @@ pub async fn command_get_consume_type_list(message: &Message, text: &str, bot: &
     
     let es_client = ELASTICSEARCH_CLIENT
         .get()
-        .ok_or_else(|| anyhow!("[DB Connection Error] Cannot connect Elasticsearch"))?;
+        .ok_or_else(|| anyhow!("[DB Connection Error][command_get_consume_type_list()] Cannot connect Elasticsearch"))?;
 
     match args.len() {
         0 => {
@@ -946,15 +946,15 @@ pub async fn command_get_consume_type_list(message: &Message, text: &str, bot: &
 
                 let input_keyword_type = split_args_vec
                     .get(0)
-                    .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 0th data of 'split_args_vec' vector does not exist. - command_get_consume_type_list()"))?;
+                    .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_get_consume_type_list()] The 0th data of 'split_args_vec' vector does not exist."))?;
 
                 let input_keyword = split_args_vec
                     .get(1)
-                    .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 1st data of 'split_args_vec' vector does not exist. - command_get_consume_type_list()"))?;
+                    .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_get_consume_type_list()] The 1st data of 'split_args_vec' vector does not exist."))?;
 
                 let bias_val = split_args_vec
                     .get(2)
-                    .ok_or_else(|| anyhow!("[Index Out Of Range Error] The 2nd data of 'split_args_vec' vector does not exist. - command_get_consume_type_list()"))?
+                    .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_get_consume_type_list()] The 2nd data of 'split_args_vec' vector does not exist."))?
                     .parse::<i32>()?;    
 
                 let keyword_exists = prodt_type_list.iter().any(|elem| {

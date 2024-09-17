@@ -20,8 +20,8 @@ pub async fn initialize_db_clients() {
     let es_client: EsHelper = match EsHelper::new(es_host, &es_id, &es_pw) {
         Ok(es_client) => es_client,
         Err(err) => {
-            error!("[DB Connection Error] Failed to create mysql client - main_controller() // {:?}", err);
-            panic!("[DB Connection Error] Failed to create mysql client - main_controller() // {:?}", err);
+            error!("[DB Connection Error][initialize_db_clients()] Failed to create mysql client : {:?}", err);
+            panic!("[DB Connection Error][initialize_db_clients()] Failed to create mysql client : {:?}", err);
         }
     };
 
@@ -31,8 +31,8 @@ pub async fn initialize_db_clients() {
     let kafka_produce_broker: ProduceBroker = match ProduceBroker::new(&kafka_host) {
         Ok(kafka_client) => kafka_client,
         Err(err) => {
-            error!("Failed to create Kafka client: {:?}", err);
-            panic!("Failed to create Kafka client: {:?}", err)
+            error!("[DB Connection Error][initialize_db_clients()] Failed to create Kafka client: {:?}", err);
+            panic!("[DB Connection Error][initialize_db_clients()] Failed to create Kafka client: {:?}", err)
         }
     };
 
