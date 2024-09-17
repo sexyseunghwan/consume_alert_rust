@@ -10,18 +10,18 @@ pub async fn initialize_db_clients() {
     
     dotenv().ok();
 
-    let es_host: Vec<String> = env::var("ES_DB_URL").expect("[ENV file read Error] 'ES_DB_URL' must be set").split(',').map(|s| s.to_string()).collect();
-    let es_id = env::var("ES_ID").expect("[ENV file read Error] 'ES_ID' must be set");
-    let es_pw = env::var("ES_PW").expect("[ENV file read Error] s'ES_PW' must be set");
+    let es_host: Vec<String> = env::var("ES_DB_URL").expect("[ENV file read Error][initialize_db_clients()] 'ES_DB_URL' must be set").split(',').map(|s| s.to_string()).collect();
+    let es_id = env::var("ES_ID").expect("[ENV file read Error][initialize_db_clients()] 'ES_ID' must be set");
+    let es_pw = env::var("ES_PW").expect("[ENV file read Error][initialize_db_clients()] 'ES_PW' must be set");
 
-    let kafka_host: String = env::var("KAFKA_HOST").expect("[ENV file read Error] 'KAFKA_HOST' must be set");
+    let kafka_host: String = env::var("KAFKA_HOST").expect("[ENV file read Error][initialize_db_clients()] 'KAFKA_HOST' must be set");
     
     // Elasticsearch connection
     let es_client: EsHelper = match EsHelper::new(es_host, &es_id, &es_pw) {
         Ok(es_client) => es_client,
         Err(err) => {
-            error!("[DB Connection Error][initialize_db_clients()] Failed to create mysql client : {:?}", err);
-            panic!("[DB Connection Error][initialize_db_clients()] Failed to create mysql client : {:?}", err);
+            error!("[DB Connection Error][initialize_db_clients()] Failed to create Elasticsearch client : {:?}", err);
+            panic!("[DB Connection Error][initialize_db_clients()] Failed to create Elasticsearch client : {:?}", err);
         }
     };
 
