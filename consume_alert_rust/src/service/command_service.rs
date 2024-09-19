@@ -787,8 +787,9 @@ pub async fn command_consumption_auto(message: &Message, text: &str, bot: &Bot) 
     let es_client = ELASTICSEARCH_CLIENT
         .get()
         .ok_or_else(|| anyhow!("[DB Connection Error][command_consumption_auto()] Cannot connect Elasticsearch"))?;
+    
 
-    if card_comp.contains("NH") {
+    if card_comp.contains("nh") {
         
         let consume_price_vec: Vec<String> = split_args_vec
             .get(2)
