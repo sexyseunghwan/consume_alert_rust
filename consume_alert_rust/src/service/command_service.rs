@@ -7,7 +7,10 @@ use crate::utils_modules::numeric_utils::*;
 use crate::utils_modules::time_utils::*;
 use crate::utils_modules::file_manager_utils::*;
 
-use crate::dtos::dto::*;
+use crate::model::TotalCostInfo::*;
+use crate::model::ToPythonGraphLine::*;
+use crate::model::ProdtTypeInfo::*;
+
 
 
 /*

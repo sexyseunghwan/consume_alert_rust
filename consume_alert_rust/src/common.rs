@@ -49,11 +49,13 @@ pub use rdkafka::consumer::Consumer;
 pub use rdkafka::producer::{FutureProducer, FutureRecord};
 pub use rdkafka::message::Message as KafkaMessage;
 
+pub use async_trait::async_trait;
 
 use crate::service::es_service::EsHelper;
 use crate::service::kafka_service::ProduceBroker;
+
 pub static ELASTICSEARCH_CLIENT: OnceCell<Arc<EsHelper>> = OnceCell::const_new();
 pub static KAFKA_PRODUCER: OnceCell<Arc<ProduceBroker>> = OnceCell::const_new();
 
-
 pub use crate::utils_modules::logger_utils::*;
+

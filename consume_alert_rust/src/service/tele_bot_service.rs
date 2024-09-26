@@ -1,5 +1,7 @@
-use crate::{common::*, dtos::dto::*};
+use crate::common::*;
 
+use crate::model::ConsumeInfo::*;
+use crate::model::ConsumeTypeInfo::*;
 
 /* 
     Generic function to retry operations

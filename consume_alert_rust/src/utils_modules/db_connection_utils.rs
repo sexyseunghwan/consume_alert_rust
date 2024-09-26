@@ -37,5 +37,9 @@ pub async fn initialize_db_clients() {
     };
 
     let _ = KAFKA_PRODUCER.set(Arc::new(kafka_produce_broker));
+
+
+    // MySQL connection
+    
     
 }

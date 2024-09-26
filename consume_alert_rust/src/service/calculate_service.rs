@@ -5,8 +5,12 @@ use crate::service::graph_api_service::*;
 
 use crate::utils_modules::time_utils::*;
 
-use crate::dtos::dto::*;
-
+use crate::model::ProdtTypeInfo::*;
+use crate::model::ProdtDetailInfo::*;
+use crate::model::ConsumeInfo::*;
+use crate::model::TotalCostInfo::*;
+use crate::model::ConsumeTypeInfo::*;
+use crate::model::ToPythonGraphLine::*;
 
 
 /*

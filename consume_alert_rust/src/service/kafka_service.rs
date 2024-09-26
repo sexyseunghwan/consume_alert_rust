@@ -1,11 +1,7 @@
 use crate::common::*;
 
+use crate::repository::kafka_repository::*;
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct KafkaBroker {
-    pub brokers: String,
-    
-}
 
 #[derive(Clone)]
 pub struct ProduceBroker {
@@ -33,7 +29,6 @@ impl ProduceBroker {
         Ok(produce_client)
     }
     
-    
     /* 
         Kafka Function that produces messages on a specific topic
     */
@@ -50,7 +45,7 @@ impl ProduceBroker {
             Err((e, _)) => Err(anyhow!(e.to_string())),
         }
     }
-
+    
     /*
         Function that SENDS the entire log of the program to KAFKA
     */
@@ -67,17 +62,3 @@ impl ProduceBroker {
 
 
 
-impl KafkaBroker { 
-    
-    /*
-        Function that creates a Producer object
-    */
-    pub fn create_producer(&self) -> Result<FutureProducer, anyhow::Error> {
-        
-        let producer:FutureProducer = ClientConfig::new()
-            .set("bootstrap.servers", &self.brokers)
-            .create()?;
-        
-        Ok(producer)
-    }
-}

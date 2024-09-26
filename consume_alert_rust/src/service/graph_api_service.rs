@@ -1,6 +1,8 @@
 use crate::common::*;
 
-use crate::dtos::dto::*;
+use crate::model::ConsumeTypeInfo::*;
+use crate::model::ToPythonGraphCircle::*;
+use crate::model::ToPythonGraphLine::*;
 
 
 /*
