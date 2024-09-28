@@ -5,6 +5,9 @@ pub use std::sync::Arc;
 pub use std::collections::HashMap;
 pub use std::path::Path;
 pub use std::cmp::Ordering;
+pub use std::future::Future;
+
+pub use rand::prelude::SliceRandom;
 
 pub use tokio::sync::OnceCell;
 
@@ -28,9 +31,10 @@ pub use elasticsearch::{
 pub use elasticsearch::http::transport::TransportBuilder;
 pub use elasticsearch::http::Url;
 pub use elasticsearch::{SearchParts, IndexParts, DeleteParts};
-
-
+pub use elasticsearch::http::transport::Transport;
+pub use elasticsearch::http::transport::ConnectionPool;
 pub use anyhow::{Result, anyhow, Context};
+pub use elasticsearch::http::response::Response;
 
 pub use getset::Getters;
 pub use derive_new::new;
@@ -54,7 +58,8 @@ pub use async_trait::async_trait;
 use crate::service::es_service::EsHelper;
 use crate::service::kafka_service::ProduceBroker;
 
-pub static ELASTICSEARCH_CLIENT: OnceCell<Arc<EsHelper>> = OnceCell::const_new();
+//pub static ELASTICSEARCH_CLIENT: OnceCell<Arc<EsHelper>> = OnceCell::const_new();
+pub static ELASTICSEARCH_CLIENTS: OnceCell<Vec<Arc<Elasticsearch>>> = OnceCell::new();
 pub static KAFKA_PRODUCER: OnceCell<Arc<ProduceBroker>> = OnceCell::const_new();
 
 pub use crate::utils_modules::logger_utils::*;

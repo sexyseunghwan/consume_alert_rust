@@ -9,7 +9,7 @@ pub struct EsHelper {
 }
 
 impl EsHelper {
-
+    
     /* 
         Constructor
     */
