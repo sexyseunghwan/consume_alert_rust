@@ -1,7 +1,8 @@
 use crate::common::*;
 
-use crate::service::es_service::*;
 use crate::service::kafka_service::*;
+
+use crate::repository::es_repository::*;
 
 /*
     Function that initializes db connection to a 'single tone'
@@ -17,15 +18,15 @@ pub async fn initialize_db_clients() {
     let kafka_host: String = env::var("KAFKA_HOST").expect("[ENV file read Error][initialize_db_clients()] 'KAFKA_HOST' must be set");
     
     // Elasticsearch connection
-    let es_client: EsHelper = match EsHelper::new(es_host, &es_id, &es_pw) {
+    let es_client: EsRepositoryPub = match EsRepositoryPub::new(es_host, &es_id, &es_pw) {
         Ok(es_client) => es_client,
         Err(err) => {
             error!("[DB Connection Error][initialize_db_clients()] Failed to create Elasticsearch client : {:?}", err);
             panic!("[DB Connection Error][initialize_db_clients()] Failed to create Elasticsearch client : {:?}", err);
         }
     };
-
-    let _ = ELASTICSEARCH_CLIENT.set(Arc::new(es_client));
+    
+    let _ = ELASTICSEARCH_CLIENTS.set(Arc::new(es_client));
     
     // Kafka connection
     let kafka_produce_broker: ProduceBroker = match ProduceBroker::new(&kafka_host) {

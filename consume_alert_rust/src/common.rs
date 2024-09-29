@@ -55,11 +55,11 @@ pub use rdkafka::message::Message as KafkaMessage;
 
 pub use async_trait::async_trait;
 
-use crate::service::es_service::EsHelper;
+use crate::repository::es_repository::*;
 use crate::service::kafka_service::ProduceBroker;
 
 //pub static ELASTICSEARCH_CLIENT: OnceCell<Arc<EsHelper>> = OnceCell::const_new();
-pub static ELASTICSEARCH_CLIENTS: OnceCell<Vec<Arc<Elasticsearch>>> = OnceCell::new();
+pub static ELASTICSEARCH_CLIENTS: OnceCell<Arc<EsRepositoryPub>> = OnceCell::new();
 pub static KAFKA_PRODUCER: OnceCell<Arc<ProduceBroker>> = OnceCell::const_new();
 
 pub use crate::utils_modules::logger_utils::*;

@@ -50,7 +50,7 @@ History     : 2023-05-04 Seunghwan Shin       # first create
               2024-09-12 Seunghwan Shin       # Add list command
               2024-09-17 Seunghwan Shin       # Manage logs with ''KAFKA'' -> Elasticsearch with 'logstash'
               2024-09-19 Seunghwan Shin       # Lowercase Input Processing
-              2024-09-26 Seunghwan Shin       # 
+              2024-00-00 Seunghwan Shin       # 
 */ 
 mod common;
 mod controller;
