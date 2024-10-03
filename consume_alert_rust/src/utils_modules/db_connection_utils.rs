@@ -14,8 +14,6 @@ pub async fn initialize_db_clients() {
     let es_host: Vec<String> = env::var("ES_DB_URL").expect("[ENV file read Error][initialize_db_clients()] 'ES_DB_URL' must be set").split(',').map(|s| s.to_string()).collect();
     let es_id = env::var("ES_ID").expect("[ENV file read Error][initialize_db_clients()] 'ES_ID' must be set");
     let es_pw = env::var("ES_PW").expect("[ENV file read Error][initialize_db_clients()] 'ES_PW' must be set");
-
-    let kafka_host: String = env::var("KAFKA_HOST").expect("[ENV file read Error][initialize_db_clients()] 'KAFKA_HOST' must be set");
     
     // Elasticsearch connection
     let es_client: EsRepositoryPub = match EsRepositoryPub::new(es_host, &es_id, &es_pw) {
@@ -26,8 +24,10 @@ pub async fn initialize_db_clients() {
         }
     };
     
-    let _ = ELASTICSEARCH_CLIENTS.set(Arc::new(es_client));
-    
+    let _ = ELASTICSEARCH_CLIENT.set(Arc::new(es_client));
+
+    let kafka_host: String = env::var("KAFKA_HOST").expect("[ENV file read Error][initialize_db_clients()] 'KAFKA_HOST' must be set");
+
     // Kafka connection
     let kafka_produce_broker: ProduceBroker = match ProduceBroker::new(&kafka_host) {
         Ok(kafka_client) => kafka_client,

@@ -3,6 +3,8 @@ use crate::common::*;
 use crate::service::command_service::*;
 use crate::utils_modules::db_connection_utils::*;
 
+pub static ELASTICSEARCH_CLIENT: OnceCell<Arc<CommandService>> = OnceCell::new();
+
 
 /*
     ======================================================
@@ -23,7 +25,7 @@ pub async fn main_controller() {
     teloxide::repl(bot, move |message: Message, bot: Bot| {
 
         async move {
-            match handle_command(&message, &bot).await {
+            match handle_command(message, bot).await {
                 Ok(_) => (),
                 Err(e) => {
                     errork(e).await;
@@ -41,7 +43,10 @@ pub async fn main_controller() {
 /*
     Functions that handle each command
 */
-async fn handle_command(message: &Message, bot: &Bot) -> Result<(), anyhow::Error> {
+async fn handle_command(message: Message, bot: Bot) -> Result<(), anyhow::Error> {
+    
+        
+    let command_service = CommandService::new(bot, message);    
     
     let input_text = message
         .text()
@@ -49,41 +54,41 @@ async fn handle_command(message: &Message, bot: &Bot) -> Result<(), anyhow::Erro
         .to_lowercase();
     
     if input_text.starts_with("c ") {
-        command_consumption(message, &input_text, bot).await?;
+        command_service.command_consumption(message, &input_text, bot).await?;
     } 
     else if input_text.starts_with("cm") {
-        command_consumption_per_mon(message, &input_text, bot).await?;
+        command_service.command_consumption_per_mon(message, &input_text, bot).await?;
     }
     else if input_text.starts_with("ctr") {
-        command_consumption_per_term(message, &input_text, bot).await?;
+        command_service.command_consumption_per_term(message, &input_text, bot).await?;
     }
     else if input_text.starts_with("ct") {
-        command_consumption_per_day(message, &input_text, bot).await?;
+        command_service.command_consumption_per_day(message, &input_text, bot).await?;
     }
     else if input_text.starts_with("cs") {
-        command_consumption_per_salary(message, &input_text, bot).await?;
+        command_service.command_consumption_per_salary(message, &input_text, bot).await?;
     }
     else if input_text.starts_with("cw") {
-        command_consumption_per_week(message, &input_text, bot).await?;
+        command_service.command_consumption_per_week(message, &input_text, bot).await?;
     }
     else if input_text.starts_with("mc") {
-        command_record_fasting_time(message, &input_text, bot).await?;
+        command_service.command_record_fasting_time(message, &input_text, bot).await?;
     }
     else if input_text.starts_with("mt") {
-        command_check_fasting_time(message, &input_text, bot).await?;
+        command_service.command_check_fasting_time(message, &input_text, bot).await?;
     }
     else if input_text.starts_with("md") {
-        command_delete_fasting_time(message, &input_text, bot).await?;
+        command_service.command_delete_fasting_time(message, &input_text, bot).await?;
     }
     else if input_text.starts_with("cy") {
-        command_consumption_per_year(message, &input_text, bot).await?;
+        command_service.command_consumption_per_year(message, &input_text, bot).await?;
     }
     else if input_text.starts_with("list") {
-        command_get_consume_type_list(message, &input_text, bot).await?;
+        command_service.command_get_consume_type_list(message, &input_text, bot).await?;
     }
     else 
     {
-        command_consumption_auto(message, &input_text, bot).await?;
+        command_service.command_consumption_auto(message, &input_text, bot).await?;
     }
     
     Ok(())

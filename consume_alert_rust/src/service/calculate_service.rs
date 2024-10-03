@@ -29,7 +29,7 @@ pub async fn get_classification_type(es_client: &Arc<EsHelper>, index_name: &str
           }
         }
     });
-
+    
     let res = es_client.cluster_search_query(query, index_name).await?;
     let mut key_vec: Vec<String> = Vec::new();
 

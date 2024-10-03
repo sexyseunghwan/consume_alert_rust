@@ -2,10 +2,6 @@ use crate::common::*;
 
 use crate::repository::kafka_repository::*;
 
-//TEST
-// TEST 2
-
-
 #[derive(Clone)]
 pub struct ProduceBroker {
     produce_broker: FutureProducer
