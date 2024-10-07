@@ -1,5 +1,6 @@
 use crate::common::*;
-use crate::service::kafka_service::*;
+
+use crate::repository::kafka_repository::*;
 
 
 /*
@@ -43,7 +44,7 @@ pub async fn errork(err: anyhow::Error) {
     // file
     error!("{:?}", err);
 
-    let kafka_client: Option<&Arc<ProduceBroker>> = match KAFKA_PRODUCER.get() {
+    let kafka_client: Option<&Arc<KafkaRepositoryPub>> = match KAFKA_PRODUCER.get() {
         Some(kafka) => Some(kafka),
         None => {
             error!("[DB Connection Error][errork()] Cannot connect Kafka cluster");
@@ -65,7 +66,7 @@ pub async fn infok(info: &str) {
     info!("{:?}", info);
         
     // kafka
-    let kafka_client: Option<&Arc<ProduceBroker>> = match KAFKA_PRODUCER.get() {
+    let kafka_client: Option<&Arc<KafkaRepositoryPub>> = match KAFKA_PRODUCER.get() {
         Some(kafka) => Some(kafka),
         None => {
             error!("[DB Connection Error][infok()] Cannot connect Kafka cluster");

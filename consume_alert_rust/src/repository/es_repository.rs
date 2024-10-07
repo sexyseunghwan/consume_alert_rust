@@ -160,7 +160,4 @@ impl EsRepository for EsRepositoryPub {
         }
         
     }
-
-
-
 }

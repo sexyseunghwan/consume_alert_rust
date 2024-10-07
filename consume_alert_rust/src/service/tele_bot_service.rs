@@ -3,6 +3,11 @@ use crate::common::*;
 use crate::model::ConsumeInfo::*;
 use crate::model::ConsumeTypeInfo::*;
 
+pub struct tele_bot_service
+{
+    
+}
+
 /* 
     Generic function to retry operations
 */
@@ -12,7 +17,7 @@ where
     Fut: std::future::Future<Output = Result<(), anyhow::Error>>,
 {
     let mut attempts = 0;
-
+    
     while attempts <= max_retries {
 
         match operation().await {

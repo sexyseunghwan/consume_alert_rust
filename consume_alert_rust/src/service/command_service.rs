@@ -14,17 +14,34 @@ use crate::model::ProdtTypeInfo::*;
 
 use crate::repository::es_repository::*;
 
-#[derive(Debug, Getters, Clone, new)]
+#[derive(Debug, Getters, Clone)]
 pub struct CommandService
 {
     pub bot: Bot,
-    pub message: Message
+    pub message_id: ChatId,
+    pub input_text: String
 }
 
 
 impl CommandService {
+    
+    /*
+        Consturctor of CommandService
+    */
+    pub fn new(bot: Bot, message: Message) -> Result<Self, anyhow::Error> {
 
+        let message_id = message.chat.id;
 
+        let input_text = message
+            .text()
+            .ok_or_else(|| anyhow!("[Error][handle_commandhandle_command()] The entered value does not exist."))?
+            .to_lowercase();
+
+        let command_service = CommandService{ bot, message_id, input_text};
+
+        Ok(command_service)
+    }
+    
     /*
         Common Command Function Without Comparison
     */
@@ -39,7 +56,7 @@ impl CommandService {
         // Hand over the consumption details to Telegram bot.
         send_message_consume_split(
             &self.bot, 
-            self.message.chat.id, 
+            self.message_id, 
             cur_consume_list, 
             cur_total_cost, 
             cur_start_dt, 
@@ -54,10 +71,10 @@ impl CommandService {
             let consume_type_list = &comsume_type_infos.0;
             let consume_type_img = comsume_type_infos.1;
 
-            send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
+            send_photo_confirm(&self.bot, self.message_id, &consume_type_img).await?;
 
-            send_message_consume_type(bot, 
-                message.chat.id, 
+            send_message_consume_type(&self.bot, 
+                self.message_id, 
                 consume_type_list, 
                 cur_total_cost, 
                 cur_start_dt, 
@@ -75,7 +92,7 @@ impl CommandService {
     /*
         Common command function with comparison group
     */
-    async fn command_common_double(bot: &Bot, message: &Message, cur_total_cost_infos: TotalCostInfo, pre_total_cost_infos: TotalCostInfo) -> Result<(), anyhow::Error> {
+    async fn command_common_double(&self, cur_total_cost_infos: TotalCostInfo, pre_total_cost_infos: TotalCostInfo) -> Result<(), anyhow::Error> {
         
 
         let cur_total_cost = cur_total_cost_infos.total_cost;
@@ -91,8 +108,8 @@ impl CommandService {
         
 
         // Hand over the consumption details to Telegram bot.
-        send_message_consume_split(bot, 
-            message.chat.id, 
+        send_message_consume_split(&self.bot, 
+            self.message_id, 
             cur_consume_list, 
             cur_total_cost, 
             cur_start_dt, 
@@ -123,11 +140,11 @@ impl CommandService {
         let graph_path = get_consume_detail_graph_double(&mut python_graph_line_info_cur, &mut python_graph_line_info_pre).await?;
 
 
-        send_photo_confirm(bot, message.chat.id, &graph_path).await?;
-        send_photo_confirm(bot, message.chat.id, &consume_type_img).await?;
+        send_photo_confirm(&self.bot, self.message_id, &graph_path).await?;
+        send_photo_confirm(&self.bot, self.message_id, &consume_type_img).await?;
 
-        send_message_consume_type(bot, 
-                            message.chat.id, 
+        send_message_consume_type(&self.bot, 
+                    self.message_id, 
                             consume_type_list, 
                             cur_total_cost, 
                             cur_start_dt, 
@@ -145,9 +162,9 @@ impl CommandService {
     /*
         command handler: Writes the expenditure details to the index in ElasticSearch. -> c
     */
-    pub async fn command_consumption(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
+    pub async fn command_consumption(&self) -> Result<(), anyhow::Error> {
 
-        let args = &text[2..];
+        let args = &self.input_text[2..];
             
         let split_args_vec: Vec<String> = args.split(':').map(|s| s.to_string()).collect();
         let mut consume_name = "";
@@ -155,11 +172,11 @@ impl CommandService {
         
         if split_args_vec.len() != 2 {
             
-            send_message_confirm(bot, 
-                                message.chat.id, 
+            send_message_confirm(&self.bot, 
+                                self.message_id, 
                                 "There is a problem with the parameter you entered. Please check again. \nEX) c snack:15000").await?;
 
-            return Err(anyhow!(format!("[Parameter Error][command_consumption()] Invalid format of 'text' variable entered as parameter. : {:?}", text)));
+            return Err(anyhow!(format!("[Parameter Error][command_consumption()] Invalid format of 'text' variable entered as parameter. : {:?}", self.input_text)));
         } 
         
         if let Some(cons_name) = split_args_vec.get(0) {
@@ -167,8 +184,8 @@ impl CommandService {
             if let Some(price) = split_args_vec.get(1) {
 
                 if !is_numeric(price) {
-                    send_message_confirm(bot, message.chat.id, "The second parameter must be numeric. \nEX) c snack:15000").await?;
-                    return Err(anyhow!(format!("[Parameter Error][command_consumption()] Invalid format of 'text' variable entered as parameter. : {:?}", text)));
+                    send_message_confirm(&self.bot, self.message_id, "The second parameter must be numeric. \nEX) c snack:15000").await?;
+                    return Err(anyhow!(format!("[Parameter Error][command_consumption()] Invalid format of 'text' variable entered as parameter. : {:?}", self.input_text)));
                 }
 
                 consume_name = cons_name;
@@ -177,8 +194,8 @@ impl CommandService {
 
         } else {
             
-            send_message_confirm(bot, 
-                            message.chat.id, 
+            send_message_confirm(&self.bot, 
+                            self.message_id, 
                             "There is a problem with the parameter you entered. Please check again. \nEX) c snack:15000").await?;
 
             return Err(anyhow!(format!("[Parameter Error][command_consumption()] Invalid format of 'text' variable entered as parameter. : {:?}", text)));
@@ -202,7 +219,7 @@ impl CommandService {
     /*
         command handler: Checks how much you have consumed during a month -> cm
     */
-    pub async fn command_consumption_per_mon(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
+    pub async fn command_consumption_per_mon(&self, text: &str) -> Result<(), anyhow::Error> {
 
         let args = &text[2..];
         let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -234,7 +251,7 @@ impl CommandService {
                 (start, end, one_month_ago_start, one_month_ago_end)
             },
             _ => {
-                send_message_confirm(bot, message.chat.id, "Invalid date format. Please use format YYYY.MM like cm 2023.07").await?;
+                send_message_confirm(&self.bot, self.message_id, "Invalid date format. Please use format YYYY.MM like cm 2023.07").await?;
                 return Err(anyhow!("[Parameter Error][command_consumption_per_mon()] Invalid format of 'text' variable entered as parameter. : {:?}", text));
             }
         };
@@ -256,8 +273,8 @@ impl CommandService {
                                                                                                 "consuming_index_prod_new", 
                                                                                                 &consume_type_vec).await?;
 
-        command_common_double(bot, message, cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
-
+        self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
+        
         Ok(())
 
     }
@@ -266,7 +283,7 @@ impl CommandService {
     /*
         command handler: Checks how much you have consumed during a specific periods -> ctr
     */
-    pub async fn command_consumption_per_term(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
+    pub async fn command_consumption_per_term(&self, text: &str) -> Result<(), anyhow::Error> {
 
         let args = &text[2..];
         let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -301,7 +318,7 @@ impl CommandService {
                 (date_start_form, date_end_form, pre_date_start, pre_date_end)
             },
             _ => {
-                send_message_confirm(bot, message.chat.id, "There is a problem with the parameter you entered. Please check again. \nEX) ctr 2023.07.07-2023.08.01").await?;
+                send_message_confirm(&self.bot, self.message_id, "There is a problem with the parameter you entered. Please check again. \nEX) ctr 2023.07.07-2023.08.01").await?;
                 return Err(anyhow!("[Parameter Error][command_consumption_per_term()] Invalid format of 'text' variable entered as parameter. : {:?}", text));
             }
         };
@@ -324,7 +341,7 @@ impl CommandService {
                                                                                                         "consuming_index_prod_new", 
                                                                                                         &consume_type_vec).await?;
                                                                                                         
-        command_common_double(bot, message, cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;    
+        self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;    
         
         Ok(())
 
@@ -335,7 +352,7 @@ impl CommandService {
     /*
         command handler: Checks how much you have consumed during a day -> ct
     */
-    pub async fn command_consumption_per_day(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
+    pub async fn command_consumption_per_day(&self, message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
         
         let args = &text[2..];
         let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -386,7 +403,7 @@ impl CommandService {
                                                         "consuming_index_prod_new", 
                                                         &consume_type_vec).await?;
         
-        command_common_single(bot, message, cur_mon_total_cost_infos).await?;
+        self.command_common_single(cur_mon_total_cost_infos).await?;
 
         Ok(())
     }
@@ -395,7 +412,7 @@ impl CommandService {
     /*
         command handler: Check the consumption details from the date of payment to the next payment. -> cs
     */
-    pub async fn command_consumption_per_salary(message: &Message, text: &str, bot: &Bot) -> Result<(), anyhow::Error> {
+    pub async fn command_consumption_per_salary(&self, text: &str) -> Result<(), anyhow::Error> {
 
         let args = &text[2..];
         let split_args_vec: Vec<String> = args.split(' ').map(String::from).collect();
@@ -471,7 +488,7 @@ impl CommandService {
                                                                                                 "consuming_index_prod_new", 
                                                                                                 &consume_type_vec).await?;
         
-        command_common_double(bot, message, cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;  
+        self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;  
         
         Ok(())
     }

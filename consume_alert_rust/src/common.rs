@@ -80,9 +80,9 @@ pub use rdkafka:: {
 pub use async_trait::async_trait;
 
 use crate::repository::es_repository::*;
-use crate::service::kafka_service::ProduceBroker;
+use crate::repository::kafka_repository::*;
 
 pub static ELASTICSEARCH_CLIENT: OnceCell<Arc<EsRepositoryPub>> = OnceCell::new();
-pub static KAFKA_PRODUCER: OnceCell<Arc<ProduceBroker>> = OnceCell::const_new();
+pub static KAFKA_PRODUCER: OnceCell<Arc<KafkaRepositoryPub>> = OnceCell::const_new();
 
 pub use crate::utils_modules::logger_utils::*;

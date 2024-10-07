@@ -1,7 +1,6 @@
 use crate::common::*;
 
-use crate::service::kafka_service::*;
-
+use crate::repository::kafka_repository::*;
 use crate::repository::es_repository::*;
 
 /*
@@ -29,7 +28,7 @@ pub async fn initialize_db_clients() {
     let kafka_host: String = env::var("KAFKA_HOST").expect("[ENV file read Error][initialize_db_clients()] 'KAFKA_HOST' must be set");
 
     // Kafka connection
-    let kafka_produce_broker: ProduceBroker = match ProduceBroker::new(&kafka_host) {
+    let kafka_produce_broker: KafkaRepositoryPub = match KafkaRepositoryPub::new(&kafka_host) {
         Ok(kafka_client) => kafka_client,
         Err(err) => {
             error!("[DB Connection Error][initialize_db_clients()] Failed to create Kafka client: {:?}", err);
@@ -41,6 +40,5 @@ pub async fn initialize_db_clients() {
 
 
     // MySQL connection
-    
-    
+        
 }

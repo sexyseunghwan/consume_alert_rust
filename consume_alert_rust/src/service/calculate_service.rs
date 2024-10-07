@@ -1,9 +1,11 @@
 use crate::common::*;
 
-use crate::service::es_service::*;
+//use crate::service::es_service::*;
 use crate::service::graph_api_service::*;
 
 use crate::utils_modules::time_utils::*;
+
+use crate::repository::es_repository::*;
 
 use crate::model::ProdtTypeInfo::*;
 use crate::model::ProdtDetailInfo::*;
@@ -16,7 +18,7 @@ use crate::model::ToPythonGraphLine::*;
 /*
     Function to get ProdtTypeInfo keyword_type information from Elasticsearch
 */
-pub async fn get_classification_type(es_client: &Arc<EsHelper>, index_name: &str) -> Result<Vec<String>, anyhow::Error> {
+pub async fn get_classification_type(es_client: &, index_name: &str) -> Result<Vec<String>, anyhow::Error> {
 
     let query = json!({
         "size": 0,  
