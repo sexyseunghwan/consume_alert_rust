@@ -16,7 +16,10 @@ pub use rand:: {
     SeedableRng
 };
 
-pub use tokio::sync::OnceCell;
+pub use tokio::{
+    sync::OnceCell,
+    task
+};
 
 pub use futures::future::Lazy;
 pub use log::{info, error};
@@ -69,20 +72,27 @@ pub use regex::Regex;
 
 pub use num_format::{Locale, ToFormattedString};
 
-pub use rdkafka:: {
-    config::ClientConfig,
-    consumer::Consumer,
-    producer::{FutureProducer, FutureRecord},
-    message::Message as KafkaMessage
-};
+// pub use rdkafka:: {
+//     config::ClientConfig,
+//     consumer::Consumer,
+//     producer::{FutureProducer, FutureRecord},
+//     message::Message as KafkaMessage
+// };
+
+// pub use kafka::{
+//     producer::{Producer, Record as KafkaRecord, RequiredAcks}
+// };
+
+pub use kafka::producer::{Producer, Record as KafkaRecord, RequiredAcks};
 
 
 pub use async_trait::async_trait;
 
-use crate::repository::es_repository::*;
-use crate::repository::kafka_repository::*;
-
-pub static ELASTICSEARCH_CLIENT: OnceCell<Arc<EsRepositoryPub>> = OnceCell::new();
-pub static KAFKA_PRODUCER: OnceCell<Arc<KafkaRepositoryPub>> = OnceCell::const_new();
+//use crate::repository::es_repository::*;
+//use crate::repository::kafka_repository::*;
+//pub static ELASTICSEARCH_CLIENT: OnceCell<Arc<EsRepositoryPub>> = OnceCell::new();
+//pub static KAFKA_PRODUCER: OnceCell<Arc<KafkaRepositoryPub>> = OnceCell::const_new();
 
 pub use crate::utils_modules::logger_utils::*;
+
+pub use once_cell::sync::Lazy as once_lazy;
