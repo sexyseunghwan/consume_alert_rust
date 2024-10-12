@@ -37,24 +37,37 @@ fn custom_format(w: &mut dyn Write, now: &mut flexi_logger::DeferredNow, record:
 }
 
 /*
+
+*/
+async fn logging_kafka(msg: &str) {
+    
+    let kafka_producer = get_kafka_producer();
+    info!("kafka_producer-1");
+    let msg_owned = msg.to_string();
+
+    let handle = task::spawn_blocking(move || {
+        kafka_producer.produce_message("consume_alert_rust", &msg_owned).unwrap_or_else(|e| {
+            error!("{:?}", e);
+        });
+    });
+    
+    info!("kafka_producer-2");
+
+    match handle.await {
+        Ok(_) => (),
+        Err(e) => error!("Error waiting for task: {:?}", e),
+    }
+    
+}
+
+/*
     error!
 */
 pub async fn errork(err: anyhow::Error) {
     
     // file
     error!("{:?}", err);
-
-    let kafka_client: Option<&Arc<KafkaRepositoryPub>> = match KAFKA_PRODUCER.get() {
-        Some(kafka) => Some(kafka),
-        None => {
-            error!("[DB Connection Error][errork()] Cannot connect Kafka cluster");
-            None
-        }
-    };
-    
-    if let Some(kafka_client) = kafka_client {
-        kafka_client.logging_kafka(&err.to_string()).await;
-    }
+    logging_kafka(&err.to_string()).await;
 }
 
 /*
@@ -64,18 +77,19 @@ pub async fn infok(info: &str) {
     
     // file
     info!("{:?}", info);
-        
-    // kafka
-    let kafka_client: Option<&Arc<KafkaRepositoryPub>> = match KAFKA_PRODUCER.get() {
-        Some(kafka) => Some(kafka),
-        None => {
-            error!("[DB Connection Error][infok()] Cannot connect Kafka cluster");
-            None
-        }
-    };
+    logging_kafka(info).await;
+    info!("end");
+    // // kafka
+    // let kafka_client: Option<&Arc<KafkaRepositoryPub>> = match KAFKA_PRODUCER.get() {
+    //     Some(kafka) => Some(kafka),
+    //     None => {
+    //         error!("[DB Connection Error][infok()] Cannot connect Kafka cluster");
+    //         None
+    //     }
+    // };
 
-    if let Some(kafka_client) = kafka_client {
-        kafka_client.logging_kafka(info).await;
-    }
+    // if let Some(kafka_client) = kafka_client {
+    //     kafka_client.logging_kafka(info).await;
+    // }
     
 }

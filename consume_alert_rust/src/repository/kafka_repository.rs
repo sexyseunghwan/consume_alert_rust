@@ -76,7 +76,7 @@ static KAFKA_PRODUCER: once_lazy<Arc<KafkaRepositoryPub>> = once_lazy::new(|| {
 
 
 /*
-
+    Function to initialize Kafka connection instances
 */
 pub fn initialize_kafka_clients() -> Arc<KafkaRepositoryPub> {
 
@@ -96,48 +96,45 @@ pub fn initialize_kafka_clients() -> Arc<KafkaRepositoryPub> {
             }
         };
     
-    let kafka_producer = KafkaRepositoryPub::new(produce_broker);
+    let kafka_producer = KafkaRepositoryPub::new(Arc::new(Mutex::new(produce_broker)));
     Arc::new(kafka_producer)
 }
+
+
+/*
+    
+*/
+pub fn get_kafka_producer() -> Arc<KafkaRepositoryPub> {
+    Arc::clone(&KAFKA_PRODUCER)
+}
+
 
 #[async_trait]
 pub trait KafkaRepository {
     fn produce_message(&self, topic: &str, message: &str) -> Result<(), anyhow::Error>;
-    async fn logging_kafka(&self, msg: &str);
+    //async fn logging_kafka(&self, msg: &str);
 }
 
 #[derive(new)]
 pub struct KafkaRepositoryPub {
-    produce_broker: Producer
+    produce_broker: Arc<Mutex<Producer>>
 }
 
 #[async_trait]
 impl KafkaRepository for KafkaRepositoryPub {
 
     /* 
-
+        Function that send message to Kafka
     */
     fn produce_message(&self, topic: &str, message: &str) -> Result<(), anyhow::Error> {
 
-        let produce_broker = self.produce_broker;
-        let result = produce_broker.send(&KafkaRecord::from_value(topic, message))?;
+        let mut produce_broker = self
+            .produce_broker
+            .lock()
+            .map_err(|e| anyhow!("Failed to lock the Kafka producer mutex: {:?}", e))?;
         
+        let _result = produce_broker.send(&KafkaRecord::from_value(topic, message))?;
+         
         Ok(())
     }
-    
-    
-    /*
-
-    */
-    async fn logging_kafka(&self, msg: &str) {
-
-        let handle = task::spawn_blocking(move || {
-            self.produce_message("consume_alert_rust", msg);
-        });
-        
-        let res = handle.await;
-        
-    }
-
-
 }

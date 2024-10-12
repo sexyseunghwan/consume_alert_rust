@@ -1,5 +1,31 @@
 use crate::common::*;
 
+static ELASTICSEARCH_CLIENT: once_lazy<Arc<EsRepositoryPub>> = once_lazy::new(|| {
+    initialize_elastic_clients()
+});
+
+
+/*
+    Function to initialize Elasticsearch connection instances
+*/
+pub fn initialize_elastic_clients() -> Arc<EsRepositoryPub> {
+
+    let es_host: Vec<String> = env::var("ES_DB_URL").expect("[ENV file read Error][initialize_db_clients()] 'ES_DB_URL' must be set").split(',').map(|s| s.to_string()).collect();
+    let es_id = env::var("ES_ID").expect("[ENV file read Error][initialize_db_clients()] 'ES_ID' must be set");
+    let es_pw = env::var("ES_PW").expect("[ENV file read Error][initialize_db_clients()] 'ES_PW' must be set");
+
+    // Elasticsearch connection
+    let es_client: EsRepositoryPub = match EsRepositoryPub::new(es_host, &es_id, &es_pw) {
+        Ok(es_client) => es_client,
+        Err(err) => {
+            error!("[DB Connection Error][initialize_db_clients()] Failed to create Elasticsearch client : {:?}", err);
+            panic!("[DB Connection Error][initialize_db_clients()] Failed to create Elasticsearch client : {:?}", err);
+        }
+    };
+
+    Arc::new(es_client)
+}
+
 
 #[async_trait]
 pub trait EsRepository {
@@ -19,7 +45,6 @@ pub(crate) struct EsClient {
     host: String,
     es_conn: Elasticsearch
 }
-
 
 impl EsRepositoryPub {
     
