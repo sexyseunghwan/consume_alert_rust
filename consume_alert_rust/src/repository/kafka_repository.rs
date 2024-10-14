@@ -100,9 +100,13 @@ pub fn initialize_kafka_clients() -> Arc<KafkaRepositoryPub> {
     Arc::new(kafka_producer)
 }
 
+//export PATH="/opt/homebrew/Cellar/mysql-client/9.0.1/lib:$PATH"
+
+//export LIBRARY_PATH="/opt/homebrew/Cellar/mysql-client/9.0.1/lib:$LIBRARY_PATH"
+
 
 /*
-    
+    /opt/homebrew/Cellar/mysql-client/9.0.1/lib
 */
 pub fn get_kafka_producer() -> Arc<KafkaRepositoryPub> {
     Arc::clone(&KAFKA_PRODUCER)
@@ -112,7 +116,6 @@ pub fn get_kafka_producer() -> Arc<KafkaRepositoryPub> {
 #[async_trait]
 pub trait KafkaRepository {
     fn produce_message(&self, topic: &str, message: &str) -> Result<(), anyhow::Error>;
-    //async fn logging_kafka(&self, msg: &str);
 }
 
 #[derive(new)]

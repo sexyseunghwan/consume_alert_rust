@@ -1,26 +1,33 @@
-// use crate::common::*;
+use crate::common::*;
 
-// use crate::service::calculate_service::*;
-// use crate::service::tele_bot_service::*;
+use crate::service::calculate_service::*;
+use crate::service::tele_bot_service::*;
 
-// use crate::utils_modules::numeric_utils::*;
-// use crate::utils_modules::time_utils::*;
-// use crate::utils_modules::file_manager_utils::*;
-// use crate::utils_modules::common_function::*;
+use crate::utils_modules::numeric_utils::*;
+use crate::utils_modules::time_utils::*;
+use crate::utils_modules::file_manager_utils::*;
+use crate::utils_modules::common_function::*;
 
-// use crate::model::TotalCostInfo::*;
-// use crate::model::ToPythonGraphLine::*;
-// use crate::model::ProdtTypeInfo::*;
+use crate::model::TotalCostInfo::*;
+use crate::model::ToPythonGraphLine::*;
+use crate::model::ProdtTypeInfo::*;
 
-// use crate::repository::es_repository::*;
+use crate::repository::es_repository::*;
 
-// #[derive(Debug, Getters, Clone)]
-// pub struct CommandService
-// {
-//     pub bot: Bot,
-//     pub message_id: ChatId,
-//     pub input_text: String
-// }
+
+#[async_trait]
+pub trait CommandService {
+
+}
+
+#[derive(Debug, Getters, Clone)]
+pub struct CommandServicePub<R: EsRepository>
+{
+    pub bot: Bot,
+    pub message_id: ChatId,
+    pub input_text: String, 
+    pub elastic_obj: R
+}
 
 
 // impl CommandService {

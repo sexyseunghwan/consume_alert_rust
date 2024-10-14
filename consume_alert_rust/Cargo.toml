@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 # rdkafka = "0.26"
 
+
 [dependencies]
 tokio = { version = "1.0", features = ["full"] } 
 dotenv = "0.15.0"
@@ -30,4 +31,6 @@ regex = "1.10.5"
 num-format = "0.4.4"
 lazy_static = "1.5.0"
 async-trait = "0.1.83"
+mysql_async = "0.34.1"
 kafka = "0.10.0"
+diesel = { version = "2.1.5", features = ["mysql", "r2d2"] }

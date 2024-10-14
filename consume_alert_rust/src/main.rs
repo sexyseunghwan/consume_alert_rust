@@ -53,25 +53,49 @@ History     : 2023-05-04 Seunghwan Shin       # first create
               2024-00-00 Seunghwan Shin       # 
 */ 
 mod common;
-mod controller;
+use common::*;
+mod handler;
 mod utils_modules;
 mod service;
 mod model;
 mod repository;
 
 use utils_modules::logger_utils::*;
-use controller::main_controller::*;
+use handler::main_handler::*;
+
+use utils_modules::common_function::*;
+
 //use controller::test_controller::*;
-
-
 #[tokio::main]
 async fn main() {
     
     // Initiate Logger
     set_global_logger();
 
+    // Select compilation environment
+    dotenv().ok();
+    let bot = Bot::from_env();
+
+    initialize_db_connection();
+    infok("Consume Alert Program Start").await;
+    
+    // teloxide::repl(bot, move |message: Message, bot: Bot| {
+    //     async move {
+    //         match handle_command(message, bot).await {
+    //             Ok(_) => (),
+    //             Err(e) => {
+    //                 errork(e).await;
+    //             }
+    //         };
+    //         respond(())
+    //     }
+    // })
+    // .await;  
+
+    
+    
     // Start Controller
-    main_controller().await;
+    //main_controller().await;
 
     //test_controller().await;
 }
