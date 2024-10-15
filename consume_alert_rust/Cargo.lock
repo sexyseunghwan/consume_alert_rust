@@ -392,7 +392,6 @@ dependencies = [
  "mysql_async",
  "num-format",
  "once_cell",
- "openssl",
  "percent-encoding",
  "rand",
  "regex",

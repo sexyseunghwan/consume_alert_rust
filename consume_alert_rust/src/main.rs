@@ -77,7 +77,8 @@ async fn main() {
     let bot = Bot::from_env();
 
     initialize_db_connection();
-    infok("Consume Alert Program Start").await;
+    
+    //infok("Consume Alert Program Start").await;
     
     // teloxide::repl(bot, move |message: Message, bot: Bot| {
     //     async move {
@@ -91,8 +92,6 @@ async fn main() {
     //     }
     // })
     // .await;  
-
-    
     
     // Start Controller
     //main_controller().await;

@@ -1,3 +1,5 @@
+use std::os::windows::io::AsRawHandle;
+
 use crate::common::*;
 
 static ELASTICSEARCH_CLIENT: once_lazy<Arc<EsRepositoryPub>> = once_lazy::new(|| {
@@ -24,6 +26,17 @@ pub fn initialize_elastic_clients() -> Arc<EsRepositoryPub> {
     };
 
     Arc::new(es_client)
+}
+
+
+/*
+    Function to get elasticsearch connection
+*/
+pub fn get_elastic_conn() -> Arc<EsRepositoryPub> {
+
+    let es_client = &ELASTICSEARCH_CLIENT;
+    Arc::clone(&es_client)
+
 }
 
 

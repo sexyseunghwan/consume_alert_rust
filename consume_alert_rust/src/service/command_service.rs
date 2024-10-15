@@ -21,33 +21,44 @@ pub trait CommandService {
 }
 
 #[derive(Debug, Getters, Clone)]
-pub struct CommandServicePub<R: EsRepository>
+pub struct CommandServicePub
 {
     pub bot: Bot,
     pub message_id: ChatId,
-    pub input_text: String, 
-    pub elastic_obj: R
+    pub input_text: String
 }
 
 
+impl CommandServicePub {
+
+    /*
+        Consturctor of CommandService
+    */
+    pub fn new(bot: Bot, message: Message) -> Result<Self, anyhow::Error> {
+
+        let message_id = message.chat.id;
+
+        let input_text = message
+            .text()
+            .ok_or_else(|| anyhow!("[Error][handle_commandhandle_command()] The entered value does not exist."))?
+            .to_lowercase();
+
+        let command_service = CommandServicePub{ bot, message_id, input_text };
+        
+        Ok(command_service)
+    }
+}
+
+
+impl CommandService for CommandServicePub {
+
+    
+
+}
+
 // impl CommandService {
     
-//     /*
-//         Consturctor of CommandService
-//     */
-//     pub fn new(bot: Bot, message: Message) -> Result<Self, anyhow::Error> {
 
-//         let message_id = message.chat.id;
-
-//         let input_text = message
-//             .text()
-//             .ok_or_else(|| anyhow!("[Error][handle_commandhandle_command()] The entered value does not exist."))?
-//             .to_lowercase();
-
-//         let command_service = CommandService{ bot, message_id, input_text};
-
-//         Ok(command_service)
-//     }
     
 //     /*
 //         Common Command Function Without Comparison
