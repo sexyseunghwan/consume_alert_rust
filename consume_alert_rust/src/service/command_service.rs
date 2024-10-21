@@ -17,7 +17,7 @@ use crate::repository::es_repository::*;
 
 #[async_trait]
 pub trait CommandService {
-
+    fn get_input_text(&self) -> String;
 }
 
 #[derive(Debug, Getters, Clone)]
@@ -52,7 +52,10 @@ impl CommandServicePub {
 
 impl CommandService for CommandServicePub {
 
-    
+    fn get_input_text(&self) -> String {
+        self.input_text.clone()
+    }
+        
 
 }
 

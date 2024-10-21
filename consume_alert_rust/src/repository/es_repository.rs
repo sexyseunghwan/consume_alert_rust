@@ -1,15 +1,14 @@
-use std::os::windows::io::AsRawHandle;
 
 use crate::common::*;
 
+
+#[doc = "Elasticsearch connection object to be used in a single tone"]
 static ELASTICSEARCH_CLIENT: once_lazy<Arc<EsRepositoryPub>> = once_lazy::new(|| {
     initialize_elastic_clients()
 });
 
 
-/*
-    Function to initialize Elasticsearch connection instances
-*/
+#[doc = "Function to initialize Elasticsearch connection instances"]
 pub fn initialize_elastic_clients() -> Arc<EsRepositoryPub> {
 
     let es_host: Vec<String> = env::var("ES_DB_URL").expect("[ENV file read Error][initialize_db_clients()] 'ES_DB_URL' must be set").split(',').map(|s| s.to_string()).collect();
@@ -29,9 +28,7 @@ pub fn initialize_elastic_clients() -> Arc<EsRepositoryPub> {
 }
 
 
-/*
-    Function to get elasticsearch connection
-*/
+#[doc = "Function to get elasticsearch connection"]
 pub fn get_elastic_conn() -> Arc<EsRepositoryPub> {
 
     let es_client = &ELASTICSEARCH_CLIENT;
@@ -85,7 +82,7 @@ impl EsRepositoryPub {
     }
 
 
-    // Common logic: common node failure handling and node selection
+    #[doc = "Common logic: common node failure handling and node selection"]
     async fn execute_on_any_node<F, Fut>(&self, operation: F) -> Result<Response, anyhow::Error>
     where
         F: Fn(EsClient) -> Fut + Send + Sync,
@@ -118,10 +115,8 @@ impl EsRepositoryPub {
 
 #[async_trait]
 impl EsRepository for EsRepositoryPub {
-
-    /*
-        Function that EXECUTES elasticsearch queries - search
-    */
+    
+    #[doc = "Function that EXECUTES elasticsearch queries - search"]
     async fn get_search_query(&self, es_query: &Value, index_name: &str) -> Result<Value, anyhow::Error> {
         
         let response = self.execute_on_any_node(|es_client| async move {
@@ -146,9 +141,8 @@ impl EsRepository for EsRepositoryPub {
         }
     }
 
-    /*
-        Function that EXECUTES elasticsearch queries - indexing
-    */
+    
+    #[doc = "Function that EXECUTES elasticsearch queries - indexing"]
     async fn post_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error> {
 
         let response = self.execute_on_any_node(|es_client| async move {
@@ -172,10 +166,8 @@ impl EsRepository for EsRepositoryPub {
         }
     }
 
-
-    /*
-        Function that EXECUTES elasticsearch queries - delete
-    */
+    
+    #[doc = "Function that EXECUTES elasticsearch queries - delete"]
     async fn delete_query(&self, doc_id: &str, index_name: &str) -> Result<(), anyhow::Error> {
         
         let response = self.execute_on_any_node(|es_client| async move {

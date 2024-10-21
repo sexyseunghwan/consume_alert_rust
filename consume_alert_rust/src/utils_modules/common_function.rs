@@ -10,6 +10,6 @@ pub fn initialize_db_connection() {
     
     initialize_elastic_clients();
     initialize_kafka_clients();
-
-    println!("!!!");
+    
+    //println!("!!!");
 }

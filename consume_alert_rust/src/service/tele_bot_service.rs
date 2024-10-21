@@ -3,122 +3,149 @@ use crate::common::*;
 use crate::model::ConsumeInfo::*;
 use crate::model::ConsumeTypeInfo::*;
 
-pub struct tele_bot_service
-{
-    
+#[async_trait]
+pub trait TelebotService {
+    async fn tele_bot_send_msg(&self, msg: &str) -> Result<(), anyhow::Error>;
+    async fn send_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error>;
+    async fn tele_bot_send_photo(&self, image_path: &str) -> Result<(), anyhow::Error>;
+    async fn send_photo_confirm(&self, image_path: &str) -> Result<(), anyhow::Error>;
+    async fn send_consumption_message<'life1, 'life2, 'msg, T>
+    (
+        &self,
+        items: &'life1 Vec<T>,  
+        message_builder: fn(&'life2 T) -> String,
+        empty_flag: bool,
+        empty_msg: &'msg str,
+        msg_title: &'msg str
+    ) -> Result<(), anyhow::Error>
+    where
+    'life1: 'life2, // 'life1이 'life2보다 오래 살아야 함을 명시
+    T: Send + Sync;
 }
 
-/* 
-    Generic function to retry operations
-*/
-async fn try_send_operation<F, Fut>(operation: F, max_retries: usize, retry_delay: Duration) -> Result<(), anyhow::Error>
-where
-    F: Fn() -> Fut,
-    Fut: std::future::Future<Output = Result<(), anyhow::Error>>,
-{
-    let mut attempts = 0;
-    
-    while attempts <= max_retries {
 
-        match operation().await {
-            Ok(_) => return Ok(()),
-            Err(e) if attempts == max_retries => {
-                error!("[Telebot Error][try_send_operation()] Max attempts reached. : {:?}", e);
-                return Err(e)
-            }
-            Err(e) => {
-                error!("{:?}", e);
-                thread::sleep(retry_delay);
-                attempts += 1;
+pub struct TelebotServicePub
+{
+    pub bot: Bot,
+    pub chat_id: ChatId, 
+}
+
+
+impl TelebotServicePub {
+        
+    #[doc = "Generic function to retry operations"]
+    async fn try_send_operation<F, Fut>(&self, operation: F, max_retries: usize, retry_delay: Duration) -> Result<(), anyhow::Error>
+    where
+        F: Fn() -> Fut,
+        Fut: std::future::Future<Output = Result<(), anyhow::Error>>,
+    {
+        let mut attempts = 0;
+        
+        while attempts <= max_retries {
+
+            match operation().await {
+                Ok(_) => return Ok(()),
+                Err(e) if attempts == max_retries => {
+                    error!("[Telebot Error][try_send_operation()] Max attempts reached. : {:?}", e);
+                    return Err(e)
+                }
+                Err(e) => {
+                    error!("{:?}", e);
+                    thread::sleep(retry_delay);
+                    attempts += 1;
+                }
             }
         }
+        
+        Err(anyhow!("[Telebot Error][try_send_operation()] Failed after retrying {} times", max_retries))
     }
-       
-    Err(anyhow!("[Telebot Error][try_send_operation()] Failed after retrying {} times", max_retries))
-}
-
-/*
-    Send message via Telegram Bot
-*/
-async fn tele_bot_send_msg(bot: &Bot, chat_id: ChatId, msg: &str) -> Result<(), anyhow::Error> {
     
-    bot.send_message(chat_id, msg).await.context("[Telebot Error][tele_bot_send_msg()] Failed to send command response.")?;
-    
-    Ok(())
+
 }
 
-/* 
-    Retry sending messages
-*/ 
-pub async fn send_message_confirm(bot: &Bot, chat_id: ChatId, msg: &str) -> Result<(), anyhow::Error> {
-    try_send_operation(|| tele_bot_send_msg(bot, chat_id, msg), 6, Duration::from_secs(40)).await
-}
+#[async_trait]
+impl TelebotService for TelebotServicePub {
 
-/* 
-    Send photo message via Telegram Bot
-*/
-async fn tele_bot_send_photo(bot: &Bot, chat_id: ChatId, image_path: &str) -> Result<(), anyhow::Error> {
-    let photo = InputFile::file(Path::new(image_path));
-    bot.send_photo(chat_id, photo).await.context("Telebot Error][tele_bot_send_photo()] Failed to send Photo.")?;
-    Ok(())
-}
-
-/* 
-    Retry sending photos
-*/
-pub async fn send_photo_confirm(bot: &Bot, chat_id: ChatId, image_path: &str) -> Result<(), anyhow::Error> {
-    try_send_operation(|| tele_bot_send_photo(bot, chat_id, image_path), 6, Duration::from_secs(40)).await
-}
-
-
-/*
-    Functions that send messages related to consumption details
-*/
-async fn send_consumption_message<T>(
-    bot: &Bot, 
-    chat_id: ChatId, 
-    items: &Vec<T>,  
-    message_builder: fn(&T) -> String,
-    empty_flag: bool,
-    empty_msg: &str,
-    msg_title: &str
-) -> Result<(), anyhow::Error> {
-    
-    //let total_cost_i32 = total_cost as i32;
-    let cnt = 10;
-    let items_len = items.len();
-    let loop_cnt = (items_len / cnt) + (if items_len % cnt != 0 { 1 } else { 0 });
-    
-    if empty_flag {
+    #[doc = "Send message via Telegram Bot"]
+    async fn tele_bot_send_msg(&self, msg: &str) -> Result<(), anyhow::Error> {
         
-        send_message_confirm(
-            bot, 
-            chat_id, 
-            empty_msg, 
-        ).await?;
+        self.bot.send_message(self.chat_id, msg)
+            .await
+            .context("[Telebot Error][tele_bot_send_msg()] Failed to send command response.")?;
 
+        Ok(())
+    }
     
-    } else {
+
+    #[doc = "Retry sending messages"]
+    async fn send_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error> {
+        self.try_send_operation(|| self.tele_bot_send_msg(msg), 6, Duration::from_secs(40)).await
+    }
+
+
+    #[doc = "tele_bot_send_photo"]
+    async fn tele_bot_send_photo(&self, image_path: &str) -> Result<(), anyhow::Error> {
         
-        for idx in 0..loop_cnt {
-            let mut send_text = String::new();
-            let end_idx = cmp::min(items_len, (idx + 1) * cnt);
-    
-            if idx == 0 {
-                send_text.push_str(msg_title);
-            }
-           
-            for inner_idx in (cnt * idx)..end_idx {
-                send_text.push_str("---------------------------------\n");
-                send_text.push_str(&message_builder(&items[inner_idx]));
-            }
-    
-            send_message_confirm(bot, chat_id, &send_text).await?;
-        }
-    }    
+        let photo = InputFile::file(Path::new(image_path));
+        self.bot.send_photo(self.chat_id, photo).await.context("Telebot Error][tele_bot_send_photo()] Failed to send Photo.")?;
+        
+        Ok(())
+    }
 
 
-    Ok(())
+    #[doc = "Retry sending photos"]
+    async fn send_photo_confirm(&self, image_path: &str) -> Result<(), anyhow::Error> {
+        self.try_send_operation(|| self.tele_bot_send_photo(image_path), 6, Duration::from_secs(40)).await
+    }
+    
+
+    #[doc = "Functions that send messages related to consumption details"]
+    async fn send_consumption_message<'life1, 'life2, 'msg, T>(
+        &self, 
+        items: &'life1 Vec<T>,  
+        message_builder: fn(&'life2 T) -> String,
+        empty_flag: bool,
+        empty_msg: &'msg str,
+        msg_title: &'msg str
+    ) -> Result<(), anyhow::Error> 
+    where
+        'life1: 'life2, // 'life1' should live longer than 'life2'
+        T: Send + Sync
+    {
+        
+        //let total_cost_i32 = total_cost as i32;
+        let cnt = 10;
+        let items_len = items.len();
+        let loop_cnt = (items_len / cnt) + (if items_len % cnt != 0 { 1 } else { 0 });
+        
+        if empty_flag {
+            self.send_message_confirm(empty_msg).await?;
+        } else {
+
+            
+            for idx in 0..loop_cnt {
+                let mut send_text = String::new();
+                let end_idx = cmp::min(items_len, (idx + 1) * cnt);
+        
+                if idx == 0 {
+                    send_text.push_str(msg_title);
+                }
+                
+                for inner_idx in (cnt * idx)..end_idx {
+                    send_text.push_str("---------------------------------\n");
+                    send_text.push_str(&message_builder(&items[inner_idx]));
+                }
+        
+                self.send_message_confirm(&send_text).await?;
+            }
+        }    
+    
+    
+        Ok(())
+    }
+
+
+
 }
 
 

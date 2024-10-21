@@ -5,6 +5,12 @@ use crate::model::ToPythonGraphCircle::*;
 use crate::model::ToPythonGraphLine::*;
 
 
+#[async_trait]
+pub trait GraphApiService {
+    
+}
+
+
 /*
     Function that calls python api to draw a pie chart.
 */

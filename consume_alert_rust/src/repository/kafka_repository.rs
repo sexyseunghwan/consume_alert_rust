@@ -67,17 +67,14 @@ use crate::common::*;
     
 // }
 
-/*
 
-*/
+#[doc = "Kafka connection object to be used in a single tone"]
 static KAFKA_PRODUCER: once_lazy<Arc<KafkaRepositoryPub>> = once_lazy::new(|| {
     initialize_kafka_clients()
 });
 
 
-/*
-    Function to initialize Kafka connection instances
-*/
+#[doc = "Function to initialize Kafka connection instances"]
 pub fn initialize_kafka_clients() -> Arc<KafkaRepositoryPub> {
 
     let kafka_host: String = env::var("KAFKA_HOST").expect("[ENV file read Error][initialize_db_clients()] 'KAFKA_HOST' must be set");
