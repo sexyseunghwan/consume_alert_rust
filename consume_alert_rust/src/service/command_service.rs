@@ -30,7 +30,7 @@ pub struct CommandServicePub
 
 
 impl CommandServicePub {
-
+    
     /*
         Consturctor of CommandService
     */
@@ -44,7 +44,7 @@ impl CommandServicePub {
             .to_lowercase();
 
         let command_service = CommandServicePub{ bot, message_id, input_text };
-        
+            
         Ok(command_service)
     }
 }
@@ -55,8 +55,8 @@ impl CommandService for CommandServicePub {
     fn get_input_text(&self) -> String {
         self.input_text.clone()
     }
-        
-
+    
+    
 }
 
 // impl CommandService {

@@ -5,10 +5,12 @@ use crate::model::ConsumeTypeInfo::*;
 
 #[async_trait]
 pub trait TelebotService {
+    
     async fn tele_bot_send_msg(&self, msg: &str) -> Result<(), anyhow::Error>;
     async fn send_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error>;
     async fn tele_bot_send_photo(&self, image_path: &str) -> Result<(), anyhow::Error>;
     async fn send_photo_confirm(&self, image_path: &str) -> Result<(), anyhow::Error>;
+    
     async fn send_consumption_message<'life1, 'life2, 'msg, T>
     (
         &self,
@@ -19,8 +21,36 @@ pub trait TelebotService {
         msg_title: &'msg str
     ) -> Result<(), anyhow::Error>
     where
-    'life1: 'life2, // 'life1이 'life2보다 오래 살아야 함을 명시
+    'life1: 'life2,
     T: Send + Sync;
+
+    async fn send_message_consume_split
+    (
+        &self,
+        consume_list: &Vec<ConsumeInfo>, 
+        total_cost: f64, 
+        start_dt: NaiveDate, 
+        end_dt: NaiveDate,
+        empty_flag: bool
+    ) -> Result<(), anyhow::Error>;
+
+
+    async fn send_message_consume_type(
+        &self,
+        consume_type_list: &Vec<ConsumeTypeInfo>, 
+        total_cost: f64, 
+        start_dt: NaiveDate, 
+        end_dt: NaiveDate,
+        empty_flag: bool
+    ) -> Result<(), anyhow::Error>;
+
+
+    async fn send_message_consume_type_list(
+        &self,
+        consume_type_list: &Vec<String>, 
+        empty_flag: bool
+    ) -> Result<(), anyhow::Error>;
+
 }
 
 
@@ -145,83 +175,70 @@ impl TelebotService for TelebotServicePub {
     }
 
 
+    #[doc = "Functions that send messages related to consumption details"]
+    async fn send_message_consume_split(
+        &self,
+        consume_list: &Vec<ConsumeInfo>, 
+        total_cost: f64, 
+        start_dt: NaiveDate, 
+        end_dt: NaiveDate,
+        empty_flag: bool
+    ) -> Result<(), anyhow::Error> {
 
-}
+        let total_cost_i32 = total_cost as i32;
 
-
-
-/*
-    Functions that send messages related to consumption details  
-*/
-pub async fn send_message_consume_split(
-    bot: &Bot, 
-    chat_id: ChatId, 
-    consume_list: &Vec<ConsumeInfo>, 
-    total_cost: f64, 
-    start_dt: NaiveDate, 
-    end_dt: NaiveDate,
-    empty_flag: bool
-) -> Result<(), anyhow::Error> {
-
-    let total_cost_i32 = total_cost as i32;
-
-    send_consumption_message(bot, chat_id, consume_list, |item| {
-        format!(
-            "name : {}\ndate : {}\ncost : {}\n",
-            item.prodt_name(),
-            item.timestamp(),
-            item.prodt_money().to_formatted_string(&Locale::ko)
-        )},
-        empty_flag,
-        &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)),
-        &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)) 
-    ).await
-}
+        self.send_consumption_message(consume_list, |item| {
+            format!(
+                "name : {}\ndate : {}\ncost : {}\n",
+                item.prodt_name(),
+                item.timestamp(),
+                item.prodt_money().to_formatted_string(&Locale::ko)
+            )},
+            empty_flag,
+            &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)),
+            &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)) 
+        ).await
+    }
 
 
-/*
-    Function that sends messages related to consumption type history
-*/
-pub async fn send_message_consume_type(
-    bot: &Bot, 
-    chat_id: ChatId, 
-    consume_type_list: &Vec<ConsumeTypeInfo>, 
-    total_cost: f64, 
-    start_dt: NaiveDate, 
-    end_dt: NaiveDate,
-    empty_flag: bool
-) -> Result<(), anyhow::Error> {
+    #[doc = "Function that sends messages related to consumption type history"]
+    async fn send_message_consume_type(
+        &self,
+        consume_type_list: &Vec<ConsumeTypeInfo>, 
+        total_cost: f64, 
+        start_dt: NaiveDate, 
+        end_dt: NaiveDate,
+        empty_flag: bool
+    ) -> Result<(), anyhow::Error> {
 
-    let total_cost_i32 = total_cost as i32;
+        let total_cost_i32 = total_cost as i32;
 
-    send_consumption_message(bot, chat_id, consume_type_list, |item| {
-        format!(
-            "category name : {}\ncost : {}\ncost(%) : {}%\n",
-            item.prodt_type(),
-            item.prodt_cost().to_formatted_string(&Locale::ko),
-            item.prodt_per()
-        )},
-        empty_flag,
-        &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)),
-        &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko))
-    ).await
-}
+        self.send_consumption_message(consume_type_list, |item| {
+            format!(
+                "category name : {}\ncost : {}\ncost(%) : {}%\n",
+                item.prodt_type(),
+                item.prodt_cost().to_formatted_string(&Locale::ko),
+                item.prodt_per()
+            )},
+            empty_flag,
+            &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)),
+            &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko))
+        ).await
+    }
 
+    #[doc = "Function that sends "]    
+    async fn send_message_consume_type_list(
+        &self,
+        consume_type_list: &Vec<String>, 
+        empty_flag: bool
+    ) -> Result<(), anyhow::Error> {
 
-/*
-    
-*/
-pub async fn send_message_consume_type_list(
-    bot: &Bot, 
-    chat_id: ChatId, 
-    consume_type_list: &Vec<String>, 
-    empty_flag: bool
-) -> Result<(), anyhow::Error> {
-    
-    send_consumption_message(bot, chat_id, consume_type_list, |item| {
-        format!("{}\n",item.to_string())},
-        empty_flag,
-        "'consume_type' does not exist.",
-        "ConsumeType List\n=========[DETAIL]=========\n"
-    ).await
+        self.send_consumption_message(consume_type_list, |item| {
+            format!("{}\n",item.to_string())},
+            empty_flag,
+            "'consume_type' does not exist.",
+            "ConsumeType List\n=========[DETAIL]=========\n"
+        ).await
+
+    }   
 }
