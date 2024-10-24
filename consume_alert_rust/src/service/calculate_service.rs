@@ -16,23 +16,25 @@ use crate::model::ToPythonGraphLine::*;
 
 #[async_trait]
 pub trait CalculateService {
-    async fn get_classification_type(index_name: &str) -> Result<Vec<String>, anyhow::Error>;
-    async fn get_classification_consumption_type(index_name: &str) -> Result<Vec<ProdtTypeInfo>, anyhow::Error>;
-    async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<TotalCostInfo, anyhow::Error>;
-    async fn get_consume_info_by_classification_type<'a>(consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error>;
-    async fn get_consume_type_graph(total_cost: f64, start_dt: NaiveDate, end_dt: NaiveDate, consume_list: &Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error>;
-    async fn get_consume_detail_graph_double(python_graph_line_info_cur: &mut ToPythonGraphLine, python_graph_line_info_pre: &mut ToPythonGraphLine) -> Result<String, anyhow::Error>;
-    async fn get_consume_detail_graph_single(python_graph_line_info: &ToPythonGraphLine) -> Result<String, anyhow::Error>;
-    async fn get_recent_mealtime_data_from_elastic<T: DeserializeOwned>(index_name: &str, col_name: &str, es_query: Value, default_val: T) -> Result<T, anyhow::Error>;
+    // async fn get_classification_type(index_name: &str) -> Result<Vec<String>, anyhow::Error>;
+    // async fn get_classification_consumption_type(index_name: &str) -> Result<Vec<ProdtTypeInfo>, anyhow::Error>;
+    // async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<TotalCostInfo, anyhow::Error>;
+    // async fn get_consume_info_by_classification_type<'a>(consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error>;
+    // async fn get_consume_type_graph(total_cost: f64, start_dt: NaiveDate, end_dt: NaiveDate, consume_list: &Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error>;
+    // async fn get_consume_detail_graph_double(python_graph_line_info_cur: &mut ToPythonGraphLine, python_graph_line_info_pre: &mut ToPythonGraphLine) -> Result<String, anyhow::Error>;
+    // async fn get_consume_detail_graph_single(python_graph_line_info: &ToPythonGraphLine) -> Result<String, anyhow::Error>;
+    // async fn get_recent_mealtime_data_from_elastic<T: DeserializeOwned>(index_name: &str, col_name: &str, es_query: Value, default_val: T) -> Result<T, anyhow::Error>;
 }   
 
+#[derive(Debug, Getters, new)]
 pub struct CalculateServicePub
 {   
     
 }
 
 
-impl CalculateServicePub {
+#[async_trait]
+impl CalculateService for CalculateServicePub {
     
 }
 

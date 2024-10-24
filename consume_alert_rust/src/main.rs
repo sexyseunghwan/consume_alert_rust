@@ -60,10 +60,15 @@ mod service;
 mod model;
 mod repository;
 
+use handler::main_handler;
 use utils_modules::logger_utils::*;
 use handler::main_handler::*;
 
 use utils_modules::common_function::*;
+
+use service::graph_api_service::*;
+use service::tele_bot_service::*;
+use service::calculate_service::*;
 
 //use controller::test_controller::*;
 #[tokio::main]
@@ -79,19 +84,26 @@ async fn main() {
     initialize_db_connection();
     
     //infok("Consume Alert Program Start").await;
-    
-    // teloxide::repl(bot, move |message: Message, bot: Bot| {
-    //     async move {
-    //         match handle_command(message, bot).await {
-    //             Ok(_) => (),
-    //             Err(e) => {
-    //                 errork(e).await;
-    //             }
-    //         };
-    //         respond(())
-    //     }
-    // })
-    // .await;  
+
+
+    teloxide::repl(bot, move |message: Message, bot: Bot| {
+        
+        async move {
+            let graph_api_service = GraphApiServicePub::new();
+            let telebot_service = TelebotServicePub::new(bot, message);    
+            let calculate_service = CalculateServicePub::new();
+            let main_handler = MainHandler::new(graph_api_service, calculate_service, telebot_service);
+            
+            match main_handler.main_call_function().await {
+                Ok(_) => (),
+                Err(e) => {
+                    errork(e).await;
+                }
+            };
+            respond(())
+        }
+    })
+    .await;  
     
     // Start Controller
     //main_controller().await;

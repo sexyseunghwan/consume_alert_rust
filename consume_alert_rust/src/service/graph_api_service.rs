@@ -10,6 +10,18 @@ pub trait GraphApiService {
     
 }
 
+#[derive(Debug, Getters, new)]
+pub struct GraphApiServicePub {
+    
+}
+
+
+#[async_trait]
+impl GraphApiService for GraphApiServicePub {
+    
+}
+
+
 
 /*
     Function that calls python api to draw a pie chart.

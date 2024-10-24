@@ -51,18 +51,40 @@ pub trait TelebotService {
         empty_flag: bool
     ) -> Result<(), anyhow::Error>;
 
+
+    fn get_input_text(&self) -> String;
+
 }
 
 
+#[derive(Debug, Getters)]
 pub struct TelebotServicePub
 {
     pub bot: Bot,
-    pub chat_id: ChatId, 
+    pub chat_id: ChatId,
+    pub input_text: String 
 }
 
 
 impl TelebotServicePub {
         
+    pub fn new(bot: Bot, message: Message) -> Self {
+
+        let input_text = match message.text() {
+            Some(input_text) => input_text,
+            None => {
+                error!("[Error][handle_commandhandle_command()] The entered value does not exist.");
+                ""
+            }
+        }.to_string();
+
+        let chat_id = message.chat.id;
+
+        Self {
+            bot, chat_id, input_text
+        }
+    }
+
     #[doc = "Generic function to retry operations"]
     async fn try_send_operation<F, Fut>(&self, operation: F, max_retries: usize, retry_delay: Duration) -> Result<(), anyhow::Error>
     where
@@ -240,5 +262,10 @@ impl TelebotService for TelebotServicePub {
             "ConsumeType List\n=========[DETAIL]=========\n"
         ).await
 
-    }   
+    } 
+
+    #[doc = ""] 
+    fn get_input_text(&self) -> String {
+        self.input_text.to_string()
+    }
 }

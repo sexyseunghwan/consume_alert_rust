@@ -1,30 +1,34 @@
 use crate::common::*;
 
-use crate::service::command_service::*;
+use crate::service::calculate_service::*;
 use crate::service::graph_api_service::*;
+use crate::service::tele_bot_service::*;
 
 use crate::utils_modules::common_function::*;
 
 
-pub struct MainHandler<G: GraphApiService, C: CommandService> {
+pub struct MainHandler<G: GraphApiService, C: CalculateService, T: TelebotService> {
     graph_api_service: G,
-    command_service: C
+    calculate_service: C,
+    telebot_service: T
 }
 
 
-impl<G: GraphApiService, C: CommandService> MainHandler<G, C> {
+impl<G: GraphApiService, C: CalculateService, T: TelebotService> MainHandler<G, C, T> {
 
-    pub fn new(graph_api_service: G, command_service: C) -> Self {
+    pub fn new(graph_api_service: G, calculate_service: C, telebot_service: T) -> Self {
         Self {
             graph_api_service,
-            command_service
+            calculate_service,
+            telebot_service
         }
     }
-
+    
     #[doc = "docs"]
     pub async fn main_call_function(&self) -> Result<(), anyhow::Error> {
         
-        let input_text = self.command_service.get_input_text();
+        let input_text = self.telebot_service.get_input_text();
+        //let input_text = self.calculate_service.get_input_text();
 
         if input_text.starts_with("c ") {
             self.command_consumption().await?;
@@ -66,11 +70,11 @@ impl<G: GraphApiService, C: CommandService> MainHandler<G, C> {
 
         Ok(())
     }
-
+    
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch. -> c"]
     async fn command_consumption(&self) -> Result<(), anyhow::Error> {
 
-        let args = self.command_service.get_input_text();//.as_str()[2..];
+        let args = self.telebot_service.get_input_text();//.as_str()[2..];
         let args_aplit = &args[2..];
 
         let split_args_vec: Vec<String> = args_aplit.split(':').map(|s| s.to_string()).collect();
