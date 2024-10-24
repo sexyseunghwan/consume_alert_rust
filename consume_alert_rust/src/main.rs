@@ -79,20 +79,24 @@ async fn main() {
 
     // Select compilation environment
     dotenv().ok();
-    let bot = Bot::from_env();
+    let bot = Arc::new(Bot::from_env());
 
     initialize_db_connection();
     
+    let graph_api_service = Arc::new(GraphApiServicePub::new());
+    let calculate_service = Arc::new(CalculateServicePub::new());
+
     //infok("Consume Alert Program Start").await;
+    teloxide::repl(Arc::clone(&bot), move |message: Message, bot: Arc<Bot>| {
 
+        let graph_api_service_clone = Arc::clone(&graph_api_service);
+        let calculate_service_clone = Arc::clone(&calculate_service);
 
-    teloxide::repl(bot, move |message: Message, bot: Bot| {
-        
         async move {
-            let graph_api_service = GraphApiServicePub::new();
+
+            println!("??");    
             let telebot_service = TelebotServicePub::new(bot, message);    
-            let calculate_service = CalculateServicePub::new();
-            let main_handler = MainHandler::new(graph_api_service, calculate_service, telebot_service);
+            let main_handler = MainHandler::new(graph_api_service_clone, calculate_service_clone, telebot_service);
             
             match main_handler.main_call_function().await {
                 Ok(_) => (),
@@ -100,13 +104,11 @@ async fn main() {
                     errork(e).await;
                 }
             };
+
+            println!("end");
             respond(())
+            
         }
     })
     .await;  
-    
-    // Start Controller
-    //main_controller().await;
-
-    //test_controller().await;
 }

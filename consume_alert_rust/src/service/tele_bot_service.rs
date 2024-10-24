@@ -60,7 +60,7 @@ pub trait TelebotService {
 #[derive(Debug, Getters)]
 pub struct TelebotServicePub
 {
-    pub bot: Bot,
+    pub bot: Arc<Bot>,
     pub chat_id: ChatId,
     pub input_text: String 
 }
@@ -68,7 +68,7 @@ pub struct TelebotServicePub
 
 impl TelebotServicePub {
         
-    pub fn new(bot: Bot, message: Message) -> Self {
+    pub fn new(bot: Arc<Bot>, message: Message) -> Self {
 
         let input_text = match message.text() {
             Some(input_text) => input_text,

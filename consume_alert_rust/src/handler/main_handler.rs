@@ -8,15 +8,15 @@ use crate::utils_modules::common_function::*;
 
 
 pub struct MainHandler<G: GraphApiService, C: CalculateService, T: TelebotService> {
-    graph_api_service: G,
-    calculate_service: C,
+    graph_api_service: Arc<G>,
+    calculate_service: Arc<C>,
     telebot_service: T
 }
 
 
 impl<G: GraphApiService, C: CalculateService, T: TelebotService> MainHandler<G, C, T> {
 
-    pub fn new(graph_api_service: G, calculate_service: C, telebot_service: T) -> Self {
+    pub fn new(graph_api_service: Arc<G>, calculate_service: Arc<C>, telebot_service: T) -> Self {
         Self {
             graph_api_service,
             calculate_service,
@@ -80,7 +80,8 @@ impl<G: GraphApiService, C: CalculateService, T: TelebotService> MainHandler<G, 
         let split_args_vec: Vec<String> = args_aplit.split(':').map(|s| s.to_string()).collect();
         let mut consume_name = "";
         let mut consume_cash = "";
-
+        
+        println!("{:?}", split_args_vec[1]);
 
         if split_args_vec.len() != 2 {
 
