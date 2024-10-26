@@ -76,7 +76,8 @@ impl TelebotServicePub {
                 error!("[Error][handle_commandhandle_command()] The entered value does not exist.");
                 ""
             }
-        }.to_string();
+        }.to_string()
+        .to_lowercase();
 
         let chat_id = message.chat.id;
 

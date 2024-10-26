@@ -17,45 +17,185 @@ use crate::repository::es_repository::*;
 
 #[async_trait]
 pub trait CommandService {
-    fn get_input_text(&self) -> String;
-}
-
-#[derive(Debug, Getters, Clone)]
-pub struct CommandServicePub
-{
-    pub bot: Bot,
-    pub message_id: ChatId,
-    pub input_text: String
-}
-
-
-impl CommandServicePub {
     
-    /*
-        Consturctor of CommandService
-    */
-    pub fn new(bot: Bot, message: Message) -> Result<Self, anyhow::Error> {
-
-        let message_id = message.chat.id;
-
-        let input_text = message
-            .text()
-            .ok_or_else(|| anyhow!("[Error][handle_commandhandle_command()] The entered value does not exist."))?
-            .to_lowercase();
-
-        let command_service = CommandServicePub{ bot, message_id, input_text };
-            
-        Ok(command_service)
-    }
+    // 
+    async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<bool, anyhow::Error>;
+    fn get_string_vector_by_replace(&self, intput_str: &str, replacements: &Vec<&str>) -> Result<Vec<String>, anyhow::Error>;
+    fn get_consume_time(&self, consume_time_name_vec: &Vec<String>) -> Result<String, anyhow::Error>;
+    fn get_consume_prodt_name(&self, consume_time_name_vec: &Vec<String>, idx: usize) -> Result<String, anyhow::Error>;
+    fn get_consume_prodt_money(&self, consume_price_vec: &Vec<String>, idx: usize) -> Result<i32, anyhow::Error>;
+    
+    
+    //fn process_date_part(&self, consume_time_name_vec: &Vec<String>)
 }
 
+#[derive(Debug, Getters, Clone, new)]
+pub struct CommandServicePub;
 
+
+
+#[async_trait]
 impl CommandService for CommandServicePub {
+    
+    
+    #[doc = "docs"]
+    async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<bool, anyhow::Error> {
 
-    fn get_input_text(&self) -> String {
-        self.input_text.clone()
+        let consume_type = split_args_vec
+            .get(0)
+            .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_type()] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
+        
+        let es_client = get_elastic_conn();
+        let split_val = vec![",", "원"];
+        
+        if consume_type.contains("nh") {
+
+            let consume_price_vec: Vec<String> = self.get_string_vector_by_replace(split_args_vec
+                .get(2)
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 2, split_args_vec))?,
+                &split_val
+            )?;
+
+            let consume_price = self.get_consume_prodt_money(&consume_price_vec, 0)?;
+
+            let consume_time_vec: Vec<String> = split_args_vec
+                .get(3)
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 3))?
+                .split(" ")
+                .map(|s| s.to_string())
+                .collect();
+            
+            let consume_time = self.get_consume_time(&consume_time_vec)?;
+
+            let consume_name = split_args_vec
+                .get(4)
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'split_args_vec' vector was accessed.", 4))?;
+
+
+            let document = json!({
+                "@timestamp": consume_time,
+                "prodt_name": consume_name,
+                "prodt_money": consume_price
+            });
+            
+            println!("{:?}", document);
+
+            //es_client.post_query(&document, "consuming_index_prod_new").await?;
+
+
+            Ok(true)
+        } else if consume_type.contains("삼성"){
+
+            let consume_price_vec = self.get_string_vector_by_replace(split_args_vec
+                .get(1)
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 2, split_args_vec))?,
+                &split_val
+            )?;
+            
+            let consume_price = self.get_consume_prodt_money(&consume_price_vec, 0)?;
+
+            let consume_time_vec: Vec<String> = split_args_vec
+                .get(2)
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 3))?
+                .split(" ")
+                .map(|s| s.to_string())
+                .collect();
+            
+            let consume_time = self.get_consume_time(&consume_time_vec)?;
+
+            let consume_name = split_args_vec
+                .get(2)
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'split_args_vec' vector was accessed.", 4))?;
+
+            let document = json!({
+                "@timestamp": consume_time,
+                "prodt_name": consume_name,
+                "prodt_money": consume_price
+            });
+            
+            //es_client.post_query(&document, "consuming_index_prod_new").await?;
+    
+            println!("{:?}", document);
+            
+            Ok(true)
+        } else {
+            
+            
+            Ok(false)
+        }
+
+        
+
+        //Ok(true)
+    }
+
+
+    #[doc = "Functions that vectorize by spaces, excluding certain characters from a string"]
+    fn get_string_vector_by_replace(&self, intput_str: &str, replacements: &Vec<&str>) -> Result<Vec<String>, anyhow::Error> {
+        
+        let consume_price_vec: Vec<String> = intput_str
+            .to_string()
+            .split_whitespace()
+            .map(|s| {
+                replacements.iter().fold(s.to_string(), |acc, replace| acc.replace(replace, ""))
+            })
+            .collect();
+        
+        Ok(consume_price_vec)
+    }
+
+    #[doc = "docs"]
+    fn get_consume_time(&self, consume_time_name_vec: &Vec<String>) -> Result<String, anyhow::Error> {
+        
+        let date_part: Vec<u32> = consume_time_name_vec
+            .get(0)
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 0))?
+            .split("/")
+            .map(|s| s.parse::<u32>())
+            .collect::<Result<Vec<_>, _>>()?;
+        
+        let time_part: Vec<u32> = consume_time_name_vec
+            .get(1)
+            .ok_or_else(|| anyhow!("[[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 1))?
+            .split(":")
+            .map(|s| s.parse::<u32>())
+            .collect::<Result<Vec<_>, _>>()?;
+        
+        let mon = date_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'date_part' vector was accessed.", 0))?;
+        let day = date_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'date_part' vector was accessed.", 1))?;
+        let hour = time_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'time_part' vector was accessed.", 0))?;
+        let min = time_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'time_part' vector was accessed.", 1))?;
+        
+        let consume_date = get_this_year_naivedatetime(*mon, *day, *hour, *min)?;
+        let consume_date_str = get_str_from_naive_datetime(consume_date);
+
+        Ok(consume_date_str)
+
     }
     
+    
+    #[doc = "docs"]
+    fn get_consume_prodt_name(&self, consume_time_name_vec: &Vec<String>, idx: usize) -> Result<String, anyhow::Error> {
+
+        let consume_name = consume_time_name_vec
+            .get(idx)// 2
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_prodt_name()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed.", idx))?
+            .trim();
+        
+        Ok(consume_name.to_string())
+    }
+    
+    #[doc = "docs"]
+    fn get_consume_prodt_money(&self, consume_price_vec: &Vec<String>, idx: usize) -> Result<i32, anyhow::Error> {
+
+        let consume_price = consume_price_vec
+            .get(idx) // 0
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_prodt_money()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed.", idx))?
+            .parse::<i32>()?;
+        
+        Ok(consume_price)
+    }
+
     
 }
 
@@ -840,14 +980,14 @@ impl CommandService for CommandServicePub {
 
 //         if card_comp.contains("nh") {
             
-//             let consume_price_vec: Vec<String> = split_args_vec
-//                 .get(2)
-//                 .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 2, split_args_vec))?
-//                 .replace(",", "")
-//                 .replace("원", "")
-//                 .split(" ")
-//                 .map(|s| s.to_string())
-//                 .collect(); 
+            // let consume_price_vec: Vec<String> = split_args_vec
+            //     .get(2)
+            //     .ok_or_else(|| anyhow!("[Index Out Of Range Error][command_consumption_auto()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 2, split_args_vec))?
+            //     .replace(",", "")
+            //     .replace("원", "")
+            //     .split(" ")
+            //     .map(|s| s.to_string())
+            //     .collect(); 
             
 //             let consume_price = consume_price_vec
 //                 .get(0)
@@ -1032,5 +1172,3 @@ impl CommandService for CommandServicePub {
     
 
 // }
-
-

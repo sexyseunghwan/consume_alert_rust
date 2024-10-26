@@ -69,6 +69,7 @@ use utils_modules::common_function::*;
 use service::graph_api_service::*;
 use service::tele_bot_service::*;
 use service::calculate_service::*;
+use service::command_service::*;
 
 //use controller::test_controller::*;
 #[tokio::main]
@@ -79,24 +80,35 @@ async fn main() {
 
     // Select compilation environment
     dotenv().ok();
-    let bot = Arc::new(Bot::from_env());
 
     initialize_db_connection();
     
+    prod().await;
+    //dev().await;
+}
+
+
+async fn prod() {
+
+    let bot = Arc::new(Bot::from_env());
+
     let graph_api_service = Arc::new(GraphApiServicePub::new());
     let calculate_service = Arc::new(CalculateServicePub::new());
+    let command_service = Arc::new(CommandServicePub::new());
 
     //infok("Consume Alert Program Start").await;
     teloxide::repl(Arc::clone(&bot), move |message: Message, bot: Arc<Bot>| {
 
         let graph_api_service_clone = Arc::clone(&graph_api_service);
         let calculate_service_clone = Arc::clone(&calculate_service);
+        let command_service_clone = Arc::clone(&command_service);
 
         async move {
 
             println!("??");    
             let telebot_service = TelebotServicePub::new(bot, message);    
-            let main_handler = MainHandler::new(graph_api_service_clone, calculate_service_clone, telebot_service);
+            let main_handler = 
+                MainHandler::new(graph_api_service_clone, calculate_service_clone, telebot_service, command_service_clone);
             
             match main_handler.main_call_function().await {
                 Ok(_) => (),
@@ -104,11 +116,39 @@ async fn main() {
                     errork(e).await;
                 }
             };
-
+            
             println!("end");
             respond(())
             
         }
     })
     .await;  
+
+}
+
+//             let document = json!({
+//                 "@timestamp": get_str_from_naive_datetime(consume_date),
+//                 "prodt_name": consume_name,
+//                 "prodt_money": consume_price
+//             });
+
+// ["nh카드3*3*승인", "신*환", "1,000원 일시불", "10/23 23:37", "세븐일레븐(잠실캐슬", "총누적472,347원"]
+// ["삼성5221승인 신*환", "109,000원 일시불", "10/26 15:48 네이버페이", "누적2,117,616원"]
+
+
+async fn dev() {
+
+    let test = "[Web발신]
+NH카드3*3*승인
+신*환
+1,000원 일시불
+10/23 23:37
+세븐일레븐(잠실캐슬
+총누적472,347원";
+
+    //let test_vec = vec![",", "원"];
+    //let res = get_string_vector_by_replace(test, &test_vec).unwrap();
+
+    //println!("{:?}", res);
+
 }
