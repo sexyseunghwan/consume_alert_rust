@@ -15,9 +15,10 @@ use crate::model::ConsumeTypeInfo::*;
 use crate::model::ToPythonGraphLine::*;
 
 #[async_trait]
-pub trait CalculateService {
-    // async fn get_classification_type(index_name: &str) -> Result<Vec<String>, anyhow::Error>;
-    // async fn get_classification_consumption_type(index_name: &str) -> Result<Vec<ProdtTypeInfo>, anyhow::Error>;
+pub trait DBService {
+    async fn get_classification_type(&self, index_name: &str) -> Result<Vec<String>, anyhow::Error>;
+    async fn get_classification_consumption_type(&self, index_name: &str) -> Result<Vec<ProdtTypeInfo>, anyhow::Error>;
+    async fn total_cost_detail_specific_period(&self, start_date: NaiveDate, end_date: NaiveDate, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<TotalCostInfo, anyhow::Error>;
     // async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<TotalCostInfo, anyhow::Error>;
     // async fn get_consume_info_by_classification_type<'a>(consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error>;
     // async fn get_consume_type_graph(total_cost: f64, start_dt: NaiveDate, end_dt: NaiveDate, consume_list: &Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error>;
@@ -27,204 +28,195 @@ pub trait CalculateService {
 }   
 
 #[derive(Debug, Getters, new)]
-pub struct CalculateServicePub
-{   
-    
-}
+pub struct DBServicePub;
 
 
 #[async_trait]
-impl CalculateService for CalculateServicePub {
+impl DBService for DBServicePub {
+
+
+    #[doc = "Function to get ProdtTypeInfo keyword_type information from Elasticsearch"]
+    async fn get_classification_type(&self, index_name: &str) -> Result<Vec<String>, anyhow::Error> {
+        
+        let query = json!({
+            "size": 0,  
+            "aggs": {
+              "unique_keyword_types": {
+                "terms": {
+                  "field": "keyword_type",
+                  "size": 1000  
+                }
+              }
+            }
+        });
+        
+        let es_client = get_elastic_conn(); 
+        let query_res = es_client.get_search_query(&query, index_name).await?;
+        let mut key_vec: Vec<String> = Vec::new();
+
+        if let Some(keyword_types) = query_res["aggregations"]["unique_keyword_types"]["buckets"].as_array() {
+
+            for keyword_type in keyword_types {
+                
+                let k_type = match keyword_type.get("key").and_then(Value::as_str) {
+                    Some(k_type) => k_type,
+                    None => continue
+                };
+
+                key_vec.push(k_type.to_string());
+            }
+        }
+        
+        Ok(key_vec)
+    }
+
     
+    #[doc = "Function to get FULL ProdtTypeInfo keyword_type information from Elasticsearch"]
+    async fn get_classification_consumption_type(&self, index_name: &str) -> Result<Vec<ProdtTypeInfo>, anyhow::Error> {
+
+        let key_vec = self.get_classification_type(index_name).await?;  
+
+        let mut keyword_type_vec: Vec<ProdtTypeInfo> = Vec::new();
+        let es_client = get_elastic_conn(); 
+        
+        for keyword_type in key_vec {
+
+            let inner_query = json!({
+                "query": {
+                    "term": {
+                        "keyword_type": {   
+                            "value": keyword_type
+                            }
+                        }
+                    },
+                "size" : 1000
+            });
+            
+            
+            let inner_res = es_client.get_search_query(&inner_query, index_name).await?;
+            let mut keyword_vec: Vec<ProdtDetailInfo> = Vec::new();
+            
+            if let Some(keywords) = inner_res["hits"]["hits"].as_array() {
+                for key_word in keywords {
+                    if let Some(keyword_src) = key_word.get("_source") {
+                        let k_word = keyword_src.get("keyword").and_then(Value::as_str);
+                        let bias_value = keyword_src.get("bias_value").and_then(Value::as_i64).map(|v| v as i32);
+
+                        match (k_word, bias_value) {
+                            (Some(word), Some(bias)) => {
+                                let prodt_detail = ProdtDetailInfo::new(word.to_string(), bias);
+                                keyword_vec.push(prodt_detail);
+                            },
+                            _ => {
+                                error!("[Parsing Error][get_classification_consumption_type()] Missing or invalid 'keyword' or 'bias_value'");
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+                
+            let keyword_type_obj = ProdtTypeInfo::new(keyword_type, keyword_vec);
+            keyword_type_vec.push(keyword_type_obj);
+
+        }
+        
+        Ok(keyword_type_vec)
+    }
+
+
+
+    #[doc = "Functions that show the details of total consumption and consumption over a specific period of time"]
+    async fn total_cost_detail_specific_period(&self, start_date: NaiveDate, end_date: NaiveDate, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<TotalCostInfo, anyhow::Error> {
+        
+        let query = json!({
+            "size": 10000,
+            "query": {
+                "range": {
+                    "@timestamp": {
+                        "gte": get_str_from_naivedate(start_date),
+                        "lte": get_str_from_naivedate(end_date)
+                    }
+                }
+            },
+            "aggs": {
+                "total_prodt_money": {
+                    "sum": {
+                        "field": "prodt_money"
+                    }
+                }
+            },
+            "sort": {
+                "@timestamp": { "order": "asc" }
+            }
+        });
+        
+        let mut consume_info_list:Vec<ConsumeInfo> = Vec::new();
+        let mut empty_flag = false;
+        
+        let es_client = get_elastic_conn(); 
+        let es_cur_res = es_client.get_search_query(&query, index_name).await?;
+
+        let total_cost = match &es_cur_res["aggregations"]["total_prodt_money"]["value"].as_f64() {
+            Some(total_cost) => *total_cost,
+            None => return Err(anyhow!("[Error][total_cost_detail_specific_period()] 'total_cost' error"))
+        };
+        
+        if let Some(prodt_infos) = es_cur_res["hits"]["hits"].as_array() {
+
+            for elem in prodt_infos {
+
+                if let Some(source) = elem.get("_source") {
+                    
+                    let timestamp = match source.get("@timestamp").and_then(Value::as_str) {
+                        Some(timestamp) => timestamp,
+                        None => {
+                            errork(anyhow!("[Error][total_cost_detail_specific_period()] '@timestamp' is empty!"));
+                            continue
+                        }
+                    };
+        
+                    let prodt_money = match source.get("prodt_money").and_then(Value::as_i64).map(|v| v as i32) {
+                        Some(timestamp) => timestamp,
+                        None => {
+                            errork(anyhow!("[Error][total_cost_detail_specific_period()] 'prodt_money' is empty!"));
+                            continue
+                        }
+                    };
+        
+                    let prodt_name = match source.get("prodt_name").and_then(Value::as_str) {
+                        Some(timestamp) => timestamp,
+                        None => {
+                            errork(anyhow!("[Error][total_cost_detail_specific_period()] 'prodt_name' is empty!"));
+                            continue
+                        }
+                    };
+                    
+                    let mut consume_info = ConsumeInfo::new(timestamp.to_string(), prodt_name.to_string(), prodt_money, String::from(""));
+                    get_consume_info_by_classification_type(consume_type_vec, &mut consume_info).await?;
+                    
+                    consume_info_list.push(consume_info);
+                }             
+            }
+        }
+        
+
+        if consume_info_list.len() == 0 {
+            let cur_time = get_str_from_naive_datetime(get_current_kor_naive_datetime());
+            let consume_info = ConsumeInfo::new(cur_time, String::from("empty"), 0, String::from("etc"));
+
+            consume_info_list.push(consume_info);
+            empty_flag = true;
+        }
+        
+        let total_cost_info = TotalCostInfo::new(total_cost, consume_info_list, empty_flag, start_date, end_date);
+
+        Ok(total_cost_info)
+    }
+
+
+
 }
-
-// #[async_trait]
-// impl CalculateService for CalculateServicePub {
-    
-// }
-
-
-
-// /*
-//     Function to get ProdtTypeInfo keyword_type information from Elasticsearch
-// */
-// pub async fn get_classification_type(es_client: &, index_name: &str) -> Result<Vec<String>, anyhow::Error> {
-
-//     let query = json!({
-//         "size": 0,  
-//         "aggs": {
-//           "unique_keyword_types": {
-//             "terms": {
-//               "field": "keyword_type",
-//               "size": 100  
-//             }
-//           }
-//         }
-//     });
-    
-//     let res = es_client.cluster_search_query(query, index_name).await?;
-//     let mut key_vec: Vec<String> = Vec::new();
-
-//     if let Some(keyword_types) = res["aggregations"]["unique_keyword_types"]["buckets"].as_array() {
-
-//         for keyword_type in keyword_types {
-            
-//             let k_type = match keyword_type.get("key").and_then(Value::as_str) {
-//                 Some(k_type) => k_type,
-//                 None => continue
-//             };
-
-//             key_vec.push(k_type.to_string());
-//         }
-//     }
-    
-//     Ok(key_vec)
-// }
-
-
-// /*
-//     Function to get FULL ProdtTypeInfo keyword_type information from Elasticsearch
-// */
-// pub async fn get_classification_consumption_type(es_client: &Arc<EsHelper>, index_name: &str) -> Result<Vec<ProdtTypeInfo>, anyhow::Error> {
-
-//     let key_vec = get_classification_type(es_client, index_name).await?;
-
-//     let mut keyword_type_vec: Vec<ProdtTypeInfo> = Vec::new();
-
-//     for keyword_type in key_vec {
-
-//         let inner_query = json!({
-//             "query": {
-//                 "term": {
-//                     "keyword_type": {   
-//                         "value": keyword_type
-//                         }
-//                     }
-//                 },
-//             "size" : 1000
-//         });
-
-//         let inner_res = es_client.cluster_search_query(inner_query, index_name).await?;
-//         let mut keyword_vec: Vec<ProdtDetailInfo> = Vec::new();
-
-//         if let Some(keywords) = inner_res["hits"]["hits"].as_array() {
-//             for key_word in keywords {
-//                 if let Some(keyword_src) = key_word.get("_source") {
-//                     let k_word = keyword_src.get("keyword").and_then(Value::as_str);
-//                     let bias_value = keyword_src.get("bias_value").and_then(Value::as_i64).map(|v| v as i32);
-
-//                     match (k_word, bias_value) {
-//                         (Some(word), Some(bias)) => {
-//                             let prodt_detail = ProdtDetailInfo::new(word.to_string(), bias);
-//                             keyword_vec.push(prodt_detail);
-//                         },
-//                         _ => {
-//                             error!("[Parsing Error][get_classification_consumption_type()] Missing or invalid 'keyword' or 'bias_value'");
-//                             continue;
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-            
-//         let keyword_type_obj = ProdtTypeInfo::new(keyword_type, keyword_vec);
-//         keyword_type_vec.push(keyword_type_obj);
-
-//     }
-    
-//     Ok(keyword_type_vec)
-// }
-
-
-
-// /*
-//     Functions that show the details of total consumption and consumption over a specific period of time
-// */
-// pub async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, es_client: &Arc<EsHelper>, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<TotalCostInfo, anyhow::Error> {
-    
-//     let query = json!({
-//         "size": 10000,
-//         "query": {
-//             "range": {
-//                 "@timestamp": {
-//                     "gte": get_str_from_naivedate(start_date),
-//                     "lte": get_str_from_naivedate(end_date)
-//                 }
-//             }
-//         },
-//         "aggs": {
-//             "total_prodt_money": {
-//                 "sum": {
-//                     "field": "prodt_money"
-//                 }
-//             }
-//         },
-//         "sort": {
-//             "@timestamp": { "order": "asc" }
-//         }
-//     });
-    
-//     let mut consume_info_list:Vec<ConsumeInfo> = Vec::new();
-//     let mut empty_flag = false;
-    
-//     let es_cur_res = es_client.cluster_search_query(query, index_name).await?;
-
-//     let total_cost = match &es_cur_res["aggregations"]["total_prodt_money"]["value"].as_f64() {
-//         Some(total_cost) => *total_cost,
-//         None => return Err(anyhow!("[Error][total_cost_detail_specific_period()] 'total_cost' error"))
-//     };
-    
-//     if let Some(prodt_infos) = es_cur_res["hits"]["hits"].as_array() {
-
-//         for elem in prodt_infos {
-
-//             if let Some(source) = elem.get("_source") {
-                
-//                 let timestamp = match source.get("@timestamp").and_then(Value::as_str) {
-//                     Some(timestamp) => timestamp,
-//                     None => {
-//                         error!("[Error][total_cost_detail_specific_period()] '@timestamp' is empty!");
-//                         continue
-//                     }
-//                 };
-    
-//                 let prodt_money = match source.get("prodt_money").and_then(Value::as_i64).map(|v| v as i32) {
-//                     Some(timestamp) => timestamp,
-//                     None => {
-//                         error!("[Error][total_cost_detail_specific_period()] 'prodt_money' is empty!");
-//                         continue
-//                     }
-//                 };
-    
-//                 let prodt_name = match source.get("prodt_name").and_then(Value::as_str) {
-//                     Some(timestamp) => timestamp,
-//                     None => {
-//                         error!("[Error][total_cost_detail_specific_period()] 'prodt_name' is empty!");
-//                         continue
-//                     }
-//                 };
-                
-//                 let mut consume_info = ConsumeInfo::new(timestamp.to_string(), prodt_name.to_string(), prodt_money, String::from(""));
-//                 get_consume_info_by_classification_type(consume_type_vec, &mut consume_info).await?;
-                
-//                 consume_info_list.push(consume_info);
-//             }             
-//         }
-//     }
-    
-
-//     if consume_info_list.len() == 0 {
-//         let cur_time = get_str_from_naive_datetime(get_current_kor_naive_datetime());
-//         let consume_info = ConsumeInfo::new(cur_time, String::from("empty"), 0, String::from("etc"));
-
-//         consume_info_list.push(consume_info);
-//         empty_flag = true;
-//     }
-    
-//     let total_cost_info = TotalCostInfo::new(total_cost, consume_info_list, empty_flag, start_date, end_date);
-
-//     Ok(total_cost_info)
-// }
 
 
 

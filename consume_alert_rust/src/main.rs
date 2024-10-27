@@ -68,7 +68,7 @@ use utils_modules::common_function::*;
 
 use service::graph_api_service::*;
 use service::tele_bot_service::*;
-use service::calculate_service::*;
+use service::database_service::*;
 use service::command_service::*;
 
 //use controller::test_controller::*;
@@ -83,8 +83,8 @@ async fn main() {
 
     initialize_db_connection();
     
-    prod().await;
-    //dev().await;
+    //prod().await;
+    dev().await;
 }
 
 
@@ -93,14 +93,14 @@ async fn prod() {
     let bot = Arc::new(Bot::from_env());
 
     let graph_api_service = Arc::new(GraphApiServicePub::new());
-    let calculate_service = Arc::new(CalculateServicePub::new());
+    let db_service = Arc::new(DBServicePub::new());
     let command_service = Arc::new(CommandServicePub::new());
 
     //infok("Consume Alert Program Start").await;
     teloxide::repl(Arc::clone(&bot), move |message: Message, bot: Arc<Bot>| {
 
         let graph_api_service_clone = Arc::clone(&graph_api_service);
-        let calculate_service_clone = Arc::clone(&calculate_service);
+        let calculate_service_clone = Arc::clone(&db_service);
         let command_service_clone = Arc::clone(&command_service);
 
         async move {
@@ -126,29 +126,32 @@ async fn prod() {
 
 }
 
-//             let document = json!({
-//                 "@timestamp": get_str_from_naive_datetime(consume_date),
-//                 "prodt_name": consume_name,
-//                 "prodt_money": consume_price
-//             });
-
-// ["nh카드3*3*승인", "신*환", "1,000원 일시불", "10/23 23:37", "세븐일레븐(잠실캐슬", "총누적472,347원"]
-// ["삼성5221승인 신*환", "109,000원 일시불", "10/26 15:48 네이버페이", "누적2,117,616원"]
-
 
 async fn dev() {
+    
+    print!("Enter some text: ");
+    std::io::stdout().flush().unwrap(); // Empty the buffer after outputting without a new line.
 
-    let test = "[Web발신]
-NH카드3*3*승인
-신*환
-1,000원 일시불
-10/23 23:37
-세븐일레븐(잠실캐슬
-총누적472,347원";
+    let mut input = String::new();
 
-    //let test_vec = vec![",", "원"];
-    //let res = get_string_vector_by_replace(test, &test_vec).unwrap();
+    match std::io::stdin().read_line(&mut input) {
+        Ok(_) => {
 
-    //println!("{:?}", res);
+            let bot = Arc::new(Bot::from_env());        
+
+            let graph_api_service = Arc::new(GraphApiServicePub::new());
+            let calculate_service = Arc::new(DBServicePub::new());
+            let command_service = Arc::new(CommandServicePub::new());
+            
+            let telebot_service = TelebotServicePub::new_test(bot, input.trim());    
+            let main_handler = 
+                MainHandler::new(graph_api_service, calculate_service, telebot_service, command_service);
+
+            main_handler.command_consumption_per_mon().await.unwrap();
+            
+        }
+        Err(e) => println!("Failed to read input: {}", e),
+    }
+
 
 }

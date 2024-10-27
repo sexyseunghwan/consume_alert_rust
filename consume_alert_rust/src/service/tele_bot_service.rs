@@ -34,7 +34,7 @@ pub trait TelebotService {
         empty_flag: bool
     ) -> Result<(), anyhow::Error>;
 
-
+    
     async fn send_message_consume_type(
         &self,
         consume_type_list: &Vec<ConsumeTypeInfo>, 
@@ -79,12 +79,24 @@ impl TelebotServicePub {
         }.to_string()
         .to_lowercase();
 
-        let chat_id = message.chat.id;
+        let chat_id: ChatId = message.chat.id;
+        
+        Self {
+            bot, chat_id, input_text
+        }
+    }
+
+    #[doc = "Generator for TEST"]
+    pub fn new_test(bot: Arc<Bot>, input_str: &str) -> Self {
+
+        let chat_id = ChatId(5346196727);
+        let input_text = input_str.to_string().to_lowercase();
 
         Self {
             bot, chat_id, input_text
         }
     }
+
 
     #[doc = "Generic function to retry operations"]
     async fn try_send_operation<F, Fut>(&self, operation: F, max_retries: usize, retry_delay: Duration) -> Result<(), anyhow::Error>

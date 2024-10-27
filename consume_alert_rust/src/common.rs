@@ -7,8 +7,8 @@ pub use std::{
     path::Path,
     cmp::Ordering,
     future::Future,
+    str::FromStr
 };
-
 
 pub use rand:: {
     prelude::SliceRandom,

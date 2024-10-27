@@ -2,7 +2,7 @@ use crate::common::*;
 
 use crate::repository::es_repository::*;
 
-use crate::service::calculate_service::*;
+use crate::service::database_service::*;
 use crate::service::graph_api_service::*;
 use crate::service::tele_bot_service::*;
 use crate::service::command_service::*;
@@ -11,27 +11,30 @@ use crate::utils_modules::common_function::*;
 use crate::utils_modules::time_utils::*;
 use crate::utils_modules::numeric_utils::*;
 
+use crate::model::PermonDatetime::*;
+use crate::model::ProdtTypeInfo::*;
 
-pub struct MainHandler<G: GraphApiService, C: CalculateService, T: TelebotService, CS: CommandService> {
+
+pub struct MainHandler<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> {
     graph_api_service: Arc<G>,
-    calculate_service: Arc<C>,
+    db_service: Arc<D>,
     telebot_service: T,
-    command_service: Arc<CS>
+    command_service: Arc<C>
 }
 
 
-impl<G: GraphApiService, C: CalculateService, T: TelebotService, CS: CommandService> MainHandler<G, C, T, CS> {
+impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> MainHandler<G, D, T, C> {
 
-    pub fn new(graph_api_service: Arc<G>, calculate_service: Arc<C>, telebot_service: T, command_service: Arc<CS>) -> Self {
+    pub fn new(graph_api_service: Arc<G>, db_service: Arc<D>, telebot_service: T, command_service: Arc<C>) -> Self {
         Self {
             graph_api_service,
-            calculate_service,
+            db_service,
             telebot_service,
             command_service
         }
     }
     
-    #[doc = "docs"]
+    #[doc = "Function that processes the request when the request is received through telegram bot"]
     pub async fn main_call_function(&self) -> Result<(), anyhow::Error> {
         
         let input_text = self.telebot_service.get_input_text();
@@ -119,11 +122,63 @@ impl<G: GraphApiService, C: CalculateService, T: TelebotService, CS: CommandServ
 
         Ok(())
     }
-
-
     
-    async fn command_consumption_per_mon(&self) -> Result<(), anyhow::Error> {
+    
+    #[doc = "command handler: Checks how much you have consumed during a month -> cm"]
+    pub async fn command_consumption_per_mon(&self) -> Result<(), anyhow::Error> {
 
+        let args = self.telebot_service.get_input_text();
+        let args_aplit = &args[2..];
+        let split_args_vec: Vec<String> = args_aplit.split(' ').map(String::from).collect();
+        
+        let permon_datetime: PermonDatetime = match split_args_vec.len() {
+            
+            1 => {
+                let date_start = get_current_kor_naivedate_first_date()?;
+                let date_end = get_lastday_naivedate(date_start)?;
+                
+                self.command_service.get_nmonth_to_current_date(date_start, date_end, -1)?
+            },
+            2 if split_args_vec.get(1).map_or(false, |d| validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)) => {
+                
+                let year: i32 = get_parsed_value_from_vector(&split_args_vec, 0)?;
+                let month: u32 = get_parsed_value_from_vector(&split_args_vec, 1)?;
+                
+                let date_start = get_naivedate(year, month, 1)?;
+                let date_end = get_lastday_naivedate(date_start)?;
+
+                self.command_service.get_nmonth_to_current_date(date_start, date_end, -1)?
+            },
+            _ => {
+                self.telebot_service
+                    .send_message_confirm("Invalid date format. Please use format YYYY.MM like cm 2023.07")
+                    .await?;
+
+                return Err(anyhow!("[Parameter Error][command_consumption_per_mon()] Invalid format of 'text' variable entered as parameter. : {:?}", args));
+            }
+            
+        };
+        
+        let es_client = get_elastic_conn(); 
+        
+        /* */
+        let consume_type_vec: Vec<ProdtTypeInfo> = 
+            self.db_service
+                .get_classification_consumption_type("consuming_index_prod_type").await?;
+        
+        /* */
+        let cur_mon_total_cost_infos = 
+            self.db_service
+                .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_vec).await?;
+        
+        /* */
+        let pre_mon_total_cost_infos = 
+            self.db_service
+                .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_vec).await?;
+        
+        
+        //self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
+        
         Ok(())
     }
 
@@ -177,94 +232,38 @@ impl<G: GraphApiService, C: CalculateService, T: TelebotService, CS: CommandServ
     async fn command_consumption_auto(&self) -> Result<(), anyhow::Error> {
 
         let args = self.telebot_service.get_input_text();
-
-        println!("{:?}", args);
-
+        
         let re = Regex::new(r"\[.*?\]\n?")?;
-        let repalce_string = re.replace_all(&args, "").to_string();
-
-        let split_args_vec: Vec<String> = repalce_string.split('\n').map(|s| s.to_string()).collect();
-
-        println!("{:?}", split_args_vec);
-
-        let consume_type = split_args_vec
-            .get(0)
-            .ok_or_else(|| anyhow!("[Parameter Error][command_consumption_auto()] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
+        let replace_string = re.replace_all(&args, "").to_string();
         
-        println!("{:?}", consume_type);
+        let split_args_vec: Vec<String> = replace_string.split('\n').map(|s| s.to_string()).collect();
+                
+        match self.command_service.process_by_consume_type(&split_args_vec).await {
+            Ok(res) => res,
+            Err(e) => {
+                self.telebot_service
+                    .send_message_confirm("There is a problem with the parameter you entered. Please check again.")
+                    .await?;
 
-        // if consume_type.contains("nh") {
+                return Err(e)
+            }
+        }
 
-        //     println!("{:?}", split_args_vec);    
-
-            
-            
-
-        // } else if consume_type.contains("삼성") {
-
-        //     println!("{:?}", split_args_vec);    
-            
-
-        // } else {
-
-        //     self.telebot_service
-        //         .send_message_confirm( "There is a problem with the parameter you entered. Please check again.")
-        //         .await?;
-
-        //     return Err(anyhow!(format!("[Parameter Error][command_consumption_auto()] Invalid format of 'text' variable entered as parameter. : {:?}", split_args_vec)));
-        // }
-        
-        
         Ok(())
     }
 
+    #[doc = "docs"]
+    async fn command_common_single(&self) -> Result<(), anyhow::Error> {
+
+
+        Ok(())
+    }
+    
+    #[doc = "docs"]
+    async fn command_common_double(&self) -> Result<(), anyhow::Error> {
+
+
+        Ok(())
+    }
+    
 }
-
-/*
-    Functions that handle each command
-*/
-// pub async fn handle_command(message: Message, bot: Bot) -> Result<(), anyhow::Error> {
-
-//     let command_service = CommandService::new(bot, message)?;    
-//     let input_text = command_service.input_text;
-    
-//     if input_text.starts_with("c ") {
-//         command_service.command_consumption().await?;
-//     }
-//     else if input_text.starts_with("cm") {
-//         command_service.command_consumption_per_mon().await?;
-//     }
-//     else if input_text.starts_with("ctr") {
-//         command_service.command_consumption_per_term().await?;
-//     }
-//     else if input_text.starts_with("ct") {
-//         command_service.command_consumption_per_day().await?;
-//     }
-//     else if input_text.starts_with("cs") {
-//         command_service.command_consumption_per_salary().await?;
-//     }
-//     else if input_text.starts_with("cw") {
-//         command_service.command_consumption_per_week().await?;
-//     }
-//     else if input_text.starts_with("mc") {
-//         command_service.command_record_fasting_time().await?;
-//     }
-//     else if input_text.starts_with("mt") {
-//         command_service.command_check_fasting_time().await?;
-//     }
-//     else if input_text.starts_with("md") {
-//         command_service.command_delete_fasting_time().await?;
-//     }
-//     else if input_text.starts_with("cy") {
-//         command_service.command_consumption_per_year().await?;
-//     }
-//     else if input_text.starts_with("list") {
-//         command_service.command_get_consume_type_list().await?;
-//     }
-//     else 
-//     {
-//         command_service.command_consumption_auto().await?;
-//     }
-    
-//     Ok(())
-// }
