@@ -3,9 +3,7 @@ use crate::common::*;
 use crate::repository::kafka_repository::*;
 
 
-/*
-    Function responsible for logging
-*/
+#[doc = "Function responsible for logging"]
 pub fn set_global_logger() {
     let log_directory = "logs"; // Directory to store log files
     let file_prefix = ""; // Prefixes for log files
@@ -25,9 +23,7 @@ pub fn set_global_logger() {
 }
 
 
-/*
-    Custom Log Format Function
-*/
+#[doc = "Custom Log Format Function"]
 fn custom_format(w: &mut dyn Write, now: &mut flexi_logger::DeferredNow, record: &Record) -> Result<(), std::io::Error> {
     write!(w, "[{}] [{}] T[{}] {}",
         now.now().format("%Y-%m-%d %H:%M:%S"),
@@ -36,13 +32,11 @@ fn custom_format(w: &mut dyn Write, now: &mut flexi_logger::DeferredNow, record:
         &record.args())
 }
 
-/*
 
-*/
+#[doc = "Function that produces messages to kafka"]
 async fn logging_kafka(msg: &str) {
     
     let kafka_producer = get_kafka_producer();
-    info!("kafka_producer-1");
     let msg_owned = msg.to_string();
 
     let handle = task::spawn_blocking(move || {
@@ -50,46 +44,23 @@ async fn logging_kafka(msg: &str) {
             error!("{:?}", e);
         });
     });
-    
-    info!("kafka_producer-2");
 
     match handle.await {
         Ok(_) => (),
         Err(e) => error!("Error waiting for task: {:?}", e),
     }
-    
 }
 
-/*
-    error!
-*/
+
+#[doc = "Function that writes the error history to a file and sends it to kafka"]
 pub async fn errork(err: anyhow::Error) {
-    
-    // file
     error!("{:?}", err);
     logging_kafka(&err.to_string()).await;
 }
 
-/*
-    info!
-*/
+
+#[doc = "Function that writes the information history to a file and sends it to kafka"]
 pub async fn infok(info: &str) {
-    
-    // file
     info!("{:?}", info);
     logging_kafka(info).await;
-    info!("end");
-    // // kafka
-    // let kafka_client: Option<&Arc<KafkaRepositoryPub>> = match KAFKA_PRODUCER.get() {
-    //     Some(kafka) => Some(kafka),
-    //     None => {
-    //         error!("[DB Connection Error][infok()] Cannot connect Kafka cluster");
-    //         None
-    //     }
-    // };
-
-    // if let Some(kafka_client) = kafka_client {
-    //     kafka_client.logging_kafka(info).await;
-    // }
-    
 }

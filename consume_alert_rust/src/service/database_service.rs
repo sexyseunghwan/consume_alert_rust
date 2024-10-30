@@ -19,8 +19,7 @@ pub trait DBService {
     async fn get_classification_type(&self, index_name: &str) -> Result<Vec<String>, anyhow::Error>;
     async fn get_classification_consumption_type(&self, index_name: &str) -> Result<Vec<ProdtTypeInfo>, anyhow::Error>;
     async fn total_cost_detail_specific_period(&self, start_date: NaiveDate, end_date: NaiveDate, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<TotalCostInfo, anyhow::Error>;
-    // async fn total_cost_detail_specific_period(start_date: NaiveDate, end_date: NaiveDate, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<TotalCostInfo, anyhow::Error>;
-    // async fn get_consume_info_by_classification_type<'a>(consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error>;
+    async fn get_consume_info_by_classification_type<'a>(&self, consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error>;
     // async fn get_consume_type_graph(total_cost: f64, start_dt: NaiveDate, end_dt: NaiveDate, consume_list: &Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error>;
     // async fn get_consume_detail_graph_double(python_graph_line_info_cur: &mut ToPythonGraphLine, python_graph_line_info_pre: &mut ToPythonGraphLine) -> Result<String, anyhow::Error>;
     // async fn get_consume_detail_graph_single(python_graph_line_info: &ToPythonGraphLine) -> Result<String, anyhow::Error>;
@@ -171,7 +170,7 @@ impl DBService for DBServicePub {
                     let timestamp = match source.get("@timestamp").and_then(Value::as_str) {
                         Some(timestamp) => timestamp,
                         None => {
-                            errork(anyhow!("[Error][total_cost_detail_specific_period()] '@timestamp' is empty!"));
+                            errork(anyhow!("[Error][total_cost_detail_specific_period()] '@timestamp' is empty!")).await;
                             continue
                         }
                     };
@@ -179,7 +178,7 @@ impl DBService for DBServicePub {
                     let prodt_money = match source.get("prodt_money").and_then(Value::as_i64).map(|v| v as i32) {
                         Some(timestamp) => timestamp,
                         None => {
-                            errork(anyhow!("[Error][total_cost_detail_specific_period()] 'prodt_money' is empty!"));
+                            errork(anyhow!("[Error][total_cost_detail_specific_period()] 'prodt_money' is empty!")).await;
                             continue
                         }
                     };
@@ -187,13 +186,13 @@ impl DBService for DBServicePub {
                     let prodt_name = match source.get("prodt_name").and_then(Value::as_str) {
                         Some(timestamp) => timestamp,
                         None => {
-                            errork(anyhow!("[Error][total_cost_detail_specific_period()] 'prodt_name' is empty!"));
+                            errork(anyhow!("[Error][total_cost_detail_specific_period()] 'prodt_name' is empty!")).await;
                             continue
                         }
                     };
                     
                     let mut consume_info = ConsumeInfo::new(timestamp.to_string(), prodt_name.to_string(), prodt_money, String::from(""));
-                    get_consume_info_by_classification_type(consume_type_vec, &mut consume_info).await?;
+                    self.get_consume_info_by_classification_type(consume_type_vec, &mut consume_info).await?;
                     
                     consume_info_list.push(consume_info);
                 }             
@@ -215,6 +214,57 @@ impl DBService for DBServicePub {
     }
 
 
+
+    #[doc = "function that classifies what category that consumption is and returns an 'ConsumeInfo' instance."]
+    async fn get_consume_info_by_classification_type<'a>(&self, consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error> {
+
+        let mut type_scores: HashMap<String, i32> = HashMap::new();
+        
+        let prodt_name_trim = consume_info.prodt_name().trim();
+
+        for prodt_type_info in consume_type_vec {
+
+            let keyword_type = prodt_type_info.keyword_type(); /* consumption classification. For example, pizza Hut is classified as a MEAL */
+            let mut total_bias = 0;
+
+            for prodt_detail in prodt_type_info.prodt_detail_list() {
+                
+                let keyword = prodt_detail.keyword(); /* Pizza hut(keyword) ⊂ Meal(keyword_type) */
+                let bias_value = prodt_detail.bias_value(); /* Weight of the corresponding keyword */
+
+                if prodt_name_trim.contains(keyword) {
+                    total_bias += bias_value;
+                }
+            }
+            
+            if total_bias != 0 {
+                type_scores.insert(keyword_type.to_string(), total_bias);
+            } 
+        }
+        
+        let mut confirm_type = String::from("");
+        let mut max_score = 0;
+
+        /* Categories are determined based on the larger max_score. */
+        for (key, value) in &type_scores {
+            
+            let in_key = key.to_string();
+            let in_value = *value;
+            
+            if in_value > max_score {
+                max_score = in_value;
+                confirm_type = in_key;
+            }
+        }
+
+        if max_score == 0 {
+            consume_info.prodt_type = String::from("etc"); /* "max_score = 0" means that the consumption details are NOT included in any category. */
+        } else {
+            consume_info.prodt_type = confirm_type;
+        }
+        
+        Ok(())
+    }
 
 }
 

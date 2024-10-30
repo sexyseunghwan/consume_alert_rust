@@ -177,6 +177,9 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_vec).await?;
         
         
+        println!("{:?}", cur_mon_total_cost_infos);
+        println!("{:?}", pre_mon_total_cost_infos);
+
         //self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
         
         Ok(())
