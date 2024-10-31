@@ -366,6 +366,7 @@ impl DBService for DBServicePub {
 // }
 
 
+
 // /*
 //     Function to graph detailed consumption information (two graphs)
 // */

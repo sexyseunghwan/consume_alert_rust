@@ -67,6 +67,7 @@ pub use teloxide:: {
     Bot
 };
 
+pub use reqwest::Client;
 
 pub use regex::Regex;
 

@@ -13,6 +13,7 @@ use crate::utils_modules::numeric_utils::*;
 
 use crate::model::PermonDatetime::*;
 use crate::model::ProdtTypeInfo::*;
+use crate::model::TotalCostInfo::*;
 
 
 pub struct MainHandler<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> {
@@ -255,13 +256,50 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         Ok(())
     }
 
-    #[doc = "docs"]
-    async fn command_common_single(&self) -> Result<(), anyhow::Error> {
+    #[doc = "Common Command Function Without Comparison"]
+    async fn command_common_single(&self, cur_total_cost_infos: TotalCostInfo) -> Result<(), anyhow::Error> {
 
+        let cur_total_cost = cur_total_cost_infos.total_cost;
+        let cur_consume_list = cur_total_cost_infos.consume_list();
+        let cur_empty_flag = cur_total_cost_infos.empty_flag;
+        let cur_start_dt = cur_total_cost_infos.start_dt;
+        let cur_end_dt = cur_total_cost_infos.end_dt;    
+
+        // Hand over the consumption details to Telegram bot.
+        self.telebot_service.send_message_consume_split(
+            cur_consume_list, 
+            cur_total_cost, 
+            cur_start_dt, 
+            cur_end_dt,
+            cur_empty_flag
+        ).await?; 
+        
+        if cur_total_cost > 0.0 { 
+
+            // ( consumption type information, consumption type graph storage path )
+            let comsume_type_infos = 
+                self.graph_api_service.get_consume_type_graph(cur_total_cost, cur_start_dt, cur_end_dt, cur_consume_list).await?;
+            
+            let consume_type_list = &comsume_type_infos.0;
+            let consume_type_img = comsume_type_infos.1;
+
+            self.telebot_service.send_photo_confirm( &consume_type_img).await?;
+
+            self.telebot_service.send_message_consume_type(
+                consume_type_list, 
+                cur_total_cost, 
+                cur_start_dt, 
+                cur_end_dt,
+                cur_empty_flag).await?; 
+
+            let delete_target_vec: Vec<String> = vec![consume_type_img];
+            delete_file(delete_target_vec)?;
+        }
 
         Ok(())
     }
     
+
     #[doc = "docs"]
     async fn command_common_double(&self) -> Result<(), anyhow::Error> {
 

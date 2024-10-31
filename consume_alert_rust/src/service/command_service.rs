@@ -19,20 +19,21 @@ use crate::repository::es_repository::*;
 #[async_trait]
 pub trait CommandService {
     
-    // 
+     
     async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<(), anyhow::Error>;
     fn get_string_vector_by_replace(&self, intput_str: &str, replacements: &Vec<&str>) -> Result<Vec<String>, anyhow::Error>;
     fn get_consume_time(&self, consume_time_name_vec: &Vec<String>) -> Result<String, anyhow::Error>;
     fn get_consume_prodt_name(&self, consume_time_name_vec: &Vec<String>, idx: usize) -> Result<String, anyhow::Error>;
     fn get_consume_prodt_money(&self, consume_price_vec: &Vec<String>, idx: usize) -> Result<i32, anyhow::Error>;
     
-    //
+    
     fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PermonDatetime, anyhow::Error>;
+
+    
 }
 
 #[derive(Debug, Getters, Clone, new)]
 pub struct CommandServicePub;
-
 
 
 #[async_trait]
@@ -188,8 +189,7 @@ impl CommandService for CommandServicePub {
         Ok(consume_price)
     }
 
-
-    // === 
+    
     #[doc = "Functions that return this month's start, end date, and nth month-before/after start, end date based on this month"]
     fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PermonDatetime, anyhow::Error> {
 
@@ -200,6 +200,53 @@ impl CommandService for CommandServicePub {
         
         Ok(per_mon_datetim)
     }
+
+    
+    // #[doc = "Common Command Function Without Comparison"]
+    // async fn command_common_single(&self, cur_total_cost_infos: TotalCostInfo) -> Result<(), anyhow::Error> {
+        
+    //     let cur_total_cost = cur_total_cost_infos.total_cost;
+    //     let cur_consume_list = cur_total_cost_infos.consume_list();
+    //     let cur_empty_flag = cur_total_cost_infos.empty_flag;
+    //     let cur_start_dt = cur_total_cost_infos.start_dt;
+    //     let cur_end_dt = cur_total_cost_infos.end_dt;    
+
+    //     // Hand over the consumption details to Telegram bot.
+    //     send_message_consume_split(
+    //         &self.bot, 
+    //         self.message_id, 
+    //         cur_consume_list, 
+    //         cur_total_cost, 
+    //         cur_start_dt, 
+    //         cur_end_dt,
+    //         cur_empty_flag
+    //     ).await?; 
+        
+    //     if cur_total_cost > 0.0 { 
+
+    //         // ( consumption type information, consumption type graph storage path )
+    //         let comsume_type_infos = get_consume_type_graph(cur_total_cost, cur_start_dt, cur_end_dt, cur_consume_list).await?;
+    //         let consume_type_list = &comsume_type_infos.0;
+    //         let consume_type_img = comsume_type_infos.1;
+
+    //         send_photo_confirm(&self.bot, self.message_id, &consume_type_img).await?;
+
+    //         send_message_consume_type(&self.bot, 
+    //             self.message_id, 
+    //             consume_type_list, 
+    //             cur_total_cost, 
+    //             cur_start_dt, 
+    //             cur_end_dt,
+    //             cur_empty_flag).await?; 
+
+    //         let delete_target_vec: Vec<String> = vec![consume_type_img];
+    //         delete_file(delete_target_vec)?;
+    //     }
+
+    //     Ok(())
+    // }
+
+
     
 }
 
@@ -207,51 +254,51 @@ impl CommandService for CommandServicePub {
     
 
     
-//     /*
-//         Common Command Function Without Comparison
-//     */
-//     async fn command_common_single(&self, cur_total_cost_infos: TotalCostInfo) -> Result<(), anyhow::Error> {
+    // /*
+    //     Common Command Function Without Comparison
+    // */
+    // async fn command_common_single(&self, cur_total_cost_infos: TotalCostInfo) -> Result<(), anyhow::Error> {
         
-//         let cur_total_cost = cur_total_cost_infos.total_cost;
-//         let cur_consume_list = cur_total_cost_infos.consume_list();
-//         let cur_empty_flag = cur_total_cost_infos.empty_flag;
-//         let cur_start_dt = cur_total_cost_infos.start_dt;
-//         let cur_end_dt = cur_total_cost_infos.end_dt;    
+    //     let cur_total_cost = cur_total_cost_infos.total_cost;
+    //     let cur_consume_list = cur_total_cost_infos.consume_list();
+    //     let cur_empty_flag = cur_total_cost_infos.empty_flag;
+    //     let cur_start_dt = cur_total_cost_infos.start_dt;
+    //     let cur_end_dt = cur_total_cost_infos.end_dt;    
 
-//         // Hand over the consumption details to Telegram bot.
-//         send_message_consume_split(
-//             &self.bot, 
-//             self.message_id, 
-//             cur_consume_list, 
-//             cur_total_cost, 
-//             cur_start_dt, 
-//             cur_end_dt,
-//             cur_empty_flag
-//         ).await?; 
+    //     // Hand over the consumption details to Telegram bot.
+    //     send_message_consume_split(
+    //         &self.bot, 
+    //         self.message_id, 
+    //         cur_consume_list, 
+    //         cur_total_cost, 
+    //         cur_start_dt, 
+    //         cur_end_dt,
+    //         cur_empty_flag
+    //     ).await?; 
         
-//         if cur_total_cost > 0.0 { 
+    //     if cur_total_cost > 0.0 { 
 
-//             // ( consumption type information, consumption type graph storage path )
-//             let comsume_type_infos = get_consume_type_graph(cur_total_cost, cur_start_dt, cur_end_dt, cur_consume_list).await?;
-//             let consume_type_list = &comsume_type_infos.0;
-//             let consume_type_img = comsume_type_infos.1;
+    //         // ( consumption type information, consumption type graph storage path )
+    //         let comsume_type_infos = get_consume_type_graph(cur_total_cost, cur_start_dt, cur_end_dt, cur_consume_list).await?;
+    //         let consume_type_list = &comsume_type_infos.0;
+    //         let consume_type_img = comsume_type_infos.1;
 
-//             send_photo_confirm(&self.bot, self.message_id, &consume_type_img).await?;
+    //         send_photo_confirm(&self.bot, self.message_id, &consume_type_img).await?;
 
-//             send_message_consume_type(&self.bot, 
-//                 self.message_id, 
-//                 consume_type_list, 
-//                 cur_total_cost, 
-//                 cur_start_dt, 
-//                 cur_end_dt,
-//                 cur_empty_flag).await?; 
+    //         send_message_consume_type(&self.bot, 
+    //             self.message_id, 
+    //             consume_type_list, 
+    //             cur_total_cost, 
+    //             cur_start_dt, 
+    //             cur_end_dt,
+    //             cur_empty_flag).await?; 
 
-//             let delete_target_vec: Vec<String> = vec![consume_type_img];
-//             delete_file(delete_target_vec)?;
-//         }
+    //         let delete_target_vec: Vec<String> = vec![consume_type_img];
+    //         delete_file(delete_target_vec)?;
+    //     }
 
-//         Ok(())
-//     }
+    //     Ok(())
+    // }
 
 
 //     /*

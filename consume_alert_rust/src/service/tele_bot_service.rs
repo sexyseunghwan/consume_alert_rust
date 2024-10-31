@@ -174,7 +174,7 @@ impl TelebotService for TelebotServicePub {
         msg_title: &'msg str
     ) -> Result<(), anyhow::Error> 
     where
-        'life1: 'life2, // 'life1' should live longer than 'life2'
+        'life1: 'life2, /* 'life1' should live longer than 'life2' */ 
         T: Send + Sync
     {
         
@@ -204,12 +204,11 @@ impl TelebotService for TelebotServicePub {
                 self.send_message_confirm(&send_text).await?;
             }
         }    
-    
-    
+        
         Ok(())
     }
 
-
+    
     #[doc = "Functions that send messages related to consumption details"]
     async fn send_message_consume_split(
         &self,
