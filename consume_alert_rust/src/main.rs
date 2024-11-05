@@ -89,8 +89,8 @@ async fn main() {
 
     initialize_db_connection();
     
-    //prod().await;
-    dev().await;
+    prod().await;
+    //dev().await;
 }
 
 
@@ -153,7 +153,7 @@ async fn dev() {
             let main_handler = 
                 MainHandler::new(graph_api_service, calculate_service, telebot_service, command_service);
 
-            main_handler.command_consumption_per_mon().await.unwrap();
+            main_handler.command_consumption_auto().await.unwrap();
             
         }
         Err(e) => println!("Failed to read input: {}", e),

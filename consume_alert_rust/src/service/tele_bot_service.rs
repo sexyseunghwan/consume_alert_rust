@@ -91,7 +91,7 @@ impl TelebotServicePub {
 
         let chat_id = ChatId(5346196727);
         let input_text = input_str.to_string().to_lowercase();
-
+        
         Self {
             bot, chat_id, input_text
         }

@@ -112,7 +112,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
 
         let curr_time = get_current_kor_naive_datetime();
 
-        let document = json!({
+        let document: Value = json!({
                 "@timestamp": get_str_from_naive_datetime(curr_time),
                 "prodt_name": consume_name,
                 "prodt_money": convert_numeric(consume_cash.as_str())
@@ -233,21 +233,23 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
 
 
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch."]
-    async fn command_consumption_auto(&self) -> Result<(), anyhow::Error> {
+    pub async fn command_consumption_auto(&self) -> Result<(), anyhow::Error> {
 
         let args = self.telebot_service.get_input_text();
         
-        let re = Regex::new(r"\[.*?\]\n?")?;
+        let re: Regex = Regex::new(r"\[.*?\]\n?")?;
         let replace_string = re.replace_all(&args, "").to_string();
         
         let split_args_vec: Vec<String> = replace_string.split('\n').map(|s| s.to_string()).collect();
-                
+
+        println!("{:?}", split_args_vec);
+
         match self.command_service.process_by_consume_type(&split_args_vec).await {
             Ok(res) => res,
             Err(e) => {
-                self.telebot_service
-                    .send_message_confirm("There is a problem with the parameter you entered. Please check again.")
-                    .await?;
+                // self.telebot_service
+                //     .send_message_confirm("There is a problem with the parameter you entered. Please check again.")
+                //     .await?;
 
                 return Err(e)
             }
@@ -293,7 +295,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 cur_empty_flag).await?; 
 
             let delete_target_vec: Vec<String> = vec![consume_type_img];
-            delete_file(delete_target_vec)?;
+            //delete_file(delete_target_vec)?;
         }
 
         Ok(())

@@ -40,7 +40,7 @@ pub struct CommandServicePub;
 impl CommandService for CommandServicePub {
     
     
-    #[doc = "docs"]
+    #[doc = ""]
     async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<(), anyhow::Error> {
 
         let consume_type = split_args_vec
@@ -49,8 +49,14 @@ impl CommandService for CommandServicePub {
         
         let es_client = get_elastic_conn();
         let split_val = vec![",", "원"];
-        
+        let document: Value;
+
         if consume_type.contains("nh") {
+
+            /* Check if it's a transportation card history. */
+            let second_param = split_args_vec
+                .get(2)
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 2, split_args_vec))?;
 
             let consume_price_vec: Vec<String> = self.get_string_vector_by_replace(split_args_vec
                 .get(2)
@@ -73,15 +79,12 @@ impl CommandService for CommandServicePub {
                 .get(4)
                 .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'split_args_vec' vector was accessed.", 4))?;
 
-
-            let document = json!({
+            document = json!({
                 "@timestamp": consume_time,
                 "prodt_name": consume_name,
                 "prodt_money": consume_price
             });
             
-            es_client.post_query(&document, "consuming_index_prod_new").await?;
-
         } else if consume_type.contains("삼성"){
 
             let consume_price_vec = self.get_string_vector_by_replace(split_args_vec
@@ -105,20 +108,20 @@ impl CommandService for CommandServicePub {
                 .get(2)
                 .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 2))?;
             
-            let document = json!({
+            document = json!({
                 "@timestamp": consume_time,
                 "prodt_name": consume_name,
                 "prodt_money": consume_price
             });
             
-            es_client.post_query(&document, "consuming_index_prod_new").await?;
-            
-        } else {
+        }  
+        else {
             return Err(anyhow!("[Error][process_by_consume_type()] Variable 'consume_type' contains an undefined string."))
         }
-        
+
+        //es_client.post_query(&document, "consuming_index_prod_new").await?;
+
         Ok(())
-        //Ok(true)
     }
 
 

@@ -58,6 +58,7 @@ impl GraphApiService for GraphApiServicePub {
         }
     }
 
+
     #[doc = "Function that calls python api to draw a pie chart."]
     async fn call_python_matplot_consume_type(&self, consume_type_list: &Vec<ConsumeTypeInfo>, start_dt: NaiveDate, end_dt: NaiveDate, total_cost: f64) -> Result<String, anyhow::Error> {
 
@@ -80,6 +81,7 @@ impl GraphApiService for GraphApiServicePub {
     }
     
 
+
     #[doc = "Function that calls python api to draw a line chart."]
     async fn call_python_matplot_consume_detail(&self, comparison_info: &Vec<ToPythonGraphLine>) -> Result<String, anyhow::Error> {
         
@@ -89,6 +91,7 @@ impl GraphApiService for GraphApiServicePub {
     }   
 
 
+    
     #[doc = "Function that returns consumption type information (Graphs and detailed consumption details)"]
     async fn get_consume_type_graph(&self ,total_cost: f64, start_dt: NaiveDate, end_dt: NaiveDate, consume_list: &Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error> {
         
