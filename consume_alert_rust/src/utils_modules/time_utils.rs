@@ -79,9 +79,8 @@ pub fn get_current_kor_naivedate_first_date() -> Result<NaiveDate, anyhow::Error
 }
 
 
-/*
-    Function that obtains the last date of the current month and returns it to 'NaiveDate'
-*/
+
+#[doc = "Function that obtains the last date of the current month and returns it to 'NaiveDate'"]
 pub fn get_lastday_naivedate(naive_date: NaiveDate) -> Result<NaiveDate, anyhow::Error> {
 
     let next_month = if naive_date.month() == 12 {
@@ -98,9 +97,8 @@ pub fn get_lastday_naivedate(naive_date: NaiveDate) -> Result<NaiveDate, anyhow:
 }
 
 
-/*
-    Functions that return NaiveDate data with 'year, month, day' as parameters
-*/
+
+#[doc = "Functions that return NaiveDate data with 'year, month, day' as parameters"]
 pub fn get_naivedate(year: i32, month: u32, date: u32) -> Result<NaiveDate, anyhow::Error> {
 
     let date = NaiveDate::from_ymd_opt(year, month, date)
@@ -110,9 +108,8 @@ pub fn get_naivedate(year: i32, month: u32, date: u32) -> Result<NaiveDate, anyh
 }
 
 
-/*
-    Functions that return NaiveTime data with 'hour, min, sec' as parameters
-*/
+
+#[doc = "Functions that return NaiveTime data with 'hour, min, sec' as parameters"]
 pub fn get_naivetime(hour: u32, min: u32, sec: u32) -> Result<NaiveTime, anyhow::Error> {
     
     let time = NaiveTime::from_hms_opt(hour, min, sec)

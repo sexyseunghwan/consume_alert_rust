@@ -94,6 +94,7 @@ async fn main() {
 }
 
 
+#[doc = "Operating environment"]
 async fn prod() {
 
     let bot = Arc::new(Bot::from_env());
@@ -101,20 +102,20 @@ async fn prod() {
     let graph_api_service = Arc::new(GraphApiServicePub::new());
     let db_service = Arc::new(DBServicePub::new());
     let command_service = Arc::new(CommandServicePub::new());
-
-    //infok("Consume Alert Program Start").await;
+    
+    infok("Consume Alert Program Start").await;
+    
+    /* As soon as the event comes in, the code below continues to be executed. */
     teloxide::repl(Arc::clone(&bot), move |message: Message, bot: Arc<Bot>| {
-
+        
         let graph_api_service_clone = Arc::clone(&graph_api_service);
-        let calculate_service_clone = Arc::clone(&db_service);
+        let db_service_clone = Arc::clone(&db_service);
         let command_service_clone = Arc::clone(&command_service);
-
-        async move {
-
-            println!("??");    
+        
+        async move {   
             let telebot_service = TelebotServicePub::new(bot, message);    
             let main_handler = 
-                MainHandler::new(graph_api_service_clone, calculate_service_clone, telebot_service, command_service_clone);
+                MainHandler::new(graph_api_service_clone, db_service_clone, telebot_service, command_service_clone);
             
             match main_handler.main_call_function().await {
                 Ok(_) => (),
@@ -123,26 +124,26 @@ async fn prod() {
                 }
             };
             
-            println!("end");
             respond(())
-            
         }
     })
-    .await;  
-
+    .await;
+    
 }
 
 
+
+#[doc = "Development environment"]
 async fn dev() {
     
     print!("Enter some text: ");
-    std::io::stdout().flush().unwrap(); // Empty the buffer after outputting without a new line.
-
+    std::io::stdout().flush().unwrap(); /* Empty the buffer after outputting without a new line. */ 
+    
     let mut input = String::new();
-
+    
     match std::io::stdin().read_line(&mut input) {
         Ok(_) => {
-
+        
             let bot = Arc::new(Bot::from_env());        
 
             let graph_api_service = Arc::new(GraphApiServicePub::new());
@@ -158,6 +159,6 @@ async fn dev() {
         }
         Err(e) => println!("Failed to read input: {}", e),
     }
-
+    
 
 }

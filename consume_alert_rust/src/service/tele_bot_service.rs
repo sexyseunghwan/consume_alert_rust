@@ -3,6 +3,7 @@ use crate::common::*;
 use crate::model::ConsumeInfo::*;
 use crate::model::ConsumeTypeInfo::*;
 
+
 #[async_trait]
 pub trait TelebotService {
     
@@ -67,7 +68,14 @@ pub struct TelebotServicePub
 
 
 impl TelebotServicePub {
-        
+
+    #[doc = "Telegram 서비스 생성자"]
+    /// # Arguments
+    /// * `bot`     - Telegram Bot 객체
+    /// * `message` - message 데이터 객체
+    /// 
+    /// # Returns
+    /// * Self
     pub fn new(bot: Arc<Bot>, message: Message) -> Self {
 
         let input_text = match message.text() {
@@ -78,7 +86,7 @@ impl TelebotServicePub {
             }
         }.to_string()
         .to_lowercase();
-
+        
         let chat_id: ChatId = message.chat.id;
         
         Self {
@@ -87,6 +95,12 @@ impl TelebotServicePub {
     }
 
     #[doc = "Generator for TEST"]
+    /// # Arguments
+    /// * `bot`         -
+    /// * `input_str`   - 
+    /// 
+    /// # Returns
+    /// * Self
     pub fn new_test(bot: Arc<Bot>, input_str: &str) -> Self {
 
         let chat_id = ChatId(5346196727);

@@ -126,6 +126,14 @@ impl DBService for DBServicePub {
 
 
     #[doc = "Functions that show the details of total consumption and consumption over a specific period of time"]
+    /// # Arguments
+    /// * `start_date`      
+    /// * `end_date`        
+    /// * `index_name`       
+    /// * `consume_type_vec`- Consumption Type Information Vector ex) Meals, cafes, etc...
+    /// 
+    /// # Returns
+    /// *  Result<TotalCostInfo, anyhow::Error>
     async fn total_cost_detail_specific_period(&self, start_date: NaiveDate, end_date: NaiveDate, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<TotalCostInfo, anyhow::Error> {
         
         let query = json!({
@@ -161,6 +169,7 @@ impl DBService for DBServicePub {
             None => return Err(anyhow!("[Error][total_cost_detail_specific_period()] 'total_cost' error"))
         };
         
+
         if let Some(prodt_infos) = es_cur_res["hits"]["hits"].as_array() {
 
             for elem in prodt_infos {
@@ -218,7 +227,7 @@ impl DBService for DBServicePub {
     #[doc = "function that classifies what category that consumption is and returns an 'ConsumeInfo' instance."]
     async fn get_consume_info_by_classification_type<'a>(&self, consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error> {
 
-        let mut type_scores: HashMap<String, i32> = HashMap::new();
+        let mut type_scores_map: HashMap<String, i32> = HashMap::new();
         
         let prodt_name_trim = consume_info.prodt_name().trim();
 
@@ -229,7 +238,7 @@ impl DBService for DBServicePub {
 
             for prodt_detail in prodt_type_info.prodt_detail_list() {
                 
-                let keyword = prodt_detail.keyword(); /* Pizza hut(keyword) ⊂ Meal(keyword_type) */
+                let keyword = prodt_detail.keyword();    /* Pizza hut(keyword) ⊂ Meal(keyword_type) */
                 let bias_value = prodt_detail.bias_value(); /* Weight of the corresponding keyword */
 
                 if prodt_name_trim.contains(keyword) {
@@ -238,29 +247,29 @@ impl DBService for DBServicePub {
             }
             
             if total_bias != 0 {
-                type_scores.insert(keyword_type.to_string(), total_bias);
+                type_scores_map.insert(keyword_type.to_string(), total_bias);
             } 
         }
         
-        let mut confirm_type = String::from("");
+        let mut confirm_keyword_type = String::from("");
         let mut max_score = 0;
 
         /* Categories are determined based on the larger max_score. */
-        for (key, value) in &type_scores {
+        for (key, value) in &type_scores_map {
             
-            let in_key = key.to_string();
-            let in_value = *value;
+            let keyword_type = key.to_string();
+            let keyword_score = *value;
             
-            if in_value > max_score {
-                max_score = in_value;
-                confirm_type = in_key;
+            if keyword_score > max_score {
+                max_score = keyword_score;
+                confirm_keyword_type = keyword_type;
             }
         }
-
+        
         if max_score == 0 {
             consume_info.prodt_type = String::from("etc"); /* "max_score = 0" means that the consumption details are NOT included in any category. */
         } else {
-            consume_info.prodt_type = confirm_type;
+            consume_info.prodt_type = confirm_keyword_type;
         }
         
         Ok(())

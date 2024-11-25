@@ -125,6 +125,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     }
     
     
+
     #[doc = "command handler: Checks how much you have consumed during a month -> cm"]
     pub async fn command_consumption_per_mon(&self) -> Result<(), anyhow::Error> {
 
@@ -157,22 +158,17 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
 
                 return Err(anyhow!("[Parameter Error][command_consumption_per_mon()] Invalid format of 'text' variable entered as parameter. : {:?}", args));
             }
-            
         };
         
-        let es_client = get_elastic_conn(); 
-        
-        /* */
+        /* Consumption Type Information Vectors - Get all classification of consumption data `ex) Meals, cafes, etc...` */
         let consume_type_vec: Vec<ProdtTypeInfo> = 
             self.db_service
                 .get_classification_consumption_type("consuming_index_prod_type").await?;
         
-        /* */
         let cur_mon_total_cost_infos = 
             self.db_service
                 .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_vec).await?;
         
-        /* */
         let pre_mon_total_cost_infos = 
             self.db_service
                 .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_vec).await?;
@@ -180,7 +176,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         
         println!("{:?}", cur_mon_total_cost_infos);
         println!("{:?}", pre_mon_total_cost_infos);
-
+        
         //self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
         
         Ok(())
