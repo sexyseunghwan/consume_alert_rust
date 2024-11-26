@@ -17,6 +17,15 @@ pub fn get_str_from_naive_datetime(naive_datetime: NaiveDateTime) -> String {
 }
 
 
+#[doc = "Function that returns real-time UTC time to string"]
+pub fn get_str_curdatetime() -> String {
+    
+    let kor_now = get_current_kor_naive_datetime();
+    let formatted_time = kor_now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+
+    formatted_time
+}
+
 /*
     Function to change 'string' data format to 'NaiveDateTime' format
 */
@@ -133,9 +142,8 @@ pub fn get_naivedatetime(year: i32, month: u32, date: u32, hour: u32, min: u32, 
 }
 
 
-/*
-    Functions that make NaiveDatetime objects when you add months, days, and hours to the parameters as of the current year
-*/
+
+#[doc = "Functions that make NaiveDatetime objects when you add months, days, and hours to the parameters as of the current year"]
 pub fn get_this_year_naivedatetime(month: u32, date: u32, hour: u32, min: u32) -> Result<NaiveDateTime, anyhow::Error> {
 
     let curr_date: NaiveDateTime = get_current_kor_naive_datetime();
@@ -150,16 +158,13 @@ pub fn get_this_year_naivedatetime(month: u32, date: u32, hour: u32, min: u32) -
 
 
 
-
-/*
-    Function that returns date data a few months before and after a particular date
-*/
+#[doc = "Function that returns date data a few months before and after a particular date"]
 pub fn get_add_month_from_naivedate(naive_date: NaiveDate, add_month: i32) -> Result<NaiveDate, anyhow::Error> {
 
     let mut new_year = naive_date.year() + (naive_date.month() as i32 + add_month - 1) / 12;
     let mut new_month = (naive_date.month() as i32 + add_month - 1) % 12 + 1;
     
-    // Adjust if the month is out of range
+    /* Adjust if the month is out of range */ 
     if new_month <= 0 {
         new_month += 12;
         new_year -= 1;
@@ -173,13 +178,25 @@ pub fn get_add_month_from_naivedate(naive_date: NaiveDate, add_month: i32) -> Re
 }
 
 
-/*
-    Function that checks if the entered string satisfies the reference string format.
-*/
-pub fn validate_date_format(date_str: &str, format: &str) -> Result<bool, anyhow::Error> {
+#[doc = "Function that returns date data a few days before and after a particular date"]
+pub fn get_add_date_from_naivedate(naive_date: NaiveDate, add_day: i32) -> Result<NaiveDate, anyhow::Error> {
+    
+    let duration = chrono::Duration::days(add_day.into());
+    let result_date = naive_date.checked_add_signed(duration)
+        .ok_or_else(|| anyhow!("[Error][get_add_date_from_naivedate()] Invalid date calculation"))?;
+    
+    Ok(result_date)
+}
 
+
+
+#[doc = "Function that checks if the entered string satisfies the reference string format."]
+pub fn validate_date_format(date_str: &str, format: &str) -> Result<bool, anyhow::Error> {
+    
     let re = Regex::new(format)?;
     Ok(re.is_match(date_str))
+
 }
+
 
 

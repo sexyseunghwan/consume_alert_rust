@@ -169,7 +169,7 @@ impl DBService for DBServicePub {
             None => return Err(anyhow!("[Error][total_cost_detail_specific_period()] 'total_cost' error"))
         };
         
-
+        
         if let Some(prodt_infos) = es_cur_res["hits"]["hits"].as_array() {
 
             for elem in prodt_infos {
@@ -183,7 +183,7 @@ impl DBService for DBServicePub {
                             continue
                         }
                     };
-        
+                    
                     let prodt_money = match source.get("prodt_money").and_then(Value::as_i64).map(|v| v as i32) {
                         Some(timestamp) => timestamp,
                         None => {

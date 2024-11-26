@@ -12,6 +12,12 @@ pub fn initialize_db_connection() {
 
 
 #[doc = "Function that takes a particular value from a vector - Access by Index"]
+/// # Arguments
+/// * `vec`     - Vector data
+/// * `index`   - Parameters for which number of elements to be drawn from the vector
+/// 
+/// # Returns
+/// * Result<T, anyhow::Error>
 pub fn get_parsed_value_from_vector<T: FromStr>(vec: &Vec<String>, index: usize) -> Result<T, anyhow::Error>
 where
     T::Err: std::fmt::Debug,

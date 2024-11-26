@@ -11,7 +11,7 @@ use crate::utils_modules::common_function::*;
 use crate::model::TotalCostInfo::*;
 use crate::model::ToPythonGraphLine::*;
 use crate::model::ProdtTypeInfo::*;
-use crate::model::PermonDatetime::*;
+use crate::model::PerDatetime::*;
 
 use crate::repository::es_repository::*;
 
@@ -19,16 +19,16 @@ use crate::repository::es_repository::*;
 #[async_trait]
 pub trait CommandService {
     
-     
-    async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<(), anyhow::Error>;
-    fn get_string_vector_by_replace(&self, intput_str: &str, replacements: &Vec<&str>) -> Result<Vec<String>, anyhow::Error>;
+    /* inner Common Service */
     fn get_consume_time(&self, consume_time_name_vec: &Vec<String>) -> Result<String, anyhow::Error>;
-    fn get_consume_prodt_name(&self, consume_time_name_vec: &Vec<String>, idx: usize) -> Result<String, anyhow::Error>;
+    fn get_string_vector_by_replace(&self, intput_str: &str, replacements: &Vec<&str>) -> Result<Vec<String>, anyhow::Error>;
     fn get_consume_prodt_money(&self, consume_price_vec: &Vec<String>, idx: usize) -> Result<i32, anyhow::Error>;
     
-    
-    fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PermonDatetime, anyhow::Error>;
-
+    /* Service */
+    async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<(), anyhow::Error>;
+    fn get_consume_prodt_name(&self, consume_time_name_vec: &Vec<String>, idx: usize) -> Result<String, anyhow::Error>;
+    fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PerDatetime, anyhow::Error>;
+    fn get_nday_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nday: i32) -> Result<PerDatetime, anyhow::Error>;
     
 }
 
@@ -40,7 +40,13 @@ pub struct CommandServicePub;
 impl CommandService for CommandServicePub {
     
     
-    #[doc = ""]
+    #[doc = "Process processing function based on the type of payment"]
+    /// # Arguments
+    /// * `split_args_vec` - Array with strings as elements : Payment-related information vector: 
+    /// - ex) ["nh카드3*3*승인", "신*환", "5,500원 일시불", "11/25 10:02", "메가엠지씨커피 선릉", "총누적469,743원"]
+    /// 
+    /// # Returns
+    /// * Result<(), anyhow::Error>
     async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<(), anyhow::Error> {
 
         let consume_type = split_args_vec
@@ -50,27 +56,22 @@ impl CommandService for CommandServicePub {
         let es_client = get_elastic_conn();
         let split_val = vec![",", "원"];
         let document: Value;
-
+        
         if consume_type.contains("nh") {
-
-            /* Check if it's a transportation card history. */
-            let second_param = split_args_vec
-                .get(2)
-                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 2, split_args_vec))?;
-
+            
             let consume_price_vec: Vec<String> = self.get_string_vector_by_replace(split_args_vec
                 .get(2)
                 .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 2, split_args_vec))?,
                 &split_val
             )?;
-
+            
             let consume_price = self.get_consume_prodt_money(&consume_price_vec, 0)?;
 
             let consume_time_vec: Vec<String> = split_args_vec
                 .get(3)
                 .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 3))?
                 .split(" ")
-                .map(|s| s.to_string())
+                .map(|s| s.trim().to_string())
                 .collect();
             
             let consume_time = self.get_consume_time(&consume_time_vec)?;
@@ -78,7 +79,7 @@ impl CommandService for CommandServicePub {
             let consume_name = split_args_vec
                 .get(4)
                 .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'split_args_vec' vector was accessed.", 4))?;
-
+            
             document = json!({
                 "@timestamp": consume_time,
                 "prodt_name": consume_name,
@@ -118,57 +119,65 @@ impl CommandService for CommandServicePub {
         else {
             return Err(anyhow!("[Error][process_by_consume_type()] Variable 'consume_type' contains an undefined string."))
         }
-
-        //es_client.post_query(&document, "consuming_index_prod_new").await?;
-
+        
+        es_client.post_query(&document, "consuming_index_prod_new_test").await?;
+        
         Ok(())
     }
 
 
+
     #[doc = "Functions that vectorize by spaces, excluding certain characters from a string"]
+    /// # Arguments
+    /// * `intput_str`  - Applied String : ex) "289,545원 일시불"
+    /// * `replacements`- Character vector to replace : ex) [",", "원"]
+    /// 
+    /// # Returns
+    /// * Result<Vec<String>, anyhow::Error> - ex) ["289545", "일시불"]
     fn get_string_vector_by_replace(&self, intput_str: &str, replacements: &Vec<&str>) -> Result<Vec<String>, anyhow::Error> {
         
         let consume_price_vec: Vec<String> = intput_str
             .to_string()
             .split_whitespace()
             .map(|s| {
-                replacements.iter().fold(s.to_string(), |acc, replace| acc.replace(replace, ""))
+                replacements
+                    .iter()
+                    .fold(s.to_string(), |acc, replace| acc.replace(replace, ""))
             })
             .collect();
-        
+
         Ok(consume_price_vec)
     }
 
-    #[doc = "docs"]
+    
+    #[doc = "Function that parses date data from consumption data"]
+    /// # Arguments
+    /// * `consume_time_name_vec` - Vector with date, time data : ex) ["11/25", "10:02"]
+    /// 
+    /// # Returns
+    /// * Result<String, anyhow::Error>
     fn get_consume_time(&self, consume_time_name_vec: &Vec<String>) -> Result<String, anyhow::Error> {
-        
-        let date_part: Vec<u32> = consume_time_name_vec
+
+        /* "11/25" */
+        let parsed_date = consume_time_name_vec
             .get(0)
-            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 0))?
-            .split("/")
-            .map(|s| s.parse::<u32>())
-            .collect::<Result<Vec<_>, _>>()?;
-        
-        let time_part: Vec<u32> = consume_time_name_vec
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed.", 0))?;
+
+        /* "10:02" */
+        let parsed_time = consume_time_name_vec
             .get(1)
-            .ok_or_else(|| anyhow!("[[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 1))?
-            .split(":")
-            .map(|s| s.parse::<u32>())
-            .collect::<Result<Vec<_>, _>>()?;
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed.", 1))?;
         
-        let mon = date_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'date_part' vector was accessed.", 0))?;
-        let day = date_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'date_part' vector was accessed.", 1))?;
-        let hour = time_part.get(0).ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'time_part' vector was accessed.", 0))?;
-        let min = time_part.get(1).ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'time_part' vector was accessed.", 1))?;
-        
-        let consume_date = get_this_year_naivedatetime(*mon, *day, *hour, *min)?;
-        let consume_date_str = get_str_from_naive_datetime(consume_date);
+        let cur_year = get_current_kor_naivedate().year();
+        let formatted_date_str = format!("{}/{}", cur_year, parsed_date);
+        let format_date = NaiveDate::parse_from_str(&formatted_date_str, "%Y/%m/%d")?;
+        let format_time = NaiveTime::parse_from_str(&parsed_time, "%H:%M")?;
+        let format_datetime = NaiveDateTime::new(format_date, format_time);
 
-        Ok(consume_date_str)
-
+        Ok(format_datetime.format("%Y-%m-%dT%H:%M:%SZ").to_string())
     }
     
-    
+
     #[doc = "Function that parses the name of the consumed product"]
     fn get_consume_prodt_name(&self, consume_time_name_vec: &Vec<String>, idx: usize) -> Result<String, anyhow::Error> {
 
@@ -193,17 +202,42 @@ impl CommandService for CommandServicePub {
     }
 
     
-    #[doc = "Functions that return this month's start, end date, and nth month-before/after start, end date based on this month"]
-    fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PermonDatetime, anyhow::Error> {
+    #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` months"]
+    /// # Arguments
+    /// * `date_start`  
+    /// * `date_end`    
+    /// * `nmonth` - Before or after `N` months
+    /// 
+    /// # Returns
+    /// * Result<PermonDatetime, anyhow::Error>
+    fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PerDatetime, anyhow::Error> {
 
-        let one_month_ago_start = get_add_month_from_naivedate(date_start, nmonth)?;
-        let one_month_ago_end = get_lastday_naivedate(one_month_ago_start)?;
+        let n_month_start = get_add_month_from_naivedate(date_start, nmonth)?;
+        let n_month_end = get_lastday_naivedate(n_month_start)?;
 
-        let per_mon_datetim = PermonDatetime::new(date_start, date_end, one_month_ago_start, one_month_ago_end);
+        let per_mon_datetim = PerDatetime::new(date_start, date_end, n_month_start, n_month_end);
         
         Ok(per_mon_datetim)
     }
+    
+    #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` days"]
+    /// # Arguments
+    /// * `date_start`  
+    /// * `date_end`    
+    /// * `nday` - Before or after `N` days
+    /// 
+    /// # Returns
+    /// * Result<PermonDatetime, anyhow::Error>
+    fn get_nday_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nday: i32) -> Result<PerDatetime, anyhow::Error> {
 
+        let n_day_start = get_add_date_from_naivedate(date_start, nday)?;
+        let n_day_end = get_add_date_from_naivedate(date_end, nday)?;
+
+        let per_day_datetim = PerDatetime::new(date_start, date_end, n_day_start, n_day_end);
+        
+        Ok(per_day_datetim)
+    }
+    
     
     // #[doc = "Common Command Function Without Comparison"]
     // async fn command_common_single(&self, cur_total_cost_infos: TotalCostInfo) -> Result<(), anyhow::Error> {
