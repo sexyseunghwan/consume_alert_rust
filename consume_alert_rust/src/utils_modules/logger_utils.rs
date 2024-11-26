@@ -5,17 +5,17 @@ use crate::repository::kafka_repository::*;
 
 #[doc = "Function responsible for logging"]
 pub fn set_global_logger() {
-    let log_directory = "logs"; // Directory to store log files
-    let file_prefix = ""; // Prefixes for log files
+    let log_directory = "logs"; /* Directory to store log files */ 
+    let file_prefix = "";       /* Prefixes for log files */ 
 
-    // Logger setting
+    /* Logger setting */ 
     Logger::try_with_str("info")
         .unwrap()
         .log_to_file(FileSpec::default().directory(log_directory).discriminant(file_prefix))
         .rotate(
-            Criterion::Age(Age::Day), // daily rotation
-            Naming::Timestamps, // Use timestamps for file names
-            Cleanup::KeepLogFiles(10) // Maintain up to 10 log files
+            Criterion::Age(Age::Day),   /* daily rotation */ 
+            Naming::Timestamps,         /* Use timestamps for file names */ 
+            Cleanup::KeepLogFiles(10)   /* Maintain up to 10 log files */ 
         )
         .format_for_files(custom_format)
         .start()
@@ -40,9 +40,22 @@ async fn logging_kafka(msg: &str) {
     let msg_owned = msg.to_string();
 
     let handle = task::spawn_blocking(move || {
-        kafka_producer.produce_message("consume_alert_rust", &msg_owned).unwrap_or_else(|e| {
-            error!("{:?}", e);
-        });
+         
+        let _kafka_producer_lock = match kafka_producer.lock() {
+            Ok(mut kafka_producer_lock) => {
+                kafka_producer_lock.produce_message("consume_alert_rust", &msg_owned)  
+            },
+            Err(e) => {
+                error!("{:?}", e);
+                Ok(())
+            }
+        };
+        // kafka_producer
+        //     .produce_message("consume_alert_rust", &msg_owned)
+        //     .unwrap_or_else(|e| {
+        //         error!("{:?}", e);
+        //     });
+
     });
 
     match handle.await {

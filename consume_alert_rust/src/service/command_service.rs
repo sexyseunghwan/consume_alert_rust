@@ -202,6 +202,7 @@ impl CommandService for CommandServicePub {
     }
 
     
+    
     #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` months"]
     /// # Arguments
     /// * `date_start`  
@@ -213,13 +214,15 @@ impl CommandService for CommandServicePub {
     fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PerDatetime, anyhow::Error> {
 
         let n_month_start = get_add_month_from_naivedate(date_start, nmonth)?;
-        let n_month_end = get_lastday_naivedate(n_month_start)?;
+        let n_month_end = get_add_month_from_naivedate(date_end, nmonth)?;
 
         let per_mon_datetim = PerDatetime::new(date_start, date_end, n_month_start, n_month_end);
         
         Ok(per_mon_datetim)
     }
     
+
+
     #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` days"]
     /// # Arguments
     /// * `date_start`  
@@ -239,6 +242,7 @@ impl CommandService for CommandServicePub {
     }
     
     
+
     // #[doc = "Common Command Function Without Comparison"]
     // async fn command_common_single(&self, cur_total_cost_infos: TotalCostInfo) -> Result<(), anyhow::Error> {
         

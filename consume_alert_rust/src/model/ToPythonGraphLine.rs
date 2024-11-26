@@ -54,16 +54,16 @@ impl ToPythonGraphLine {
         )
     }
     
-    /*
-        Function that adds an amount to the 'Cumulative Consumption Vector'
-    */
+    
+
+    #[doc = "Function that adds an amount to the 'Cumulative Consumption Vector'"]
     pub fn add_to_consume_accumulate_list(&mut self, value: i32) {
         self.consume_accumulate_list.push(value);
     }
 
-    /*
-        Function that returns the size of the 'Cumulative Consumption Vector'  
-    */
+    
+    
+    #[doc = " Function that returns the size of the 'Cumulative Consumption Vector'"]
     pub fn get_consume_accumulate_list_len(&self) -> usize {  
         self.consume_accumulate_list.len()
     }

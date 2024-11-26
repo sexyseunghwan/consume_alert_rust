@@ -81,6 +81,38 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         Ok(())
     }
     
+
+
+    #[doc = ""]
+    /// # Arguments
+    /// * `permon_datetime` - Comparison group date data
+    /// 
+    /// # Returns
+    /// * Result<(), anyhow::Error>
+    async fn process_calculate_and_post_python_api(&self, permon_datetime: PerDatetime) -> Result<(), anyhow::Error> {
+
+        /* Consumption Type Information Vectors - Get all classification of consumption data `ex) Meals, cafes, etc...` */
+        let consume_type_vec: Vec<ProdtTypeInfo> = 
+        self.db_service
+            .get_classification_consumption_type("consuming_index_prod_type").await?;
+        
+        let cur_mon_total_cost_infos = 
+            self.db_service
+                .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_vec).await?;
+        
+        let pre_mon_total_cost_infos = 
+            self.db_service
+                .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_vec).await?;
+        
+            
+        //println!("{:?}", cur_mon_total_cost_infos);
+        //println!("{:?}", pre_mon_total_cost_infos);
+        
+        /* Python api */
+        //self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
+        
+        Ok(())
+    } 
     
 
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch. -> c"]
@@ -165,26 +197,10 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
             }
         };
         
-        /* Consumption Type Information Vectors - Get all classification of consumption data `ex) Meals, cafes, etc...` */
-        let consume_type_vec: Vec<ProdtTypeInfo> = 
-            self.db_service
-                .get_classification_consumption_type("consuming_index_prod_type").await?;
-        
-        let cur_mon_total_cost_infos = 
-            self.db_service
-                .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_vec).await?;
-        
-        let pre_mon_total_cost_infos = 
-            self.db_service
-                .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_vec).await?;
-        
-        
-        println!("{:?}", cur_mon_total_cost_infos);
-        println!("{:?}", pre_mon_total_cost_infos);
-        
-        /* Python api */
-        //self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
-        
+        println!("{:?}", permon_datetime);
+
+        self.process_calculate_and_post_python_api(permon_datetime).await?;
+
         Ok(())
     }
 
@@ -223,22 +239,9 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
             }
         };
         
-        /* Consumption Type Information Vectors - Get all classification of consumption data `ex) Meals, cafes, etc...` */
-        let consume_type_vec: Vec<ProdtTypeInfo> = 
-            self.db_service
-                .get_classification_consumption_type("consuming_index_prod_type").await?;
-        
-        let cur_mon_total_cost_infos = 
-            self.db_service
-                .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_vec).await?;
-        
-        let pre_mon_total_cost_infos = 
-            self.db_service
-                .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_vec).await?;
-        
+        println!("{:?}", permon_datetime);
 
-        /* Python api */
-        //self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
+        self.process_calculate_and_post_python_api(permon_datetime).await?;
 
         Ok(())
     }
@@ -282,29 +285,14 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
             }
         };
 
-    
-        /* Consumption Type Information Vectors - Get all classification of consumption data `ex) Meals, cafes, etc...` */
-        let consume_type_vec: Vec<ProdtTypeInfo> = 
-        self.db_service
-            .get_classification_consumption_type("consuming_index_prod_type").await?;
-    
-        let cur_mon_total_cost_infos = 
-            self.db_service
-                .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_vec).await?;
-        
-        let pre_mon_total_cost_infos = 
-            self.db_service
-                .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_vec).await?;
-        
-
-        /* Python api */
-        //self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
+        println!("{:?}", permon_datetime);
+        self.process_calculate_and_post_python_api(permon_datetime).await?;
 
         Ok(())
     }
 
-
-
+    
+    
     #[doc = "command handler: Check the consumption details from the date of payment to the next payment. -> cs"]    
     async fn command_consumption_per_salary(&self) -> Result<(), anyhow::Error> {
 
@@ -343,7 +331,8 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 .map_or(false, |d| validate_date_format(d, r"^\d{4}\.\d{2}$")
                 .unwrap_or(false)) => 
                 {
-                    let cur_date = NaiveDate::parse_from_str(&split_args_vec[1], "%Y.%m")
+                    let curdate_str = format!("{}.01", &split_args_vec[1]);
+                    let cur_date = NaiveDate::parse_from_str(&curdate_str, "%Y.%m.%d")
                         .map_err(|e| anyhow!("[Error][command_consumption_per_salary()] This does not fit the date format : {:?}", e))?;
                     
                     let cur_date_end = get_naivedate(cur_date.year(), cur_date.month(), 25)?;
@@ -355,39 +344,106 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
             _ => {
 
                 self.telebot_service
-                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) cs or cs 2023.11.11").await?;
+                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) cs or cs 2023.11").await?;
                 
                 return Err(anyhow!("[Parameter Error][command_consumption_per_day()] Invalid format of 'text' variable entered as parameter. : {:?}", args));
             }
         };
 
-        /* Consumption Type Information Vectors - Get all classification of consumption data `ex) Meals, cafes, etc...` */
-        let consume_type_vec: Vec<ProdtTypeInfo> = 
-        self.db_service
-            .get_classification_consumption_type("consuming_index_prod_type").await?;
-    
-        let cur_mon_total_cost_infos = 
-            self.db_service
-                .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_vec).await?;
-        
-        let pre_mon_total_cost_infos = 
-            self.db_service
-                .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_vec).await?;
-        
+        println!("{:?}", permon_datetime);
 
-        /* Python api */
-        //self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
+        self.process_calculate_and_post_python_api(permon_datetime).await?;
         
         Ok(())
     }
 
-
     
+
     #[doc = "command handler: Checks how much you have consumed during a week -> cw"]
     async fn command_consumption_per_week(&self) -> Result<(), anyhow::Error> {
 
+        let args = self.telebot_service.get_input_text();
+        let args_aplit = &args[2..];
+        let split_args_vec: Vec<String> = args_aplit.split(' ').map(String::from).collect();
+
+        let permon_datetime: PerDatetime = match split_args_vec.len() {
+            1 => {
+
+                let now = get_current_kor_naive_datetime();
+                let today = now.date();
+                let weekday = today.weekday();
+
+                let days_until_monday = Weekday::Mon.num_days_from_monday() as i64 - weekday.num_days_from_monday() as i64;
+                let monday = today + chrono::Duration::days(days_until_monday);
+
+                let date_start = monday + chrono::Duration::days(0);
+                let date_end = monday + chrono::Duration::days(6);
+
+                self.command_service
+                    .get_nday_to_current_date(date_start, date_end, -7)?
+            },
+            _ => {
+                self.telebot_service
+                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) cw").await?;
+                
+                return Err(anyhow!("[Parameter Error][command_consumption_per_week()] Invalid format of 'text' variable entered as parameter. : {:?}", args));
+            }
+        };
+
+        println!("{:?}", permon_datetime);
+
+        self.process_calculate_and_post_python_api(permon_datetime).await?;
+        
         Ok(())
     }
+
+    
+
+    #[doc = "command handler: Checks how much you have consumed during one year -> cy"]
+    async fn command_consumption_per_year(&self) -> Result<(), anyhow::Error> {
+        
+        let args = self.telebot_service.get_input_text();
+        let args_aplit = &args[2..];
+        let split_args_vec: Vec<String> = args_aplit.split(' ').map(String::from).collect();
+
+        let permon_datetime: PerDatetime = match split_args_vec.len() {
+            1 => {
+
+                let cur_year = get_current_kor_naivedate().year();
+                let start_date = get_naivedate(cur_year, 1, 1)?;  
+                let end_date = get_naivedate(cur_year, 12, 31)?; 
+                
+                self.command_service
+                    .get_nmonth_to_current_date(start_date, end_date, -12)?
+
+            },
+            2 if split_args_vec
+                .get(1)
+                .map_or(false, |d| validate_date_format(d, r"^\d{4}$").unwrap_or(false)) => 
+                {
+                    let year = split_args_vec[1].parse::<i32>()?;
+                    let start_date = get_naivedate(year, 1, 1)?; 
+                    let end_date = get_naivedate(year, 12, 31)?;  
+
+                    self.command_service
+                        .get_nmonth_to_current_date(start_date, end_date, -12)?
+                },
+            _ => {
+                
+                self.telebot_service
+                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX01) cy\nEX02) cy 2023").await?;
+                
+                return Err(anyhow!("[Parameter Error][command_consumption_per_year()] Invalid format of 'text' variable entered as parameter. : {:?}", args));         
+            }
+        };
+
+        println!("{:?}", permon_datetime);
+
+        self.process_calculate_and_post_python_api(permon_datetime).await?;
+
+        Ok(())
+    }
+
 
     async fn command_record_fasting_time(&self) -> Result<(), anyhow::Error> {
 
@@ -400,11 +456,6 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     }
 
     async fn command_delete_fasting_time(&self) -> Result<(), anyhow::Error> {
-
-        Ok(())
-    }
-
-    async fn command_consumption_per_year(&self) -> Result<(), anyhow::Error> {
 
         Ok(())
     }

@@ -67,24 +67,23 @@ use crate::common::*;
     
 // }
 
-
 #[doc = "Kafka connection object to be used in a single tone"]
-static KAFKA_PRODUCER: once_lazy<Arc<KafkaRepositoryPub>> = once_lazy::new(|| {
+static KAFKA_PRODUCER: once_lazy<Arc<Mutex<KafkaRepositoryPub>>> = once_lazy::new(|| {
     initialize_kafka_clients()
 });
 
 
 #[doc = "Function to initialize Kafka connection instances"]
-pub fn initialize_kafka_clients() -> Arc<KafkaRepositoryPub> {
-
+pub fn initialize_kafka_clients() -> Arc<Mutex<KafkaRepositoryPub>> {
+    
     let kafka_host: String = env::var("KAFKA_HOST").expect("[ENV file read Error][initialize_db_clients()] 'KAFKA_HOST' must be set");
     let kafka_host_vec: Vec<String> = kafka_host.split(',')
         .map(|s| s.to_string())
         .collect();
 
     let produce_broker: Producer = match Producer::from_hosts(kafka_host_vec.to_owned())
-        .with_ack_timeout(Duration::from_secs(3)) // Timeout settings for message transfer confirmation
-        .with_required_acks(RequiredAcks::One)// If the message transfer is delivered to at least one broker, it is considered a success
+        .with_ack_timeout(Duration::from_secs(3)) /* Timeout settings for message transfer confirmation */ 
+        .with_required_acks(RequiredAcks::One)/* If the message transfer is delivered to at least one broker, it is considered a success */ 
         .create() {
             Ok(kafka_producer) => kafka_producer,
             Err(e) => {
@@ -93,45 +92,38 @@ pub fn initialize_kafka_clients() -> Arc<KafkaRepositoryPub> {
             }
         };
     
-    let kafka_producer = KafkaRepositoryPub::new(Arc::new(Mutex::new(produce_broker)));
-    Arc::new(kafka_producer)
+    let kafka_producer = KafkaRepositoryPub::new(produce_broker);
+    Arc::new(Mutex::new(kafka_producer))
 }
 
-//export PATH="/opt/homebrew/Cellar/mysql-client/9.0.1/lib:$PATH"
 
-//export LIBRARY_PATH="/opt/homebrew/Cellar/mysql-client/9.0.1/lib:$LIBRARY_PATH"
-
-
-/*
-    /opt/homebrew/Cellar/mysql-client/9.0.1/lib
-*/
-pub fn get_kafka_producer() -> Arc<KafkaRepositoryPub> {
+#[doc = ""]
+pub fn get_kafka_producer() -> Arc<Mutex<KafkaRepositoryPub>> {
     Arc::clone(&KAFKA_PRODUCER)
 }
 
 
 #[async_trait]
 pub trait KafkaRepository {
-    fn produce_message(&self, topic: &str, message: &str) -> Result<(), anyhow::Error>;
+    fn produce_message(&mut self, topic: &str, message: &str) -> Result<(), anyhow::Error>;
 }
 
 #[derive(new)]
 pub struct KafkaRepositoryPub {
-    produce_broker: Arc<Mutex<Producer>>
+    produce_broker: Producer
 }
 
 #[async_trait]
 impl KafkaRepository for KafkaRepositoryPub {
+    
+    
+    #[doc = "Function that send message to Kafka"]
+    fn produce_message(&mut self, topic: &str, message: &str) -> Result<(), anyhow::Error> {
 
-    /* 
-        Function that send message to Kafka
-    */
-    fn produce_message(&self, topic: &str, message: &str) -> Result<(), anyhow::Error> {
+        // let produce_broker = &mut self
 
-        let mut produce_broker = self
-            .produce_broker
-            .lock()
-            .map_err(|e| anyhow!("Failed to lock the Kafka producer mutex: {:?}", e))?;
+        let produce_broker = &mut self
+            .produce_broker;
         
         let _result = produce_broker.send(&KafkaRecord::from_value(topic, message))?;
          
