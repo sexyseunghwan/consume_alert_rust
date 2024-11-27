@@ -50,12 +50,6 @@ async fn logging_kafka(msg: &str) {
                 Ok(())
             }
         };
-        // kafka_producer
-        //     .produce_message("consume_alert_rust", &msg_owned)
-        //     .unwrap_or_else(|e| {
-        //         error!("{:?}", e);
-        //     });
-
     });
 
     match handle.await {

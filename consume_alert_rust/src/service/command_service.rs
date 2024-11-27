@@ -12,6 +12,8 @@ use crate::model::TotalCostInfo::*;
 use crate::model::ToPythonGraphLine::*;
 use crate::model::ProdtTypeInfo::*;
 use crate::model::PerDatetime::*;
+use crate::model::ConsumeIndexProd::*;
+use crate::model::ConsumingIndexProdType::*;
 
 use crate::repository::es_repository::*;
 
@@ -29,7 +31,7 @@ pub trait CommandService {
     fn get_consume_prodt_name(&self, consume_time_name_vec: &Vec<String>, idx: usize) -> Result<String, anyhow::Error>;
     fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PerDatetime, anyhow::Error>;
     fn get_nday_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nday: i32) -> Result<PerDatetime, anyhow::Error>;
-    
+    async fn calculate_total_cost_info<'a>(&self, consume_map: &'a HashMap<String, ConsumingIndexProdType>, consume_index_prod_vector: &'a mut Vec<ConsumeIndexProd>) -> Result<TotalCostInfo, anyhow::Error>;
 }
 
 #[derive(Debug, Getters, Clone, new)]
@@ -241,7 +243,17 @@ impl CommandService for CommandServicePub {
         Ok(per_day_datetim)
     }
     
-    
+    #[doc = ""]
+    async fn calculate_total_cost_info<'a>(&self, consume_map: &'a HashMap<String, ConsumingIndexProdType>, consume_index_prod_vector: &'a mut Vec<ConsumeIndexProd>) -> Result<TotalCostInfo, anyhow::Error> {
+
+        for elem in consume_index_prod_vector {
+
+            
+
+        }
+
+    }
+
 
     // #[doc = "Common Command Function Without Comparison"]
     // async fn command_common_single(&self, cur_total_cost_infos: TotalCostInfo) -> Result<(), anyhow::Error> {
@@ -858,20 +870,20 @@ impl CommandService for CommandServicePub {
 //         // Brings the data of the most recent meal time of today's meal time.
 //         let current_date = get_str_from_naivedate(get_current_kor_naivedate());
 
-//         let es_query = json!({
-//             "size": 1,
-//             "query": {
-//             "range": {
-//                 "@timestamp": {
-//                 "gte": &current_date,
-//                 "lte": &current_date
-//                 }
-//             }
-//             },
-//             "sort": [
-//             { "@timestamp": { "order": "desc" }}
-//             ]
-//         });
+        // let es_query = json!({
+        //     "size": 1,
+        //     "query": {
+        //     "range": {
+        //         "@timestamp": {
+        //         "gte": &current_date,
+        //         "lte": &current_date
+        //         }
+        //     }
+        //     },
+        //     "sort": [
+        //     { "@timestamp": { "order": "desc" }}
+        //     ]
+        // });
 
 //         let last_stamp: i64 = get_recent_mealtime_data_from_elastic(&es_client, "meal_check_index", "laststamp", es_query, 0).await?;
 

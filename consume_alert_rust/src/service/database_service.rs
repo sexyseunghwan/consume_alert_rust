@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use crate::common::*;
 
 //use crate::service::es_service::*;
@@ -13,17 +15,23 @@ use crate::model::ConsumeInfo::*;
 use crate::model::TotalCostInfo::*;
 use crate::model::ConsumeTypeInfo::*;
 use crate::model::ToPythonGraphLine::*;
+use crate::model::MealCheckIndex::*;
+use crate::model::ConsumingIndexProdType::*;
+use crate::model::ConsumeIndexProd::*;
+
 
 #[async_trait]
 pub trait DBService {
-    async fn get_classification_type(&self, index_name: &str) -> Result<Vec<String>, anyhow::Error>;
-    async fn get_classification_consumption_type(&self, index_name: &str) -> Result<Vec<ProdtTypeInfo>, anyhow::Error>;
-    async fn total_cost_detail_specific_period(&self, start_date: NaiveDate, end_date: NaiveDate, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<TotalCostInfo, anyhow::Error>;
-    async fn get_consume_info_by_classification_type<'a>(&self, consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error>;
+    //async fn get_classification_type(&self, index_name: &str) -> Result<Vec<String>, anyhow::Error>;
+    async fn get_classification_consumption_type(&self, index_name: &str) -> Result<HashMap<String, ConsumingIndexProdType>, anyhow::Error>;
+    async fn get_consume_detail_specific_period(&self, index_name: &str, start_date: NaiveDate, end_date: NaiveDate) -> Result<(f64, Vec<ConsumeIndexProd>), anyhow::Error>;
+    //async fn get_consume_info_by_classification_type<'a>(&self, consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error>;
     // async fn get_consume_type_graph(total_cost: f64, start_dt: NaiveDate, end_dt: NaiveDate, consume_list: &Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error>;
     // async fn get_consume_detail_graph_double(python_graph_line_info_cur: &mut ToPythonGraphLine, python_graph_line_info_pre: &mut ToPythonGraphLine) -> Result<String, anyhow::Error>;
     // async fn get_consume_detail_graph_single(python_graph_line_info: &ToPythonGraphLine) -> Result<String, anyhow::Error>;
-    // async fn get_recent_mealtime_data_from_elastic<T: DeserializeOwned>(index_name: &str, col_name: &str, es_query: Value, default_val: T) -> Result<T, anyhow::Error>;
+    async fn get_recent_mealtime_data_from_elastic(&self, query_size: i32) -> Result<Vec<MealCheckIndex>, anyhow::Error>;
+
+    async fn post_model_to_es<T: Serialize + Send>(&self, index_name: &str, model: T) -> Result<(), anyhow::Error>;
 }   
 
 #[derive(Debug, Getters, new)]
@@ -34,108 +42,152 @@ pub struct DBServicePub;
 impl DBService for DBServicePub {
 
 
-    #[doc = "Function to get ProdtTypeInfo keyword_type information from Elasticsearch"]
-    async fn get_classification_type(&self, index_name: &str) -> Result<Vec<String>, anyhow::Error> {
+    // #[doc = "Function to get ProdtTypeInfo keyword_type information from Elasticsearch"]
+    // async fn get_classification_type(&self, index_name: &str) -> Result<Vec<String>, anyhow::Error> {
         
-        let query = json!({
-            "size": 0,  
-            "aggs": {
-              "unique_keyword_types": {
-                "terms": {
-                  "field": "keyword_type",
-                  "size": 1000  
-                }
-              }
-            }
-        });
+    //     let query = json!({
+    //         "size": 0,  
+    //         "aggs": {
+    //           "unique_keyword_types": {
+    //             "terms": {
+    //               "field": "keyword_type",
+    //               "size": 1000  
+    //             }
+    //           }
+    //         }
+    //     });
         
-        let es_client = get_elastic_conn(); 
-        let query_res = es_client.get_search_query(&query, index_name).await?;
-        let mut key_vec: Vec<String> = Vec::new();
+    //     let es_client = get_elastic_conn(); 
+    //     let query_res = es_client.get_search_query(&query, index_name).await?;
+    //     let mut key_vec: Vec<String> = Vec::new();
 
-        if let Some(keyword_types) = query_res["aggregations"]["unique_keyword_types"]["buckets"].as_array() {
+    //     if let Some(keyword_types) = query_res["aggregations"]["unique_keyword_types"]["buckets"].as_array() {
 
-            for keyword_type in keyword_types {
+    //         for keyword_type in keyword_types {
                 
-                let k_type = match keyword_type.get("key").and_then(Value::as_str) {
-                    Some(k_type) => k_type,
-                    None => continue
-                };
+    //             let k_type = match keyword_type.get("key").and_then(Value::as_str) {
+    //                 Some(k_type) => k_type,
+    //                 None => continue
+    //             };
 
-                key_vec.push(k_type.to_string());
-            }
-        }
+    //             key_vec.push(k_type.to_string());
+    //         }
+    //     }
         
-        Ok(key_vec)
-    }
-
+    //     Ok(key_vec)
+    // }
+    
+    
     
     #[doc = "Function to get FULL ProdtTypeInfo keyword_type information from Elasticsearch"]
-    async fn get_classification_consumption_type(&self, index_name: &str) -> Result<Vec<ProdtTypeInfo>, anyhow::Error> {
+    async fn get_classification_consumption_type(&self, index_name: &str) -> Result<HashMap<String, ConsumingIndexProdType>, anyhow::Error> {
 
-        let key_vec = self.get_classification_type(index_name).await?;  
+        let query = json!({
+            "size": 10000
+        });  
 
-        let mut keyword_type_vec: Vec<ProdtTypeInfo> = Vec::new();
+        let mut consume_type_map: HashMap<String, ConsumingIndexProdType> = HashMap::new();
         let es_client = get_elastic_conn(); 
+        let response_body = es_client.get_search_query(&query, index_name).await?;
+        let hits = &response_body["hits"]["hits"];
+
+        let results: Vec<ConsumingIndexProdType> = hits.as_array()
+            .ok_or_else(|| anyhow!("[Error][get_recent_mealtime_data_from_elastic()] "))?
+            .iter()
+            .map(|hit| {
+                hit.get("_source") 
+                    .ok_or_else(|| anyhow!("[Error][get_recent_mealtime_data_from_elastic()] Missing '_source' field"))
+                    .and_then(|source| serde_json::from_value(source.clone()).map_err(Into::into))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         
-        for keyword_type in key_vec {
-
-            let inner_query = json!({
-                "query": {
-                    "term": {
-                        "keyword_type": {   
-                            "value": keyword_type
-                            }
-                        }
-                    },
-                "size" : 1000
-            });
-            
-            
-            let inner_res = es_client.get_search_query(&inner_query, index_name).await?;
-            let mut keyword_vec: Vec<ProdtDetailInfo> = Vec::new();
-            
-            if let Some(keywords) = inner_res["hits"]["hits"].as_array() {
-                for key_word in keywords {
-                    if let Some(keyword_src) = key_word.get("_source") {
-                        let k_word = keyword_src.get("keyword").and_then(Value::as_str);
-                        let bias_value = keyword_src.get("bias_value").and_then(Value::as_i64).map(|v| v as i32);
-
-                        match (k_word, bias_value) {
-                            (Some(word), Some(bias)) => {
-                                let prodt_detail = ProdtDetailInfo::new(word.to_string(), bias);
-                                keyword_vec.push(prodt_detail);
-                            },
-                            _ => {
-                                error!("[Parsing Error][get_classification_consumption_type()] Missing or invalid 'keyword' or 'bias_value'");
-                                continue;
-                            }
-                        }
-                    }
-                }
-            }
-                
-            let keyword_type_obj = ProdtTypeInfo::new(keyword_type, keyword_vec);
-            keyword_type_vec.push(keyword_type_obj);
-
+        for elem in &results {
+            let keyword = elem.keyword();
+            consume_type_map.insert(keyword.to_string(), elem.clone());
         }
         
-        Ok(keyword_type_vec)
+        Ok(consume_type_map)
+
+        //let key_vec = self.get_classification_type(index_name).await?;// 필요없을거 같은데...
+        
+        //let mut keyword_type_vec: Vec<ProdtTypeInfo> = Vec::new();
+        // let mut keyword_type_hashmap: HashMap<String, String> = HashMap::new();
+        // let es_client = get_elastic_conn(); 
+        
+        // for keyword_type in key_vec {
+
+        //     let inner_query = json!({
+        //         "query": {
+        //             "term": {
+        //                 "keyword_type": {   
+        //                     "value": keyword_type
+        //                     }
+        //                 }
+        //             },
+        //         "size" : 1000
+        //     });
+            
+        //     //let mut keyword_vec: Vec<ProdtDetailInfo> = Vec::new();
+        //     let response_body = es_client.get_search_query(&inner_query, index_name).await?;
+        //     let hits = &response_body["hits"]["hits"];
+            
+        //     let results: Vec<ConsumingIndexProdType> = hits.as_array()
+        //         .ok_or_else(|| anyhow!("[Error][get_recent_mealtime_data_from_elastic()] "))?
+        //         .iter()
+        //         .map(|hit| {
+        //             hit.get("_source") 
+        //                 .ok_or_else(|| anyhow!("[Error][get_recent_mealtime_data_from_elastic()] Missing '_source' field"))
+        //                 .and_then(|source| serde_json::from_value(source.clone()).map_err(Into::into))
+        //         })
+        //         .collect::<Result<Vec<_>, _>>()?;
+            
+        //     for elem in &results {
+        //         keyword_type_hashmap.insert();
+        //     }
+
+            //keyword_type_hashmap.insert(keyword_type, results);
+
+            // 아래처럼 하면 너무 복잡해지는데?
+            // if let Some(keywords) = inner_res["hits"]["hits"].as_array() {
+            //     for key_word in keywords {
+            //         if let Some(keyword_src) = key_word.get("_source") {
+            //             let k_word = keyword_src.get("keyword").and_then(Value::as_str);
+            //             let bias_value = keyword_src.get("bias_value").and_then(Value::as_i64).map(|v| v as i32);
+
+            //             match (k_word, bias_value) {
+            //                 (Some(word), Some(bias)) => {
+            //                     let prodt_detail = ProdtDetailInfo::new(word.to_string(), bias);
+            //                     keyword_vec.push(prodt_detail);
+            //                 },
+            //                 _ => {
+            //                     error!("[Parsing Error][get_classification_consumption_type()] Missing or invalid 'keyword' or 'bias_value'");
+            //                     continue;
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
+            
+            // let keyword_type_obj = ProdtTypeInfo::new(keyword_type, keyword_vec);
+            // keyword_type_vec.push(keyword_type_obj);
+        //}
+        
+        //Ok(keyword_type_hashmap)
     }
 
 
 
     #[doc = "Functions that show the details of total consumption and consumption over a specific period of time"]
     /// # Arguments
+    /// * `index_name`    
     /// * `start_date`      
     /// * `end_date`        
-    /// * `index_name`       
-    /// * `consume_type_vec`- Consumption Type Information Vector ex) Meals, cafes, etc...
+    ///    
     /// 
     /// # Returns
-    /// *  Result<TotalCostInfo, anyhow::Error>
-    async fn total_cost_detail_specific_period(&self, start_date: NaiveDate, end_date: NaiveDate, index_name: &str, consume_type_vec: &Vec<ProdtTypeInfo>) -> Result<TotalCostInfo, anyhow::Error> {
-        
+    /// * Result<(f64, Vec<ConsumeIndexProd>), anyhow::Error> - (total cost, Vec<ConsumeIndexProd>)
+    async fn get_consume_detail_specific_period(&self, index_name: &str, start_date: NaiveDate, end_date: NaiveDate) -> Result<(f64, Vec<ConsumeIndexProd>), anyhow::Error> {
+         
         let query = json!({
             "size": 10000,
             "query": {
@@ -157,124 +209,251 @@ impl DBService for DBServicePub {
                 "@timestamp": { "order": "asc" }
             }
         });
-        
-        let mut consume_info_list:Vec<ConsumeInfo> = Vec::new();
-        let mut empty_flag = false;
-        
-        let es_client = get_elastic_conn(); 
-        let es_cur_res = es_client.get_search_query(&query, index_name).await?;
 
-        let total_cost = match &es_cur_res["aggregations"]["total_prodt_money"]["value"].as_f64() {
+        let es_client = get_elastic_conn(); 
+        let response_body = es_client.get_search_query(&query, index_name).await?;
+        let hits = &response_body["hits"]["hits"];
+        
+        let total_cost = match &response_body["aggregations"]["total_prodt_money"]["value"].as_f64() {
             Some(total_cost) => *total_cost,
             None => return Err(anyhow!("[Error][total_cost_detail_specific_period()] 'total_cost' error"))
         };
         
+        let results: Vec<ConsumeIndexProd> = hits.as_array()
+            .ok_or_else(|| anyhow!("[Error][total_cost_detail_specific_period()] error"))?
+            .iter()
+            .map(|hit| {
+                hit.get("_source") 
+                    .ok_or_else(|| anyhow!("[Error][total_cost_detail_specific_period()] Missing '_source' field"))
+                    .and_then(|source| serde_json::from_value(source.clone()).map_err(Into::into))
+            })
+            .collect::<Result<Vec<_>, _>>()?; 
         
-        if let Some(prodt_infos) = es_cur_res["hits"]["hits"].as_array() {
+        Ok((total_cost, results)) 
+    }
+    
 
-            for elem in prodt_infos {
 
-                if let Some(source) = elem.get("_source") {
-                    
-                    let timestamp = match source.get("@timestamp").and_then(Value::as_str) {
-                        Some(timestamp) => timestamp,
-                        None => {
-                            errork(anyhow!("[Error][total_cost_detail_specific_period()] '@timestamp' is empty!")).await;
-                            continue
-                        }
-                    };
-                    
-                    let prodt_money = match source.get("prodt_money").and_then(Value::as_i64).map(|v| v as i32) {
-                        Some(timestamp) => timestamp,
-                        None => {
-                            errork(anyhow!("[Error][total_cost_detail_specific_period()] 'prodt_money' is empty!")).await;
-                            continue
-                        }
-                    };
+
+    // #[doc = "Functions that show the details of total consumption and consumption over a specific period of time"]
+    // /// # Arguments
+    // /// * `start_date`      
+    // /// * `end_date`        
+    // /// * `index_name`       
+    // /// * `consume_type_vec`- Consumption Type Information Vector ex) Meals, cafes, etc...
+    // /// 
+    // /// # Returns
+    // /// *  Result<TotalCostInfo, anyhow::Error>
+    // async fn total_cost_detail_specific_period(&self, start_date: NaiveDate, end_date: NaiveDate, index_name: &str, consume_type_vec: &HashMap<String, Vec<ConsumingIndexProdType>>) -> Result<TotalCostInfo, anyhow::Error> {
         
-                    let prodt_name = match source.get("prodt_name").and_then(Value::as_str) {
-                        Some(timestamp) => timestamp,
-                        None => {
-                            errork(anyhow!("[Error][total_cost_detail_specific_period()] 'prodt_name' is empty!")).await;
-                            continue
-                        }
-                    };
+    //     let query = json!({
+    //         "size": 10000,
+    //         "query": {
+    //             "range": {
+    //                 "@timestamp": {
+    //                     "gte": get_str_from_naivedate(start_date),
+    //                     "lte": get_str_from_naivedate(end_date)
+    //                 }
+    //             }
+    //         },
+    //         "aggs": {
+    //             "total_prodt_money": {
+    //                 "sum": {
+    //                     "field": "prodt_money"
+    //                 }
+    //             }
+    //         },
+    //         "sort": {
+    //             "@timestamp": { "order": "asc" }
+    //         }
+    //     });
+        
+    //     let mut consume_info_list:Vec<ConsumeInfo> = Vec::new();
+    //     let mut empty_flag = false;
+        
+    //     let es_client = get_elastic_conn(); 
+    //     let response_body = es_client.get_search_query(&query, index_name).await?;
+    //     let hits = &response_body["hits"]["hits"];
+
+    //     let total_cost = match &response_body["aggregations"]["total_prodt_money"]["value"].as_f64() {
+    //         Some(total_cost) => *total_cost,
+    //         None => return Err(anyhow!("[Error][total_cost_detail_specific_period()] 'total_cost' error"))
+    //     };
+        
+    //     let mut results: Vec<ConsumeIndexProd> = hits.as_array()
+    //         .ok_or_else(|| anyhow!("[Error][total_cost_detail_specific_period()] "))?
+    //         .iter()
+    //         .map(|hit| {
+    //             hit.get("_source") 
+    //                 .ok_or_else(|| anyhow!("[Error][total_cost_detail_specific_period()] Missing '_source' field"))
+    //                 .and_then(|source| serde_json::from_value(source.clone()).map_err(Into::into))
+    //         })
+    //         .collect::<Result<Vec<_>, _>>()?; 
+        
+        
+        
+    //     // if let Some(prodt_infos) = es_cur_res["hits"]["hits"].as_array() {
+
+    //     //     for elem in prodt_infos {
+
+    //     //         if let Some(source) = elem.get("_source") {
                     
-                    let mut consume_info = ConsumeInfo::new(timestamp.to_string(), prodt_name.to_string(), prodt_money, String::from(""));
-                    self.get_consume_info_by_classification_type(consume_type_vec, &mut consume_info).await?;
+    //     //             let timestamp = match source.get("@timestamp").and_then(Value::as_str) {
+    //     //                 Some(timestamp) => timestamp,
+    //     //                 None => {
+    //     //                     errork(anyhow!("[Error][total_cost_detail_specific_period()] '@timestamp' is empty!")).await;
+    //     //                     continue
+    //     //                 }
+    //     //             };
                     
-                    consume_info_list.push(consume_info);
-                }             
-            }
-        }
+    //     //             let prodt_money = match source.get("prodt_money").and_then(Value::as_i64).map(|v| v as i32) {
+    //     //                 Some(timestamp) => timestamp,
+    //     //                 None => {
+    //     //                     errork(anyhow!("[Error][total_cost_detail_specific_period()] 'prodt_money' is empty!")).await;
+    //     //                     continue
+    //     //                 }
+    //     //             };
+        
+    //     //             let prodt_name = match source.get("prodt_name").and_then(Value::as_str) {
+    //     //                 Some(timestamp) => timestamp,
+    //     //                 None => {
+    //     //                     errork(anyhow!("[Error][total_cost_detail_specific_period()] 'prodt_name' is empty!")).await;
+    //     //                     continue
+    //     //                 }
+    //     //             };
+                    
+    //     //             let mut consume_info = ConsumeInfo::new(timestamp.to_string(), prodt_name.to_string(), prodt_money, String::from(""));
+    //     //             self.get_consume_info_by_classification_type(consume_type_vec, &mut consume_info).await?;
+                    
+    //     //             consume_info_list.push(consume_info);
+    //     //         }             
+    //     //     }
+    //     // }
         
 
-        if consume_info_list.len() == 0 {
-            let cur_time = get_str_from_naive_datetime(get_current_kor_naive_datetime());
-            let consume_info = ConsumeInfo::new(cur_time, String::from("empty"), 0, String::from("etc"));
+    //     // if consume_info_list.len() == 0 {
+    //     //     let cur_time = get_str_from_naive_datetime(get_current_kor_naive_datetime());
+    //     //     let consume_info = ConsumeInfo::new(cur_time, String::from("empty"), 0, String::from("etc"));
 
-            consume_info_list.push(consume_info);
-            empty_flag = true;
-        }
+    //     //     consume_info_list.push(consume_info);
+    //     //     empty_flag = true;
+    //     // }
         
-        let total_cost_info = TotalCostInfo::new(total_cost, consume_info_list, empty_flag, start_date, end_date);
+    //     // let total_cost_info = TotalCostInfo::new(total_cost, consume_info_list, empty_flag, start_date, end_date);
 
-        Ok(total_cost_info)
+    //     //Ok(total_cost_info)
+    // }
+
+
+
+    // #[doc = "function that classifies what category that consumption is and returns an 'ConsumeInfo' instance."]
+    // async fn get_consume_info_by_classification_type<'a>(&self, consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error> {
+
+    //     let mut type_scores_map: HashMap<String, i32> = HashMap::new();
+        
+    //     let prodt_name_trim = consume_info.prodt_name().trim();
+
+    //     for prodt_type_info in consume_type_vec {
+
+    //         let keyword_type = prodt_type_info.keyword_type(); /* consumption classification. For example, pizza Hut is classified as a MEAL */
+    //         let mut total_bias = 0;
+
+    //         for prodt_detail in prodt_type_info.prodt_detail_list() {
+                
+    //             let keyword = prodt_detail.keyword();    /* Pizza hut(keyword) ⊂ Meal(keyword_type) */
+    //             let bias_value = prodt_detail.bias_value(); /* Weight of the corresponding keyword */
+
+    //             if prodt_name_trim.contains(keyword) {
+    //                 total_bias += bias_value;
+    //             }
+    //         }
+            
+    //         if total_bias != 0 {
+    //             type_scores_map.insert(keyword_type.to_string(), total_bias);
+    //         } 
+    //     }
+        
+    //     let mut confirm_keyword_type = String::from("");
+    //     let mut max_score = 0;
+
+    //     /* Categories are determined based on the larger max_score. */
+    //     for (key, value) in &type_scores_map {
+            
+    //         let keyword_type = key.to_string();
+    //         let keyword_score = *value;
+            
+    //         if keyword_score > max_score {
+    //             max_score = keyword_score;
+    //             confirm_keyword_type = keyword_type;
+    //         }
+    //     }
+        
+    //     if max_score == 0 {
+    //         consume_info.prodt_type = String::from("etc"); /* "max_score = 0" means that the consumption details are NOT included in any category. */
+    //     } else {
+    //         consume_info.prodt_type = confirm_keyword_type;
+    //     }
+        
+    //     Ok(())
+    // }
+
+
+    
+    #[doc = "Function that determines the number of meals today"]
+    async fn get_recent_mealtime_data_from_elastic(&self, query_size: i32) -> Result<Vec<MealCheckIndex>, anyhow::Error> {
+        
+        let es_client = get_elastic_conn();
+        let current_date = get_current_kor_naivedate().to_string();
+        
+        let es_query = json!({
+            "size": query_size,
+            "query": {
+                "range": {
+                    "@timestamp": {
+                        "gte": "2023-11-27",//&current_date,
+                        "lte": "2023-11-27"//&current_date
+                    }
+                }
+            },
+            "sort": [
+                { "@timestamp": { "order": "desc" } }
+            ]
+        });
+        
+        let response_body = es_client.get_search_query(&es_query, "meal_check_index").await?;
+        let hits = &response_body["hits"]["hits"];
+        
+        let results: Vec<MealCheckIndex> = hits.as_array()
+            .ok_or_else(|| anyhow!("[Error][get_recent_mealtime_data_from_elastic()] "))?
+            .iter()
+            .map(|hit| {
+                hit.get("_source") 
+                    .ok_or_else(|| anyhow!("[Error][get_recent_mealtime_data_from_elastic()] Missing '_source' field"))
+                    .and_then(|source| serde_json::from_value(source.clone()).map_err(Into::into))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        
+        Ok(results)
     }
 
 
-
-    #[doc = "function that classifies what category that consumption is and returns an 'ConsumeInfo' instance."]
-    async fn get_consume_info_by_classification_type<'a>(&self, consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error> {
-
-        let mut type_scores_map: HashMap<String, i32> = HashMap::new();
+    
+    #[doc = "Function that posts the Json model itself to an Elasticsearch specific index"]
+    /// # Arguments
+    /// * model - Model to POST with Elasticsearch
+    /// 
+    /// # Result
+    /// * Result<(), anyhow::Error>
+    async fn post_model_to_es<T: Serialize + Send>(&self, index_name: &str, model: T) -> Result<(), anyhow::Error> {
         
-        let prodt_name_trim = consume_info.prodt_name().trim();
+        let es_client = get_elastic_conn();
 
-        for prodt_type_info in consume_type_vec {
+        let model_json = serde_json::to_value(model)?; 
+        es_client.post_query(&model_json, index_name).await?;
 
-            let keyword_type = prodt_type_info.keyword_type(); /* consumption classification. For example, pizza Hut is classified as a MEAL */
-            let mut total_bias = 0;
-
-            for prodt_detail in prodt_type_info.prodt_detail_list() {
-                
-                let keyword = prodt_detail.keyword();    /* Pizza hut(keyword) ⊂ Meal(keyword_type) */
-                let bias_value = prodt_detail.bias_value(); /* Weight of the corresponding keyword */
-
-                if prodt_name_trim.contains(keyword) {
-                    total_bias += bias_value;
-                }
-            }
-            
-            if total_bias != 0 {
-                type_scores_map.insert(keyword_type.to_string(), total_bias);
-            } 
-        }
-        
-        let mut confirm_keyword_type = String::from("");
-        let mut max_score = 0;
-
-        /* Categories are determined based on the larger max_score. */
-        for (key, value) in &type_scores_map {
-            
-            let keyword_type = key.to_string();
-            let keyword_score = *value;
-            
-            if keyword_score > max_score {
-                max_score = keyword_score;
-                confirm_keyword_type = keyword_type;
-            }
-        }
-        
-        if max_score == 0 {
-            consume_info.prodt_type = String::from("etc"); /* "max_score = 0" means that the consumption details are NOT included in any category. */
-        } else {
-            consume_info.prodt_type = confirm_keyword_type;
-        }
-        
         Ok(())
     }
-
+     
 }
 
 

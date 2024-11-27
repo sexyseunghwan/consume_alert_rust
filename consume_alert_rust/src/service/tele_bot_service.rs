@@ -192,7 +192,6 @@ impl TelebotService for TelebotServicePub {
         T: Send + Sync
     {
         
-        //let total_cost_i32 = total_cost as i32;
         let cnt = 10;
         let items_len = items.len();
         let loop_cnt = (items_len / cnt) + (if items_len % cnt != 0 { 1 } else { 0 });
@@ -289,8 +288,8 @@ impl TelebotService for TelebotServicePub {
         ).await
 
     } 
-
-    #[doc = ""] 
+    
+    #[doc = "String entered through `Telegram`"] 
     fn get_input_text(&self) -> String {
         self.input_text.to_string()
     }

@@ -6,3 +6,6 @@ pub mod ToPythonGraphCircle;
 pub mod TotalCostInfo;
 pub mod ToPythonGraphLine;
 pub mod PerDatetime;
+pub mod MealCheckIndex;
+pub mod ConsumingIndexProdType;
+pub mod ConsumeIndexProd;

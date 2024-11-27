@@ -1,4 +1,3 @@
-
 use crate::common::*;
 
 
@@ -15,7 +14,7 @@ pub fn initialize_elastic_clients() -> Arc<EsRepositoryPub> {
     let es_id = env::var("ES_ID").expect("[ENV file read Error][initialize_db_clients()] 'ES_ID' must be set");
     let es_pw = env::var("ES_PW").expect("[ENV file read Error][initialize_db_clients()] 'ES_PW' must be set");
 
-    // Elasticsearch connection
+    /* Elasticsearch connection */ 
     let es_client: EsRepositoryPub = match EsRepositoryPub::new(es_host, &es_id, &es_pw) {
         Ok(es_client) => es_client,
         Err(err) => {
@@ -144,7 +143,7 @@ impl EsRepository for EsRepositoryPub {
     
     #[doc = "Function that EXECUTES elasticsearch queries - indexing"]
     async fn post_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error> {
-
+        
         let response = self.execute_on_any_node(|es_client| async move {
         
             let response = es_client
@@ -157,7 +156,7 @@ impl EsRepository for EsRepositoryPub {
             Ok(response)
         })
         .await?;
-
+        
         if response.status_code().is_success() {
             Ok(())
         } else {
@@ -165,8 +164,8 @@ impl EsRepository for EsRepositoryPub {
             Err(anyhow!(error_message))
         }
     }
-
     
+        
     #[doc = "Function that EXECUTES elasticsearch queries - delete"]
     async fn delete_query(&self, doc_id: &str, index_name: &str) -> Result<(), anyhow::Error> {
         

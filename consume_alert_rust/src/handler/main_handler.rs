@@ -14,6 +14,8 @@ use crate::utils_modules::numeric_utils::*;
 use crate::model::PerDatetime::*;
 use crate::model::ProdtTypeInfo::*;
 use crate::model::TotalCostInfo::*;
+use crate::model::MealCheckIndex::*;
+use crate::model::ConsumingIndexProdType::*;
 
 
 pub struct MainHandler<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> {
@@ -80,10 +82,28 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
 
         Ok(())
     }
-    
 
 
-    #[doc = ""]
+    #[doc = "Function that preprocesses the text entered by telegram"]
+    /// # Arguments
+    /// * split_gubun - Distinguishing characters
+    /// 
+    /// # Returns
+    /// * Vec<String> - Distinguishing String vector
+    fn preprocess_string(&self, split_gubun: &str) -> Vec<String> {
+        
+        let args = self.telebot_service.get_input_text();
+        let args_aplit = &args[2..];
+        let split_args_vec: Vec<String> = args_aplit
+            .split(split_gubun)
+            .map(|s| s.trim().to_string())
+            .collect();
+
+        split_args_vec
+    }
+
+
+    #[doc = "Function reponsible for calculation consumption data and linking python api"]
     /// # Arguments
     /// * `permon_datetime` - Comparison group date data
     /// 
@@ -92,21 +112,31 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     async fn process_calculate_and_post_python_api(&self, permon_datetime: PerDatetime) -> Result<(), anyhow::Error> {
 
         /* Consumption Type Information Vectors - Get all classification of consumption data `ex) Meals, cafes, etc...` */
-        let consume_type_vec: Vec<ProdtTypeInfo> = 
-        self.db_service
-            .get_classification_consumption_type("consuming_index_prod_type").await?;
+        // let consume_type_vec: Vec<ProdtTypeInfo> = 
+        //     self.db_service
+        //         .get_classification_consumption_type("consuming_index_prod_type").await?;
         
-        let cur_mon_total_cost_infos = 
+        let consume_type_map: HashMap<String, ConsumingIndexProdType> = 
             self.db_service
-                .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_vec).await?;
+                .get_classification_consumption_type("consuming_index_prod_type").await?;
         
-        let pre_mon_total_cost_infos = 
+        let mut cur_consume_detail_infos = 
             self.db_service
-                .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_vec).await?;
+                .get_consume_detail_specific_period("consuming_index_prod_new", permon_datetime.date_start,  permon_datetime.date_end).await?;
         
-            
-        //println!("{:?}", cur_mon_total_cost_infos);
-        //println!("{:?}", pre_mon_total_cost_infos);
+
+
+        let mut versus_consume_detail_infos = 
+            self.db_service
+                .get_consume_detail_specific_period("consuming_index_prod_new", permon_datetime.n_date_start,  permon_datetime.n_date_end).await?;
+
+        // let cur_mon_total_cost_infos = 
+        //     self.db_service
+        //         .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_map).await?;
+        
+        // let pre_mon_total_cost_infos = 
+        //     self.db_service
+        //         .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_map).await?;
         
         /* Python api */
         //self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
@@ -118,27 +148,21 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch. -> c"]
     async fn command_consumption(&self) -> Result<(), anyhow::Error> {
 
-        let args = self.telebot_service.get_input_text();
-        let args_aplit = &args[2..];
-
-        let split_args: Vec<String> = args_aplit
-            .split(':')
-            .map(|s| s.trim().to_string())
-            .collect();
+        let split_args_vec = self.preprocess_string(":");
         
         
-        if split_args.len() != 2 {
+        if split_args_vec.len() != 2 {
 
             self.telebot_service
                 .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) c snack:15000")
                 .await?;
             
-            return Err(anyhow!(format!("[Parameter Error][command_consumption()] Invalid format of 'text' variable entered as parameter. : {:?}", args)));
+            return Err(anyhow!(format!("[Parameter Error][command_consumption()] Invalid format of 'text' variable entered as parameter. : {:?}", self.telebot_service.get_input_text())));
         }
         
-        let (consume_name, consume_cash) = (&split_args[0], &split_args[1]);        
+        let (consume_name, consume_cash) = (&split_args_vec[0], &split_args_vec[1]);        
         
-        let consume_cash_i64: i64 = match get_parsed_value_from_vector(&split_args, 1) {
+        let consume_cash_i64: i64 = match get_parsed_value_from_vector(&split_args_vec, 1) {
             Ok(consume_cash_i64) => consume_cash_i64,
             Err(e) => {
                 self.telebot_service
@@ -166,9 +190,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     #[doc = "command handler: Checks how much you have consumed during a month -> cm"]
     pub async fn command_consumption_per_mon(&self) -> Result<(), anyhow::Error> {
 
-        let args = self.telebot_service.get_input_text();
-        let args_aplit = &args[2..];
-        let split_args_vec: Vec<String> = args_aplit.split(' ').map(String::from).collect();
+        let split_args_vec = self.preprocess_string(" ");
 
         let permon_datetime: PerDatetime = match split_args_vec.len() {
             
@@ -193,7 +215,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                     .send_message_confirm("Invalid date format. Please use format YYYY.MM like cm 2023.07")
                     .await?;
 
-                return Err(anyhow!("[Parameter Error][command_consumption_per_mon()] Invalid format of 'text' variable entered as parameter. : {:?}", args));
+                return Err(anyhow!("[Parameter Error][command_consumption_per_mon()] Invalid format of 'text' variable entered as parameter. : {:?}", self.telebot_service.get_input_text()));
             }
         };
         
@@ -209,9 +231,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     #[doc = "command handler: Checks how much you have consumed during a specific periods -> ctr"]
     async fn command_consumption_per_term(&self) -> Result<(), anyhow::Error> {
 
-        let args = self.telebot_service.get_input_text();
-        let args_aplit = &args[2..];
-        let split_args_vec: Vec<String> = args_aplit.split(' ').map(String::from).collect();
+        let split_args_vec = self.preprocess_string(" ");
         
         let permon_datetime: PerDatetime = match split_args_vec.len() {
 
@@ -235,7 +255,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                     .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) ctr 2023.07.07-2023.08.01")
                     .await?;
 
-                return Err(anyhow!("[Parameter Error][command_consumption_per_term()] Invalid format of 'text' variable entered as parameter. : {:?}", args));           
+                return Err(anyhow!("[Parameter Error][command_consumption_per_term()] Invalid format of 'text' variable entered as parameter. : {:?}", self.telebot_service.get_input_text()));           
             }
         };
         
@@ -251,9 +271,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     #[doc = "command handler: Checks how much you have consumed during a day -> ct"]
     async fn command_consumption_per_day(&self) -> Result<(), anyhow::Error> {
 
-        let args = self.telebot_service.get_input_text();
-        let args_aplit = &args[2..];
-        let split_args_vec: Vec<String> = args_aplit.split(' ').map(String::from).collect();
+        let split_args_vec = self.preprocess_string(" ");
 
         
         let permon_datetime: PerDatetime = match split_args_vec.len() {
@@ -281,7 +299,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 self.telebot_service
                     .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) ct or ct 2023.11.11").await?;
                 
-                return Err(anyhow!("[Parameter Error][command_consumption_per_day()] Invalid format of 'text' variable entered as parameter. : {:?}", args));
+                return Err(anyhow!("[Parameter Error][command_consumption_per_day()] Invalid format of 'text' variable entered as parameter. : {:?}", self.telebot_service.get_input_text()));
             }
         };
 
@@ -296,9 +314,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     #[doc = "command handler: Check the consumption details from the date of payment to the next payment. -> cs"]    
     async fn command_consumption_per_salary(&self) -> Result<(), anyhow::Error> {
 
-        let args = self.telebot_service.get_input_text();
-        let args_aplit = &args[2..];
-        let split_args_vec: Vec<String> = args_aplit.split(' ').map(String::from).collect();
+        let split_args_vec = self.preprocess_string(" ");
 
         let permon_datetime: PerDatetime = match split_args_vec.len() {
             1 => {
@@ -346,7 +362,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 self.telebot_service
                     .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) cs or cs 2023.11").await?;
                 
-                return Err(anyhow!("[Parameter Error][command_consumption_per_day()] Invalid format of 'text' variable entered as parameter. : {:?}", args));
+                return Err(anyhow!("[Parameter Error][command_consumption_per_day()] Invalid format of 'text' variable entered as parameter. : {:?}", self.telebot_service.get_input_text()));
             }
         };
 
@@ -362,9 +378,8 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     #[doc = "command handler: Checks how much you have consumed during a week -> cw"]
     async fn command_consumption_per_week(&self) -> Result<(), anyhow::Error> {
 
-        let args = self.telebot_service.get_input_text();
-        let args_aplit = &args[2..];
-        let split_args_vec: Vec<String> = args_aplit.split(' ').map(String::from).collect();
+        let split_args_vec = self.preprocess_string(" ");
+
 
         let permon_datetime: PerDatetime = match split_args_vec.len() {
             1 => {
@@ -386,7 +401,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 self.telebot_service
                     .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) cw").await?;
                 
-                return Err(anyhow!("[Parameter Error][command_consumption_per_week()] Invalid format of 'text' variable entered as parameter. : {:?}", args));
+                return Err(anyhow!("[Parameter Error][command_consumption_per_week()] Invalid format of 'text' variable entered as parameter. : {:?}", self.telebot_service.get_input_text()));
             }
         };
 
@@ -402,9 +417,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     #[doc = "command handler: Checks how much you have consumed during one year -> cy"]
     async fn command_consumption_per_year(&self) -> Result<(), anyhow::Error> {
         
-        let args = self.telebot_service.get_input_text();
-        let args_aplit = &args[2..];
-        let split_args_vec: Vec<String> = args_aplit.split(' ').map(String::from).collect();
+        let split_args_vec = self.preprocess_string(" ");
 
         let permon_datetime: PerDatetime = match split_args_vec.len() {
             1 => {
@@ -433,7 +446,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 self.telebot_service
                     .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX01) cy\nEX02) cy 2023").await?;
                 
-                return Err(anyhow!("[Parameter Error][command_consumption_per_year()] Invalid format of 'text' variable entered as parameter. : {:?}", args));         
+                return Err(anyhow!("[Parameter Error][command_consumption_per_year()] Invalid format of 'text' variable entered as parameter. : {:?}", self.telebot_service.get_input_text()));         
             }
         };
 
@@ -445,11 +458,59 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     }
 
 
+    
+    #[doc = "command handler: Function for recording meal times -> mc"]
     async fn command_record_fasting_time(&self) -> Result<(), anyhow::Error> {
 
+        let split_args_vec = self.preprocess_string(" ");
+
+        let meal_time = match split_args_vec.len() {
+            1 => {
+                get_current_kor_naive_datetime() 
+            },
+            2 if split_args_vec
+                .get(1)
+                .map_or(false, |d| validate_date_format(d, r"^\d{2}\:\d{2}$")
+                .unwrap_or(false)) => {
+                    
+                    let naive_time = NaiveTime::parse_from_str(&format!("{}:00", split_args_vec[1]), "%H:%M:%S")
+                        .map_err(|e| anyhow!("[Error][command_record_fasting_time()] problem occurred while converting the variable 'naive_time': {:?}", e))?;
+                    
+                    let cur_time = get_current_kor_naive_datetime();
+                    let naive_datetime = 
+                        get_naivedatetime(cur_time.year(), cur_time.month(), cur_time.day(), naive_time.hour(), naive_time.minute(), naive_time.second())
+                            .map_err(|e| anyhow!("[Error][command_record_fasting_time()] problem occurred while converting the variable 'naive_datetime': {:?}", e))?;
+                    
+                    naive_datetime
+                },
+            _ => {
+                self.telebot_service
+                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX01) mc 22:30 \nEX02) mc").await?;
+                
+                return Err(anyhow!("[Parameter Error][command_record_fasting_time()] Invalid format of 'text' variable entered as parameter. : {:?}", self.telebot_service.get_input_text()));
+            }
+        };
+        
+        println!("meal_time: {:?}", meal_time);
+        
+        /* Brings the data of the most recent meal time of today's meal time. */
+        let recent_mealtime_vec = self.db_service.get_recent_mealtime_data_from_elastic(1).await?; 
+        let mealtime_data: MealCheckIndex;
+
+        if recent_mealtime_vec.len() == 1 {
+            let recent_mealtime_data = &recent_mealtime_vec[0];
+            mealtime_data = MealCheckIndex::new(meal_time.to_string(), 0, recent_mealtime_data.laststamp() + 1);
+        } else {   
+            mealtime_data = MealCheckIndex::new(meal_time.to_string(), 0, 1);
+        }
+        
+        self.db_service.post_model_to_es("meal_check_index", mealtime_data).await?;
+        
         Ok(())
     }
 
+
+    
     async fn command_check_fasting_time(&self) -> Result<(), anyhow::Error> {
 
         Ok(())
@@ -475,7 +536,6 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         let re: Regex = Regex::new(r"\[.*?\]\n?")?; 
         let replace_string = re.replace_all(&args, "").to_string(); /* Remove the '[~]' string. */
         
-        println!("replace_string:{}", replace_string);
         let split_args_vec: Vec<String> = replace_string
             .split('\n')
             .map(|s| s.trim().to_string())

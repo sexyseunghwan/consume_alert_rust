@@ -2,7 +2,7 @@
 Author      : Seunghwan Shin 
 Create date : 2023-05-01 
 Description : Code that can perform various functions through Telegram
-    
+                
 History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2023-05-20 Seunghwan Shin       # [v.1.1.0] Applying Logging Algorithms
               2023-07-28 Seunghwan Shin       # [v.1.2.0] Add consumption pattern function
@@ -113,6 +113,7 @@ async fn prod() {
         let command_service_clone = Arc::clone(&command_service);
         
         async move {   
+            
             let telebot_service = TelebotServicePub::new(bot, message);    
             let main_handler = 
                 MainHandler::new(graph_api_service_clone, db_service_clone, telebot_service, command_service_clone);
@@ -128,7 +129,7 @@ async fn prod() {
         }
     })
     .await;
-    
+
 }
 
 
