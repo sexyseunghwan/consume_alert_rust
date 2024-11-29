@@ -31,7 +31,7 @@ pub trait CommandService {
     fn get_consume_prodt_name(&self, consume_time_name_vec: &Vec<String>, idx: usize) -> Result<String, anyhow::Error>;
     fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PerDatetime, anyhow::Error>;
     fn get_nday_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nday: i32) -> Result<PerDatetime, anyhow::Error>;
-    async fn calculate_total_cost_info<'a>(&self, consume_map: &'a HashMap<String, ConsumingIndexProdType>, consume_index_prod_vector: &'a mut Vec<ConsumeIndexProd>) -> Result<TotalCostInfo, anyhow::Error>;
+    //async fn calculate_total_cost_info<'a>(&self, consume_map: &'a HashMap<String, ConsumingIndexProdType>, consume_index_prod_vector: &'a mut Vec<ConsumeIndexProd>) -> Result<TotalCostInfo, anyhow::Error>;
 }
 
 #[derive(Debug, Getters, Clone, new)]
@@ -243,16 +243,23 @@ impl CommandService for CommandServicePub {
         Ok(per_day_datetim)
     }
     
-    #[doc = ""]
-    async fn calculate_total_cost_info<'a>(&self, consume_map: &'a HashMap<String, ConsumingIndexProdType>, consume_index_prod_vector: &'a mut Vec<ConsumeIndexProd>) -> Result<TotalCostInfo, anyhow::Error> {
 
-        for elem in consume_index_prod_vector {
+    // #[doc = ""]
+    // async fn calculate_total_cost_info<'a>(&self, consume_map: &'a HashMap<String, ConsumingIndexProdType>, consume_index_prod_vector: &'a mut Vec<ConsumeIndexProd>) -> Result<TotalCostInfo, anyhow::Error> {
 
-            
+    //     for elem in consume_index_prod_vector {
 
-        }
+    //         let prodt_type
+    //         let prodt_name = elem.prodt_name();
 
-    }
+    //         //let test = consume_map.get(prodt_name);
+    //         if let Some(test) = consume_map.get(prodt_name) {
+
+    //         }
+
+    //     }
+
+    // }
 
 
     // #[doc = "Common Command Function Without Comparison"]

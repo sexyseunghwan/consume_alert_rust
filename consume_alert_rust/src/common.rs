@@ -97,3 +97,13 @@ pub use async_trait::async_trait;
 pub use crate::utils_modules::logger_utils::*;
 
 pub use once_cell::sync::Lazy as once_lazy;
+
+pub use strsim::levenshtein;
+
+pub use rayon::prelude::*;
+
+
+/* Elasticsearch index name to use globally */
+pub static CONSUME_DETAIL: &str = "consuming_index_prod_new";
+pub static CONSUME_TYPE: &str = "consuming_index_prod_type_v2";
+pub static MEAL_CHECK: &str = "meal_check_index";

@@ -37,3 +37,5 @@ async-trait = "0.1.83"
 mysql_async = "0.34.1"
 kafka = "0.10.0"
 diesel = { version = "2.1.5", features = ["mysql", "r2d2"] }
+strsim = "0.11.1"
+rayon = "1.10.0"

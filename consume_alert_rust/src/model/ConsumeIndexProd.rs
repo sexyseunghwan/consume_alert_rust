@@ -1,6 +1,6 @@
 use crate::common::*;
 
-#[derive(Debug, Getters, Serialize, Deserialize, new)]
+#[derive(Debug, Getters, Serialize, Deserialize, Clone, new)]
 #[getset(get = "pub")]
 pub struct ConsumeIndexProd {
     #[serde(rename = "@timestamp")]

@@ -116,19 +116,26 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         //     self.db_service
         //         .get_classification_consumption_type("consuming_index_prod_type").await?;
         
-        let consume_type_map: HashMap<String, ConsumingIndexProdType> = 
-            self.db_service
-                .get_classification_consumption_type("consuming_index_prod_type").await?;
+        // let consume_type_map: HashMap<String, ConsumingIndexProdType> = 
+        //     self.db_service
+        //         .get_classification_consumption_type("consuming_index_prod_type").await?;
         
+        //let start = std::time::Instant::now(); // 시작 시간 측정
+
         let mut cur_consume_detail_infos = 
             self.db_service
-                .get_consume_detail_specific_period("consuming_index_prod_new", permon_datetime.date_start,  permon_datetime.date_end).await?;
+                .get_consume_detail_specific_period( permon_datetime.date_start,  permon_datetime.date_end).await?;
+        
+
+        println!("{:?}", cur_consume_detail_infos.1);
+        // let mut versus_consume_detail_infos = 
+        //     self.db_service
+        //         .get_consume_detail_specific_period( permon_datetime.n_date_start,  permon_datetime.n_date_end).await?;
         
 
 
-        let mut versus_consume_detail_infos = 
-            self.db_service
-                .get_consume_detail_specific_period("consuming_index_prod_new", permon_datetime.n_date_start,  permon_datetime.n_date_end).await?;
+        //let duration = start.elapsed(); // 경과 시간 계산
+        //println!("Time elapsed in expensive_function() is: {:?}", duration);
 
         // let cur_mon_total_cost_infos = 
         //     self.db_service
@@ -504,7 +511,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
             mealtime_data = MealCheckIndex::new(meal_time.to_string(), 0, 1);
         }
         
-        self.db_service.post_model_to_es("meal_check_index", mealtime_data).await?;
+        self.db_service.post_model_to_es(MEAL_CHECK, mealtime_data).await?;
         
         Ok(())
     }
@@ -576,35 +583,35 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         let cur_end_dt = cur_total_cost_infos.end_dt;    
 
         // Hand over the consumption details to Telegram bot.
-        self.telebot_service.send_message_consume_split(
-            cur_consume_list, 
-            cur_total_cost, 
-            cur_start_dt, 
-            cur_end_dt,
-            cur_empty_flag
-        ).await?; 
+        // self.telebot_service.send_message_consume_split(
+        //     cur_consume_list, 
+        //     cur_total_cost, 
+        //     cur_start_dt, 
+        //     cur_end_dt,
+        //     cur_empty_flag
+        // ).await?; 
         
-        if cur_total_cost > 0.0 { 
+        // if cur_total_cost > 0.0 { 
 
-            // ( consumption type information, consumption type graph storage path )
-            let comsume_type_infos = 
-                self.graph_api_service.get_consume_type_graph(cur_total_cost, cur_start_dt, cur_end_dt, cur_consume_list).await?;
+        //     // ( consumption type information, consumption type graph storage path )
+        //     let comsume_type_infos = 
+        //         self.graph_api_service.get_consume_type_graph(cur_total_cost, cur_start_dt, cur_end_dt, cur_consume_list).await?;
             
-            let consume_type_list = &comsume_type_infos.0;
-            let consume_type_img = comsume_type_infos.1;
+        //     let consume_type_list = &comsume_type_infos.0;
+        //     let consume_type_img = comsume_type_infos.1;
 
-            self.telebot_service.send_photo_confirm( &consume_type_img).await?;
+        //     self.telebot_service.send_photo_confirm( &consume_type_img).await?;
 
-            self.telebot_service.send_message_consume_type(
-                consume_type_list, 
-                cur_total_cost, 
-                cur_start_dt, 
-                cur_end_dt,
-                cur_empty_flag).await?; 
+        //     self.telebot_service.send_message_consume_type(
+        //         consume_type_list, 
+        //         cur_total_cost, 
+        //         cur_start_dt, 
+        //         cur_end_dt,
+        //         cur_empty_flag).await?; 
 
-            let delete_target_vec: Vec<String> = vec![consume_type_img];
-            //delete_file(delete_target_vec)?;
-        }
+        //     let delete_target_vec: Vec<String> = vec![consume_type_img];
+        //     //delete_file(delete_target_vec)?;
+        // }
 
         Ok(())
     }
