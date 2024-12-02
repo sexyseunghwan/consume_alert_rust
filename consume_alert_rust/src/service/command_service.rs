@@ -215,8 +215,14 @@ impl CommandService for CommandServicePub {
     /// * Result<PermonDatetime, anyhow::Error>
     fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PerDatetime, anyhow::Error> {
 
-        let n_month_start = get_add_month_from_naivedate(date_start, nmonth)?;
-        let n_month_end = get_add_month_from_naivedate(date_end, nmonth)?;
+        println!("date_start: {:?}", date_start);
+        println!("date_end: {:?}", date_end);
+        
+        let n_month_start = get_add_month_from_naivedate(date_start, nmonth)
+            .map_err(|e| anyhow!("{:?} -> in get_nmonth_to_current_date().n_month_start", e))?;
+
+        let n_month_end = get_add_month_from_naivedate(date_end, nmonth)
+            .map_err(|e| anyhow!("{:?} -> in get_nmonth_to_current_date().n_month_end", e))?;
 
         let per_mon_datetim = PerDatetime::new(date_start, date_end, n_month_start, n_month_end);
         

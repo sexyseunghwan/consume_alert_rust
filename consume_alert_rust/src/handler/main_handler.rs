@@ -176,7 +176,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                     .send_message_confirm("The second parameter must be numeric. \nEX) c snack:15000")
                     .await?;
 
-                return Err(anyhow!("[Parameter Error][command_consumption()] Non-numeric 'cash' parameter: {:?} :: {:?}", consume_cash, e));
+                return Err(anyhow!("[Parameter Error][command_consumption()] Non-numeric 'cash' parameter: {:?} : {:?}", consume_cash, e));
             }
         };
         

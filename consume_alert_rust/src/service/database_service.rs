@@ -226,7 +226,7 @@ impl DBService for DBServicePub {
             None => return Err(anyhow!("[Error][total_cost_detail_specific_period()] 'total_cost' error"))
         };
         
-        let mut results: Vec<ConsumeIndexProd> = hits.as_array()
+        let results: Vec<ConsumeIndexProd> = hits.as_array()
             .ok_or_else(|| anyhow!("[Error][total_cost_detail_specific_period()] error"))?
             .iter()
             .map(|hit| {
@@ -236,14 +236,13 @@ impl DBService for DBServicePub {
             })
             .collect::<Result<Vec<_>, _>>()?; 
         
-        
         //let duration = start.elapsed(); // 경과 시간 계산
         //println!("Time elapsed in expensive_function() is: {:?}", duration);
-
+        
         /* 어떤 소비타입인지 분류해주는 로직필요 */
         let total = *(&results.len());
         let chunk_size = total / 8;
-        let arc_result = Arc::new(Mutex::new(results.clone()));
+        let arc_result = Arc::new(tokio::sync::Mutex::new(results.clone()));
         
         let tasks: Vec<_> = (0..8).map(|i| {
             
@@ -252,14 +251,9 @@ impl DBService for DBServicePub {
             let end = if i == 7 { total } else { start + chunk_size };
             
             tokio::spawn(async move {
-
-                // let mut slice = {
-                //     let mut data = details_clone.lock().unwrap();
-                //     let test = &mut data[start..end];
-                //     test
-                // };
-
-                //get_classification_consume_detail(&mut slice).await
+                let mut data_guard = details_clone.lock().await;
+                let slice = & mut data_guard[start..end];
+                get_classification_consume_detail(slice).await
             })
 
         }).collect();
@@ -270,7 +264,7 @@ impl DBService for DBServicePub {
             let result = task.await.unwrap();
             combined_results.extend(result);
         }
-
+        
         //self.get_classification_consume_detail(&mut results).await?;
 
         Ok((total_cost, results)) 
@@ -707,7 +701,9 @@ async fn get_classification_consume_detail(consume_details: &mut [ConsumeIndexPr
         
         
         if results.len() == 0 {
+            
             consume_detail.prodt_type = Some(String::from("etc"));
+
         } else {
 
             let mut score_pair: HashMap<String, usize> = HashMap::new();
