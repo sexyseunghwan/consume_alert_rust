@@ -226,6 +226,10 @@ impl DBService for DBServicePub {
             None => return Err(anyhow!("[Error][total_cost_detail_specific_period()] 'total_cost' error"))
         };
         
+        //let duration = start.elapsed(); // 경과 시간 계산
+        //println!("Time elapsed in expensive_function() is: {:?}", duration);
+        //get_classification_consume_detail(&mut data_guard, start, end).await
+
         let results: Vec<ConsumeIndexProd> = hits.as_array()
             .ok_or_else(|| anyhow!("[Error][total_cost_detail_specific_period()] error"))?
             .iter()
@@ -236,8 +240,7 @@ impl DBService for DBServicePub {
             })
             .collect::<Result<Vec<_>, _>>()?; 
         
-        //let duration = start.elapsed(); // 경과 시간 계산
-        //println!("Time elapsed in expensive_function() is: {:?}", duration);
+
         
         /* 어떤 소비타입인지 분류해주는 로직필요 */
         let total = *(&results.len());
@@ -250,11 +253,24 @@ impl DBService for DBServicePub {
             let start = i * chunk_size;
             let end = if i == 7 { total } else { start + chunk_size };
             
+
             tokio::spawn(async move {
-                let mut data_guard = details_clone.lock().await;
-                let slice = & mut data_guard[start..end];
-                get_classification_consume_detail(slice).await
+                let mut slice = {
+                    let mut data_guard = details_clone.lock().await;
+                    let temp_slice = data_guard[start..end].to_vec();
+                    temp_slice
+                };
+            
+                // 비동기 함수 내부에서 slice를 수정
+                get_classification_consume_detail(&mut slice).await
             })
+
+            // tokio::spawn(async move {
+            //     let mut data_guard: tokio::sync::MutexGuard<'_, Vec<ConsumeIndexProd>> = details_clone.lock().await;
+                
+            //     let slice = &mut data_guard[start..end];
+            //     get_classification_consume_detail(slice).await
+            // })
 
         }).collect();
         
@@ -662,6 +678,68 @@ impl DBService for DBServicePub {
 // }
 
 
+//async fn get_classification_consume_detail(consume_details: &mut tokio::sync::MutexGuard<'_, Vec<ConsumeIndexProd>>, start: usize, end: usize) -> Result<(), anyhow::Error> {
+
+    // let es_client = get_elastic_conn(); 
+    
+    // for idx in start..end {
+
+    //     let prodt_name = consume_details[idx].prodt_name();
+
+    //     let query = json!({
+    //         "query": {
+    //             "match": {
+    //                 "keyword": prodt_name
+    //             }
+    //         }
+    //     });
+        
+    //     let response_body = es_client.get_search_query(&query, CONSUME_TYPE).await?;
+    //     let hits = &response_body["hits"]["hits"];
+
+    //     let results: Vec<ConsumingIndexProdType> = hits.as_array()
+    //         .ok_or_else(|| anyhow!("[Error][total_cost_detail_specific_period()] error"))?
+    //         .iter()
+    //         .map(|hit| {
+    //             hit.get("_source") 
+    //                 .ok_or_else(|| anyhow!("[Error][total_cost_detail_specific_period()] Missing '_source' field"))
+    //                 .and_then(|source| serde_json::from_value(source.clone()).map_err(Into::into))
+    //         })
+    //         .collect::<Result<Vec<_>, _>>()?;
+        
+    //     if results.len() == 0 {
+    //         println!("@");
+    //         consume_details[idx].prodt_type = Some(String::from("etc"));
+
+    //     } else {
+    //         println!("!");
+    //         let mut score_pair: HashMap<String, usize> = HashMap::new();
+
+    //         for consume_type in &results {
+    //             let keyword_type = consume_type.keyword_type();
+    //             let bias_value = levenshtein(keyword_type, prodt_name);
+                
+    //             let entry = score_pair.entry(keyword_type.to_string()).or_insert(0);
+    //             *entry += bias_value;   
+    //         }
+
+    //         let top_score_consume_type = match score_pair.iter()
+    //             .max_by_key(|entry| entry.1)
+    //             .map(|(key, _)| key.to_string()) {
+    //                 Some(top_score_consume_type) => top_score_consume_type,
+    //                 None => {
+    //                     error!("[Error][get_classification_consume_detail()] Data 'top_score_consume_type' cannot have a None value.");
+    //                     continue;
+    //                 }   
+    //             };
+            
+    //         consume_details[idx].prodt_type = Some(top_score_consume_type);
+    //     }
+    // }
+
+    // Ok(())
+
+
 #[doc = ""]
 ///
 /// 
@@ -673,7 +751,7 @@ async fn get_classification_consume_detail(consume_details: &mut [ConsumeIndexPr
 
 
     let es_client = get_elastic_conn(); 
-    
+
     for consume_detail in consume_details {
 
         let prodt_name = consume_detail.prodt_name();
@@ -731,6 +809,6 @@ async fn get_classification_consume_detail(consume_details: &mut [ConsumeIndexPr
     }
     
 
-
     Ok(())
+    
 }

@@ -85,52 +85,52 @@ use service::command_service::*;
 async fn main() {
     
     // Initiate Logger
-    set_global_logger();
+    let set_global_logger = set_global_logger();
 
     // Select compilation environment
     dotenv().ok();
 
     initialize_db_connection();
 
-    //prod().await;
+    prod().await;
     //dev().await;
-
-    let data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    let data = Arc::new(Mutex::new(data));
-    let mut handles = vec![];
+    
+    // let data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    // let data = Arc::new(Mutex::new(data));
+    // let mut handles = vec![];
 
     // 첫 번째 슬라이스: 0~2
-    {
-        let data = Arc::clone(&data);
-        let handle = thread::spawn(move || {
-            let mut data = data.lock().unwrap();
-            for i in 0..3 {
-                data[i] += 10;  // 각 요소에 10을 더함
-            }
-        });
-        handles.push(handle);
-    }
+    // {
+    //     let data = Arc::clone(&data);
+    //     let handle = thread::spawn(move || {
+    //         let mut data = data.lock().unwrap();
+    //         for i in 0..3 {
+    //             data[i] += 10;  // 각 요소에 10을 더함
+    //         }
+    //     });
+    //     handles.push(handle);
+    // }
 
-    // 두 번째 슬라이스: 3~5
-    {
-        let data = Arc::clone(&data);
-        let handle = thread::spawn(move || {
-            let mut data = data.lock().unwrap();
-            for i in 3..6 {
-                data[i] += 20;  // 각 요소에 20을 더함
-            }
-        });
-        handles.push(handle);
-    }
+    // // 두 번째 슬라이스: 3~5
+    // {
+    //     let data = Arc::clone(&data);
+    //     let handle = thread::spawn(move || {
+    //         let mut data = data.lock().unwrap();
+    //         for i in 3..6 {
+    //             data[i] += 20;  // 각 요소에 20을 더함
+    //         }
+    //     });
+    //     handles.push(handle);
+    // }
 
-    // 모든 스레드가 완료되기를 기다림
-    for handle in handles {
-        handle.join().unwrap();
-    }
+    // // 모든 스레드가 완료되기를 기다림
+    // for handle in handles {
+    //     handle.join().unwrap();
+    // }
 
-    // 결과 출력
-    let data = data.lock().unwrap();
-    println!("{:?}", *data);
+    // // 결과 출력
+    // let data = data.lock().unwrap();
+    // println!("{:?}", *data);
 
 
 }
