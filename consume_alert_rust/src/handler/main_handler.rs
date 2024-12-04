@@ -1,3 +1,5 @@
+use chrono::format::parse;
+
 use crate::common::*;
 
 use crate::repository::es_repository::*;
@@ -120,7 +122,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         //     self.db_service
         //         .get_classification_consumption_type("consuming_index_prod_type").await?;
         
-        //let start = std::time::Instant::now(); // 시작 시간 측정
+        let start = std::time::Instant::now(); // 시작 시간 측정
 
         let mut cur_consume_detail_infos = 
             self.db_service
@@ -134,8 +136,8 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         
 
 
-        //let duration = start.elapsed(); // 경과 시간 계산
-        //println!("Time elapsed in expensive_function() is: {:?}", duration);
+        let duration = start.elapsed(); // 경과 시간 계산
+        println!("Time elapsed in expensive_function() is: {:?}", duration);
 
         // let cur_mon_total_cost_infos = 
         //     self.db_service
@@ -199,6 +201,8 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
 
         let split_args_vec = self.preprocess_string(" ");
 
+        println!("{:?}", split_args_vec);
+
         let permon_datetime: PerDatetime = match split_args_vec.len() {
             
             1 => {
@@ -208,10 +212,20 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 self.command_service.get_nmonth_to_current_date(date_start, date_end, -1)?
             },
             2 if split_args_vec.get(1).map_or(false, |d| validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)) => {
+
+                let dates = split_args_vec[1].split('.').collect::<Vec<&str>>();
+
+                let year: i32 = dates.get(0)
+                    .ok_or_else(|| anyhow!("test"))?
+                    .parse()?;
                 
-                let year: i32 = get_parsed_value_from_vector(&split_args_vec, 0)?;
-                let month: u32 = get_parsed_value_from_vector(&split_args_vec, 1)?;
+                let month: u32 = dates.get(1)
+                    .ok_or_else(|| anyhow!("test"))?
+                    .parse()?;
                 
+                //get_parsed_value_from_vector(&split_args_vec, 1)?;
+                
+
                 let date_start = get_naivedate(year, month, 1)?;
                 let date_end = get_lastday_naivedate(date_start)?;
 

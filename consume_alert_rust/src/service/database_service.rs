@@ -32,7 +32,7 @@ pub trait DBService {
     // async fn get_consume_detail_graph_double(python_graph_line_info_cur: &mut ToPythonGraphLine, python_graph_line_info_pre: &mut ToPythonGraphLine) -> Result<String, anyhow::Error>;
     // async fn get_consume_detail_graph_single(python_graph_line_info: &ToPythonGraphLine) -> Result<String, anyhow::Error>;
     async fn get_recent_mealtime_data_from_elastic(&self, query_size: i32) -> Result<Vec<MealCheckIndex>, anyhow::Error>;
-
+    
     async fn post_model_to_es<T: Serialize + Send>(&self, index_name: &str, model: T) -> Result<(), anyhow::Error>;
 }   
 
@@ -150,6 +150,12 @@ impl DBService for DBServicePub {
     //         //keyword_type_hashmap.insert(keyword_type, results);
 
     //         // 아래처럼 하면 너무 복잡해지는데?
+    
+    // 전위 순회는 뿌리-> 왼쪽 자식 ->오른쪽 자식 순
+    // 중위 순회는 왼쪽자식-> 뿌리-> 오른쪽 자식
+    // 후위 순회는 왼쪽자식->오른쪽 자식-> 뿌리
+    // 층별 순회는 그냥 노드의 순서대로
+    
     //         // if let Some(keywords) = inner_res["hits"]["hits"].as_array() {
     //         //     for key_word in keywords {
     //         //         if let Some(keyword_src) = key_word.get("_source") {
@@ -215,7 +221,7 @@ impl DBService for DBServicePub {
                 "@timestamp": { "order": "asc" }
             }
         });
-
+        
         let es_client = get_elastic_conn(); 
         let response_body = es_client.get_search_query(&query, CONSUME_DETAIL).await?;
         let hits = &response_body["hits"]["hits"];
@@ -227,10 +233,8 @@ impl DBService for DBServicePub {
         };
         
         //let duration = start.elapsed(); // 경과 시간 계산
-        //println!("Time elapsed in expensive_function() is: {:?}", duration);
-        //get_classification_consume_detail(&mut data_guard, start, end).await
 
-        let results: Vec<ConsumeIndexProd> = hits.as_array()
+        let mut results: Vec<ConsumeIndexProd> = hits.as_array()
             .ok_or_else(|| anyhow!("[Error][total_cost_detail_specific_period()] error"))?
             .iter()
             .map(|hit| {
@@ -240,55 +244,49 @@ impl DBService for DBServicePub {
             })
             .collect::<Result<Vec<_>, _>>()?; 
         
-
         
+        //get_classification_consume_detail_v1(&mut results).await?;
+        
+
         /* 어떤 소비타입인지 분류해주는 로직필요 */
-        let total = *(&results.len());
-        let chunk_size = total / 8;
-        let arc_result = Arc::new(tokio::sync::Mutex::new(results.clone()));
+        let total = results.len();
+        let chunk_size = total / 5;
         
-        let tasks: Vec<_> = (0..8).map(|i| {
+        let tasks: Vec<_> = (0..5).map(|i| {
             
-            let details_clone = arc_result.clone();
             let start = i * chunk_size;
-            let end = if i == 7 { total } else { start + chunk_size };
-            
-
+            let end = if i == 4 { total } else { start + chunk_size };
+            let slice = results[start..end].to_vec();  
+                      
             tokio::spawn(async move {
-                let mut slice = {
-                    let mut data_guard = details_clone.lock().await;
-                    let temp_slice = data_guard[start..end].to_vec();
-                    temp_slice
-                };
-            
-                // 비동기 함수 내부에서 slice를 수정
-                get_classification_consume_detail(&mut slice).await
+                /* 비동기 함수 내부에서 slice를 수정 */ 
+                get_classification_consume_detail(slice).await
             })
 
-            // tokio::spawn(async move {
-            //     let mut data_guard: tokio::sync::MutexGuard<'_, Vec<ConsumeIndexProd>> = details_clone.lock().await;
-                
-            //     let slice = &mut data_guard[start..end];
-            //     get_classification_consume_detail(slice).await
-            // })
 
         }).collect();
         
         /* Wait for the results of all tasks */  
-        let mut combined_results: Vec<()> = Vec::new();
+        let mut results: Vec<ConsumeIndexProd> = Vec::with_capacity(total);
+
         for task in tasks {
-            let result = task.await.unwrap();
-            combined_results.extend(result);
+            match task.await {
+                Ok(Ok(part)) => results.extend(part), /* Task success */
+                Ok(Err(e)) => {
+                    /* Error in get_classification_consume_detail() */
+                    return Err(anyhow!("[Error][get_classification_consume_detail()] {:?}", e));
+                },
+                Err(e) => {
+                    /* Error in TASK */
+                    return Err(anyhow!("[Error][get_consume_detail_specific_period()] {:?}", e));
+                }
+            }
         }
-        
-        //self.get_classification_consume_detail(&mut results).await?;
 
         Ok((total_cost, results)) 
     }
     
-
-
-
+    
     // #[doc = "Functions that show the details of total consumption and consumption over a specific period of time"]
     // /// # Arguments
     // /// * `start_date`      
@@ -741,17 +739,10 @@ impl DBService for DBServicePub {
 
 
 #[doc = ""]
-///
-/// 
-/// 
-/// 
-/// 
-/// 
-async fn get_classification_consume_detail(consume_details: &mut [ConsumeIndexProd]) -> Result<(), anyhow::Error> {
-
+async fn get_classification_consume_detail_v1(consume_details: &mut Vec<ConsumeIndexProd>) -> Result<(), anyhow::Error> {
 
     let es_client = get_elastic_conn(); 
-
+    
     for consume_detail in consume_details {
 
         let prodt_name = consume_detail.prodt_name();
@@ -777,10 +768,63 @@ async fn get_classification_consume_detail(consume_details: &mut [ConsumeIndexPr
             })
             .collect::<Result<Vec<_>, _>>()?;
         
+
+        if results.len() == 0 {
+            consume_detail.prodt_type = Some(String::from("etc"));
+        } else {
+            consume_detail.prodt_type_query_res = Some(results);
+        }
+    }
+
+    Ok(())
+}
+
+
+
+
+
+#[doc = ""]
+///
+/// 
+/// 
+/// 
+/// 
+/// 
+async fn get_classification_consume_detail(consume_details: Vec<ConsumeIndexProd>) -> Result<Vec<ConsumeIndexProd>, anyhow::Error> {
+
+    let mut consume_details_inner: Vec<ConsumeIndexProd> = Vec::new();
+    let es_client = get_elastic_conn(); 
+    
+    for mut consume_detail in consume_details {
+        
+        let prodt_name = consume_detail.prodt_name();
+        
+        let query = json!({
+            "query": {
+                "match": {
+                    "keyword": prodt_name
+                }
+            }
+        });
+        
+        let response_body = es_client.get_search_query(&query, CONSUME_TYPE).await?;
+        let hits = &response_body["hits"]["hits"];
+        
+        let results: Vec<ConsumingIndexProdType> = hits.as_array()
+            .ok_or_else(|| anyhow!("[Error][total_cost_detail_specific_period()] error"))?
+            .iter()
+            .map(|hit| {
+                hit.get("_source") 
+                    .ok_or_else(|| anyhow!("[Error][total_cost_detail_specific_period()] Missing '_source' field"))
+                    .and_then(|source| serde_json::from_value(source.clone()).map_err(Into::into))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        
         
         if results.len() == 0 {
             
             consume_detail.prodt_type = Some(String::from("etc"));
+            consume_details_inner.push(consume_detail);
 
         } else {
 
@@ -788,14 +832,14 @@ async fn get_classification_consume_detail(consume_details: &mut [ConsumeIndexPr
             
             for consume_type in &results {
                 let keyword_type = consume_type.keyword_type();
-                let bias_value = levenshtein(keyword_type, prodt_name);
+                let word_dist = levenshtein(keyword_type, prodt_name);
                 
-                let entry = score_pair.entry(keyword_type.to_string()).or_insert(0);
-                *entry += bias_value;   
+                let entry = score_pair.entry(keyword_type.to_string()).or_insert(word_dist);
+                *entry += word_dist;   
             }
             
             let top_score_consume_type = match score_pair.iter()
-                .max_by_key(|entry| entry.1)
+                .min_by_key(|entry| entry.1)
                 .map(|(key, _)| key.to_string()) {
                     Some(top_score_consume_type) => top_score_consume_type,
                     None => {
@@ -805,10 +849,9 @@ async fn get_classification_consume_detail(consume_details: &mut [ConsumeIndexPr
                 };
             
             consume_detail.prodt_type = Some(top_score_consume_type);
+            consume_details_inner.push(consume_detail);
         }
     }
     
-
-    Ok(())
-    
+    Ok(consume_details_inner)
 }

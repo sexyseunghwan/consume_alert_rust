@@ -92,6 +92,14 @@ async fn main() {
 
     initialize_db_connection();
 
+    // let test1 = levenshtein("세븐일레븐", "한신점");
+    // let test2 = levenshtein("세븐일레븐", "세븐일레븐 한신점");
+    // let test3 = levenshtein("세븐일레븐", "아이시떼루");
+    
+    // println!("test1: {}", test1);
+    // println!("test2: {}", test2);
+    // println!("test3: {}", test3);
+
     prod().await;
     //dev().await;
     
