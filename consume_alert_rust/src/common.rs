@@ -2,8 +2,8 @@ pub use std::{
     io::Write,
     env, fs, cmp, thread,
     time::Duration,
-    sync::{ Arc, Mutex },
-    collections::HashMap,
+    sync::{ Arc, Mutex, MutexGuard },
+    collections::{HashMap, VecDeque},
     path::Path,
     cmp::Ordering,
     future::Future,
@@ -45,7 +45,7 @@ pub use dotenv::dotenv;
 
 pub use elasticsearch::{
     Elasticsearch, 
-    http::transport::{ SingleNodeConnectionPool, TransportBuilder },
+    http::transport::{ SingleNodeConnectionPool, TransportBuilder, MultiNodeConnectionPool},
     http::Url,
     http::response::Response,
     SearchParts, 

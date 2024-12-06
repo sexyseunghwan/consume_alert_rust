@@ -14,9 +14,10 @@ use crate::model::ProdtTypeInfo::*;
 use crate::model::PerDatetime::*;
 use crate::model::ConsumeIndexProd::*;
 use crate::model::ConsumingIndexProdType::*;
+use crate::model::ConsumeIndexProdNew::*;
 
+//use crate::repository::es_multi_repository::*;
 use crate::repository::es_repository::*;
-
 
 #[async_trait]
 pub trait CommandService {
@@ -26,6 +27,8 @@ pub trait CommandService {
     fn get_string_vector_by_replace(&self, intput_str: &str, replacements: &Vec<&str>) -> Result<Vec<String>, anyhow::Error>;
     fn get_consume_prodt_money(&self, consume_price_vec: &Vec<String>, idx: usize) -> Result<i32, anyhow::Error>;
     
+    //async fn get_check_word_consume_type(&self, ) -> Result<>
+
     /* Service */
     async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<(), anyhow::Error>;
     fn get_consume_prodt_name(&self, consume_time_name_vec: &Vec<String>, idx: usize) -> Result<String, anyhow::Error>;
@@ -55,7 +58,7 @@ impl CommandService for CommandServicePub {
             .get(0)
             .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_type()] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
         
-        let es_client = get_elastic_conn();
+        let es_client = get_elastic_conn()?;
         let split_val = vec![",", "원"];
         let document: Value;
         
@@ -97,7 +100,7 @@ impl CommandService for CommandServicePub {
             )?;
             
             let consume_price = self.get_consume_prodt_money(&consume_price_vec, 0)?;
-
+            
             let consume_time_vec: Vec<String> = split_args_vec
                 .get(2)
                 .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 2))?

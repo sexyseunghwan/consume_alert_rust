@@ -7,6 +7,7 @@ use crate::service::graph_api_service::*;
 
 use crate::utils_modules::time_utils::*;
 
+//use crate::repository::es_multi_repository::*;
 use crate::repository::es_repository::*;
 
 use crate::model::ProdtTypeInfo::*;
@@ -222,7 +223,7 @@ impl DBService for DBServicePub {
             }
         });
         
-        let es_client = get_elastic_conn(); 
+        let es_client = get_elastic_conn()?; 
         let response_body = es_client.get_search_query(&query, CONSUME_DETAIL).await?;
         let hits = &response_body["hits"]["hits"];
         
@@ -454,7 +455,7 @@ impl DBService for DBServicePub {
     #[doc = "Function that determines the number of meals today"]
     async fn get_recent_mealtime_data_from_elastic(&self, query_size: i32) -> Result<Vec<MealCheckIndex>, anyhow::Error> {
         
-        let es_client = get_elastic_conn();
+        let es_client = get_elastic_conn()?;
         let current_date = get_current_kor_naivedate().to_string();
         
         let es_query = json!({
@@ -498,7 +499,7 @@ impl DBService for DBServicePub {
     /// * Result<(), anyhow::Error>
     async fn post_model_to_es<T: Serialize + Send>(&self, index_name: &str, model: T) -> Result<(), anyhow::Error> {
         
-        let es_client = get_elastic_conn();
+        let es_client = get_elastic_conn()?;
 
         let model_json = serde_json::to_value(model)?; 
         es_client.post_query(&model_json, index_name).await?;
@@ -741,7 +742,7 @@ impl DBService for DBServicePub {
 #[doc = ""]
 async fn get_classification_consume_detail_v1(consume_details: &mut Vec<ConsumeIndexProd>) -> Result<(), anyhow::Error> {
 
-    let es_client = get_elastic_conn(); 
+    let es_client = get_elastic_conn()?; 
     
     for consume_detail in consume_details {
 
@@ -793,7 +794,7 @@ async fn get_classification_consume_detail_v1(consume_details: &mut Vec<ConsumeI
 async fn get_classification_consume_detail(consume_details: Vec<ConsumeIndexProd>) -> Result<Vec<ConsumeIndexProd>, anyhow::Error> {
 
     let mut consume_details_inner: Vec<ConsumeIndexProd> = Vec::new();
-    let es_client = get_elastic_conn(); 
+    let es_client = get_elastic_conn()?; 
     
     for mut consume_detail in consume_details {
         

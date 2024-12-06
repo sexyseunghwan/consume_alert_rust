@@ -106,7 +106,7 @@ async fn main() {
     // let data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     // let data = Arc::new(Mutex::new(data));
     // let mut handles = vec![];
-
+    
     // 첫 번째 슬라이스: 0~2
     // {
     //     let data = Arc::clone(&data);

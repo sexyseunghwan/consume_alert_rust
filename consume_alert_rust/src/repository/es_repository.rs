@@ -2,37 +2,73 @@ use crate::common::*;
 
 
 #[doc = "Elasticsearch connection object to be used in a single tone"]
-static ELASTICSEARCH_CLIENT: once_lazy<Arc<EsRepositoryPub>> = once_lazy::new(|| {
-    initialize_elastic_clients()
+static ELASTICSEARCH_CONN_POOL: once_lazy<Arc<Mutex<VecDeque<EsRepositoryPub>>>> = once_lazy::new(|| {
+    Arc::new(Mutex::new(initialize_elastic_clients()))
 });
 
 
 #[doc = "Function to initialize Elasticsearch connection instances"]
-pub fn initialize_elastic_clients() -> Arc<EsRepositoryPub> {
+pub fn initialize_elastic_clients() -> VecDeque<EsRepositoryPub> {
     
-    let es_host: Vec<String> = env::var("ES_DB_URL").expect("[ENV file read Error][initialize_db_clients()] 'ES_DB_URL' must be set").split(',').map(|s| s.to_string()).collect();
-    let es_id = env::var("ES_ID").expect("[ENV file read Error][initialize_db_clients()] 'ES_ID' must be set");
-    let es_pw = env::var("ES_PW").expect("[ENV file read Error][initialize_db_clients()] 'ES_PW' must be set");
+    info!("initialize_elastic_clients() START!");
 
-    /* Elasticsearch connection */ 
-    let es_client: EsRepositoryPub = match EsRepositoryPub::new(es_host, &es_id, &es_pw) {
-        Ok(es_client) => es_client,
-        Err(err) => {
-            error!("[DB Connection Error][initialize_db_clients()] Failed to create Elasticsearch client : {:?}", err);
-            panic!("[DB Connection Error][initialize_db_clients()] Failed to create Elasticsearch client : {:?}", err);
+    /* Number of Elasticsearch connection pool */
+    let pool_cnt = match env::var("ES_POOL_CNT") {
+        Ok(pool_cnt) => {
+            let pool_cnt = pool_cnt.parse::<usize>().unwrap_or(3);
+            pool_cnt
+        },
+        Err(e) => {
+            error!("[Error][initialize_elastic_clients()] {:?}", e);
+            panic!("{:?}", e);
         }
     };
-
-    Arc::new(es_client)
+    
+    let es_host: Vec<String> = env::var("ES_DB_URL")
+        .expect("[ENV file read Error][initialize_db_clients()] 'ES_DB_URL' must be set")
+        .split(',')
+        .map(|s| s.to_string())
+        .collect();
+    
+    let es_id = env::var("ES_ID").expect("[ENV file read Error][initialize_db_clients()] 'ES_ID' must be set");
+    let es_pw = env::var("ES_PW").expect("[ENV file read Error][initialize_db_clients()] 'ES_PW' must be set");
+    
+    let mut es_pool_vec: VecDeque<EsRepositoryPub> = VecDeque::new();
+    
+    for _conn_id in 0..pool_cnt {
+        
+        /* Elasticsearch connection */ 
+        let es_connection: EsRepositoryPub = match EsRepositoryPub::new(es_host.clone(), &es_id, &es_pw) {
+            Ok(es_client) => es_client,
+            Err(err) => {
+                error!("[DB Connection Error][initialize_db_clients()] Failed to create Elasticsearch client : {:?}", err);
+                panic!("[DB Connection Error][initialize_db_clients()] Failed to create Elasticsearch client : {:?}", err);
+            }
+        };
+        
+        es_pool_vec.push_back(es_connection);
+    }
+    
+    es_pool_vec
 }
 
-
+// Option<Arc<Mutex<EsRepositoryPub>>>
 #[doc = "Function to get elasticsearch connection"]
-pub fn get_elastic_conn() -> Arc<EsRepositoryPub> {
+pub fn get_elastic_conn() -> Result<EsRepositoryPub, anyhow::Error> {
+    
+    let mut pool = match ELASTICSEARCH_CONN_POOL.lock() {
+        Ok(pool) => pool,
+        Err(e) => {
+            return Err(anyhow!("[Error][get_elastic_conn()] {:?}", e));
+        }
+    };
+    
+    let es_repo = pool.pop_front()
+        .ok_or_else(|| anyhow!("[Error][get_elastic_conn()] Cannot Find Elasticsearch Connection"))?; 
+    
+    println!("es_repo= {:?}", es_repo);
 
-    let es_client = &ELASTICSEARCH_CLIENT;
-    Arc::clone(&es_client)
-
+    Ok(es_repo)  
 }
 
 
@@ -63,16 +99,16 @@ impl EsRepositoryPub {
 
         for url in es_url_vec {
     
-            let parse_url = format!("http://{}:{}@{}", es_id, es_pw, url);
+            let parse_url: String = format!("http://{}:{}@{}", es_id, es_pw, url);
             
-            let es_url = Url::parse(&parse_url)?;
-            let conn_pool = SingleNodeConnectionPool::new(es_url);
-            let transport = TransportBuilder::new(conn_pool)
+            let es_url: Url = Url::parse(&parse_url)?;
+            let conn_pool: SingleNodeConnectionPool = SingleNodeConnectionPool::new(es_url);
+            let transport: Transport = TransportBuilder::new(conn_pool)
                 .timeout(Duration::new(5,0))
                 .build()?;
             
-            let elastic_conn = Elasticsearch::new(transport);
-            let es_client = EsClient::new(url, elastic_conn);
+            let elastic_conn: Elasticsearch = Elasticsearch::new(transport);
+            let es_client: EsClient = EsClient::new(url, elastic_conn);
             
             es_clients.push(es_client);
         }
@@ -89,8 +125,8 @@ impl EsRepositoryPub {
     {
         let mut last_error = None;
         
-        // StdRng를 사용하여 Send 트레잇 문제 해결
-        let mut rng = StdRng::from_entropy(); // 랜덤 시드로 생성
+
+        let mut rng = StdRng::from_entropy();
         let mut shuffled_clients = self.es_clients.clone();
         shuffled_clients.shuffle(&mut rng);
         
@@ -107,6 +143,22 @@ impl EsRepositoryPub {
             "All Elasticsearch nodes failed. Last error: {:?}",
             last_error
         ))
+    }
+}
+
+
+impl Drop for EsRepositoryPub {
+
+    fn drop(&mut self) {
+        
+        match ELASTICSEARCH_CONN_POOL.lock() {
+            Ok(mut pool) => {
+                pool.push_back(self.clone());
+            },
+            Err(e) => {
+                error!("[Error][EsRepositoryPub -> drop()] {:?}", e);
+            }
+        }
     }
 }
 

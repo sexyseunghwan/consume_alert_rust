@@ -2,6 +2,7 @@ use chrono::format::parse;
 
 use crate::common::*;
 
+//use crate::repository::es_multi_repository::*;
 use crate::repository::es_repository::*;
 
 use crate::service::database_service::*;
@@ -128,7 +129,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
             self.db_service
                 .get_consume_detail_specific_period( permon_datetime.date_start,  permon_datetime.date_end).await?;
         
-
+        println!("here");
         println!("{:?}", cur_consume_detail_infos.1);
         // let mut versus_consume_detail_infos = 
         //     self.db_service
@@ -138,7 +139,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
 
         let duration = start.elapsed(); // 경과 시간 계산
         println!("Time elapsed in expensive_function() is: {:?}", duration);
-
+        
         // let cur_mon_total_cost_infos = 
         //     self.db_service
         //         .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_map).await?;
@@ -156,6 +157,8 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
 
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch. -> c"]
     async fn command_consumption(&self) -> Result<(), anyhow::Error> {
+
+        println!("operation");
 
         let split_args_vec = self.preprocess_string(":");
         
@@ -188,7 +191,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 "prodt_money": consume_cash_i64
             });
         
-        let es_client = get_elastic_conn(); 
+        let es_client = get_elastic_conn()?; 
         es_client.post_query(&document, "consuming_index_prod_new_test").await?;
             
         Ok(())
