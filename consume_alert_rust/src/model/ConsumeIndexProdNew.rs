@@ -7,7 +7,8 @@ use crate::model::ConsumingIndexProdType::*;
 pub struct ConsumeIndexProdNew {
     #[serde(rename = "@timestamp")]
     pub timestamp: String,
-    pub prodt_money: i64,
+    pub cur_timestamp: String,
     pub prodt_name: String,
+    pub prodt_money: i64,
     pub prodt_type: String
 }

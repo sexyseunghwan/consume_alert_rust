@@ -2,6 +2,7 @@ use chrono::format::parse;
 
 use crate::common::*;
 
+//::ConsumeIndexProdNew;
 //use crate::repository::es_multi_repository::*;
 use crate::repository::es_repository::*;
 
@@ -13,12 +14,14 @@ use crate::service::command_service::*;
 use crate::utils_modules::common_function::*;
 use crate::utils_modules::time_utils::*;
 use crate::utils_modules::numeric_utils::*;
+use crate::utils_modules::io_utils::*;
 
 use crate::model::PerDatetime::*;
 use crate::model::ProdtTypeInfo::*;
 use crate::model::TotalCostInfo::*;
 use crate::model::MealCheckIndex::*;
 use crate::model::ConsumingIndexProdType::*;
+use crate::model::ConsumeIndexProdNew::*;
 
 
 pub struct MainHandler<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> {
@@ -47,6 +50,9 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
 
         if input_text.starts_with("c ") {
             self.command_consumption().await?;
+        }
+        else if input_text.starts_with("cd") {
+            self.command_consumption_per_mon().await?;
         }
         else if input_text.starts_with("cm") {
             self.command_consumption_per_mon().await?;
@@ -157,11 +163,8 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch. -> c"]
     async fn command_consumption(&self) -> Result<(), anyhow::Error> {
 
-        println!("operation");
-
         let split_args_vec = self.preprocess_string(":");
-        
-        
+                
         if split_args_vec.len() != 2 {
 
             self.telebot_service
@@ -184,26 +187,75 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
             }
         };
         
-        let document: Value = json!({
-                "@timestamp": get_str_curdatetime(),
-                "prodt_name": consume_name,
-                "prodt_money": consume_cash_i64
-            });
+        /* Set the product type here */ 
+        let prodt_type = self.command_service.get_consume_type_judgement(consume_name).await?;
+        let cur_time = get_str_curdatetime();
+        
+        let con_index_prod = ConsumeIndexProdNew::new(
+            cur_time.clone(), 
+            cur_time.clone(), 
+            consume_name.to_string(), 
+            consume_cash_i64, prodt_type);
+        
+        let document = convert_json_from_struct(con_index_prod)?;
         
         let es_client = get_elastic_conn()?; 
-        es_client.post_query(&document, "consuming_index_prod_new_test").await?;
-            
+        es_client.post_query(&document, CONSUME_DETAIL).await?;
+        
+        // let format = document.to_string();
+        
+        // self.telebot_service
+        //     .send_message_confirm(&format)
+        //     .await?;
+
+
         Ok(())
     }
     
     
 
+    #[doc = "command handler: Function to erase the most recent consumption history data -> cd"]
+    pub async fn command_delete_recent_cunsumption(&self) -> Result<(), anyhow::Error> {
+        
+        let split_args_vec = self.preprocess_string(" ");
+        
+        
+
+        // let permon_datetime: PerDatetime = match split_args_vec.len() {
+
+        //     2 if split_args_vec.get(1)
+        //         .map_or(false, |d| validate_date_format(d, r"^\d{4}\.\d{2}\.\d{2}-\d{4}\.\d{2}\.\d{2}$")
+        //         .unwrap_or(false)) => 
+        //         {
+        //             let dates = split_args_vec[1].split('-').collect::<Vec<&str>>();
+
+        //             let start_date = NaiveDate::parse_from_str(dates[0], "%Y.%m.%d")
+        //                 .map_err(|e| anyhow!("[Error][command_consumption_per_term()] This does not fit the date format : {:?}", e))?;
+                    
+        //             let end_date = NaiveDate::parse_from_str(dates[1], "%Y.%m.%d")
+        //                 .map_err(|e| anyhow!("[Error][command_consumption_per_term()] This does not fit the date format : {:?}", e))?;
+
+        //             self.command_service
+        //                 .get_nmonth_to_current_date(start_date, end_date, -1)?
+        //         },
+        //     _ => {
+        //         self.telebot_service
+        //             .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) ctr 2023.07.07-2023.08.01")
+        //             .await?;
+
+        //         return Err(anyhow!("[Parameter Error][command_consumption_per_term()] Invalid format of 'text' variable entered as parameter. : {:?}", self.telebot_service.get_input_text()));           
+        //     }
+        // };
+
+
+        Ok(())
+    }
+
+
     #[doc = "command handler: Checks how much you have consumed during a month -> cm"]
     pub async fn command_consumption_per_mon(&self) -> Result<(), anyhow::Error> {
 
         let split_args_vec = self.preprocess_string(" ");
-
-        println!("{:?}", split_args_vec);
 
         let permon_datetime: PerDatetime = match split_args_vec.len() {
             

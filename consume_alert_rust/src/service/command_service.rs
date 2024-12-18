@@ -26,7 +26,7 @@ pub trait CommandService {
     fn get_consume_time(&self, consume_time_name_vec: &Vec<String>) -> Result<String, anyhow::Error>;
     fn get_string_vector_by_replace(&self, intput_str: &str, replacements: &Vec<&str>) -> Result<Vec<String>, anyhow::Error>;
     fn get_consume_prodt_money(&self, consume_price_vec: &Vec<String>, idx: usize) -> Result<i32, anyhow::Error>;
-    async fn get_consume_type_judgement(&self, prodt_name: &str) -> Result<String, anyhow::Error>;
+    
     //async fn get_check_word_consume_type(&self, ) -> Result<>
 
     /* Service */
@@ -34,6 +34,7 @@ pub trait CommandService {
     fn get_consume_prodt_name(&self, consume_time_name_vec: &Vec<String>, idx: usize) -> Result<String, anyhow::Error>;
     fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PerDatetime, anyhow::Error>;
     fn get_nday_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nday: i32) -> Result<PerDatetime, anyhow::Error>;
+    async fn get_consume_type_judgement(&self, prodt_name: &str) -> Result<String, anyhow::Error>;
     //async fn calculate_total_cost_info<'a>(&self, consume_map: &'a HashMap<String, ConsumingIndexProdType>, consume_index_prod_vector: &'a mut Vec<ConsumeIndexProd>) -> Result<TotalCostInfo, anyhow::Error>;
 }
 
@@ -59,6 +60,7 @@ impl CommandService for CommandServicePub {
             .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_type()] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
         
         let es_client = get_elastic_conn()?;
+        let cur_timestamp = get_str_curdatetime();
         let split_val = vec![",", "원"];
         let document: Value;
         
@@ -90,6 +92,7 @@ impl CommandService for CommandServicePub {
 
             document = json!({
                 "@timestamp": consume_time,
+                "cur_timestamp": cur_timestamp,
                 "prodt_name": consume_name,
                 "prodt_money": consume_price,
                 "prodt_type": prodt_type
@@ -123,6 +126,7 @@ impl CommandService for CommandServicePub {
             
             document = json!({
                 "@timestamp": consume_time,
+                "cur_timestamp": cur_timestamp,
                 "prodt_name": consume_name,
                 "prodt_money": consume_price,
                 "prodt_type": prodt_type
