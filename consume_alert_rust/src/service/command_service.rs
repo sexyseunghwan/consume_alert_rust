@@ -26,11 +26,11 @@ pub trait CommandService {
     fn get_consume_time(&self, consume_time_name_vec: &Vec<String>) -> Result<String, anyhow::Error>;
     fn get_string_vector_by_replace(&self, intput_str: &str, replacements: &Vec<&str>) -> Result<Vec<String>, anyhow::Error>;
     fn get_consume_prodt_money(&self, consume_price_vec: &Vec<String>, idx: usize) -> Result<i32, anyhow::Error>;
-    
+    async fn get_consume_type_judgement(&self, prodt_name: &str) -> Result<String, anyhow::Error>;
     //async fn get_check_word_consume_type(&self, ) -> Result<>
 
     /* Service */
-    async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<(), anyhow::Error>;
+    async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<Value, anyhow::Error>;
     fn get_consume_prodt_name(&self, consume_time_name_vec: &Vec<String>, idx: usize) -> Result<String, anyhow::Error>;
     fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PerDatetime, anyhow::Error>;
     fn get_nday_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nday: i32) -> Result<PerDatetime, anyhow::Error>;
@@ -52,8 +52,8 @@ impl CommandService for CommandServicePub {
     /// 
     /// # Returns
     /// * Result<(), anyhow::Error>
-    async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<(), anyhow::Error> {
-
+    async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<Value, anyhow::Error> {
+        
         let consume_type = split_args_vec
             .get(0)
             .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_type()] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
@@ -80,15 +80,19 @@ impl CommandService for CommandServicePub {
                 .collect();
             
             let consume_time = self.get_consume_time(&consume_time_vec)?;
-
+            
             let consume_name = split_args_vec
                 .get(4)
                 .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'split_args_vec' vector was accessed.", 4))?;
             
+            /* Set the product type here */ 
+            let prodt_type = self.get_consume_type_judgement(consume_name).await?;
+
             document = json!({
                 "@timestamp": consume_time,
                 "prodt_name": consume_name,
-                "prodt_money": consume_price
+                "prodt_money": consume_price,
+                "prodt_type": prodt_type
             });
             
         } else if consume_type.contains("삼성"){
@@ -114,10 +118,14 @@ impl CommandService for CommandServicePub {
                 .get(2)
                 .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 2))?;
             
+            /* Set the product type here */ 
+            let prodt_type = self.get_consume_type_judgement(consume_name).await?;
+            
             document = json!({
                 "@timestamp": consume_time,
                 "prodt_name": consume_name,
-                "prodt_money": consume_price
+                "prodt_money": consume_price,
+                "prodt_type": prodt_type
             });
             
         }  
@@ -125,9 +133,10 @@ impl CommandService for CommandServicePub {
             return Err(anyhow!("[Error][process_by_consume_type()] Variable 'consume_type' contains an undefined string."))
         }
         
-        es_client.post_query(&document, "consuming_index_prod_new_test").await?;
+        println!("{:?}", document);
+        es_client.post_query(&document, CONSUME_DETAIL).await?;
         
-        Ok(())
+        Ok(document)
     }
 
 
@@ -206,6 +215,66 @@ impl CommandService for CommandServicePub {
         Ok(consume_price)
     }
 
+
+    #[doc = ""]
+    /// # Arguments
+    /// * `prodt_name`
+    /// 
+    /// # Returns
+    /// * Result<String, anyhow::Error>
+    async fn get_consume_type_judgement(&self, prodt_name: &str) -> Result<String, anyhow::Error> {
+
+        let es_client = get_elastic_conn()?;
+
+        let query = json!({
+            "query": {
+                "match": {
+                    "keyword": prodt_name
+                }
+            }
+        });
+
+        let response_body = es_client.get_search_query(&query, CONSUME_TYPE).await?;
+        let hits = &response_body["hits"]["hits"];
+        
+        let results: Vec<ConsumingIndexProdType> = hits.as_array()
+            .ok_or_else(|| anyhow!("[Error][get_consume_type_judgement()] error"))?
+            .iter()
+            .map(|hit| {
+                hit.get("_source") 
+                    .ok_or_else(|| anyhow!("[Error][get_consume_type_judgement()] Missing '_source' field"))
+                    .and_then(|source| serde_json::from_value(source.clone()).map_err(Into::into))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        
+        if results.len() == 0 { 
+            return Ok(String::from("etc"))
+        } else {
+
+            let mut score_pair: HashMap<String, usize> = HashMap::new();
+            
+            for consume_type in &results {
+                let keyword_type = consume_type.keyword_type();
+                
+                /* Use the 'levenshtein' algorithm to determine word match */
+                let word_dist = levenshtein(keyword_type, prodt_name);
+                
+                let entry = score_pair.entry(keyword_type.to_string()).or_insert(word_dist);
+                *entry += word_dist;   
+            }
+
+            let top_score_consume_type = match score_pair.iter()
+                .min_by_key(|entry| entry.1)
+                .map(|(key, _)| key.to_string()) {
+                    Some(top_score_consume_type) => top_score_consume_type,
+                    None => {
+                        return Err(anyhow!("[Error][get_consume_type_judgement()] Data 'top_score_consume_type' cannot have a None value."))
+                    }   
+                };
+
+            return Ok(top_score_consume_type)
+        }
+    }
     
     
     #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` months"]

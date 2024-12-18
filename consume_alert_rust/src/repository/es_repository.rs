@@ -11,7 +11,7 @@ static ELASTICSEARCH_CONN_POOL: once_lazy<Arc<Mutex<VecDeque<EsRepositoryPub>>>>
 pub fn initialize_elastic_clients() -> VecDeque<EsRepositoryPub> {
     
     info!("initialize_elastic_clients() START!");
-
+    
     /* Number of Elasticsearch connection pool */
     let pool_cnt = match env::var("ES_POOL_CNT") {
         Ok(pool_cnt) => {
@@ -65,8 +65,8 @@ pub fn get_elastic_conn() -> Result<EsRepositoryPub, anyhow::Error> {
     
     let es_repo = pool.pop_front()
         .ok_or_else(|| anyhow!("[Error][get_elastic_conn()] Cannot Find Elasticsearch Connection"))?; 
-    
-    println!("es_repo= {:?}", es_repo);
+
+    info!("pool.len = {:?}",pool.len());
 
     Ok(es_repo)  
 }

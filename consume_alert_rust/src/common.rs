@@ -104,6 +104,6 @@ pub use rayon::prelude::*;
 
 
 /* Elasticsearch index name to use globally */
-pub static CONSUME_DETAIL: &str = "consuming_index_prod_new";
+pub static CONSUME_DETAIL: &str = "consuming_index_prod_new_v2";
 pub static CONSUME_TYPE: &str = "consuming_index_prod_type_v2";
 pub static MEAL_CHECK: &str = "meal_check_index";

@@ -78,8 +78,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         else if input_text.starts_with("list") {
             self.command_get_consume_type_list().await?;
         }
-        else 
-        {
+        else {
             self.command_consumption_auto().await?;
         }
 
@@ -549,14 +548,14 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
 
         Ok(())
     }
-
+    
     
     
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch."]
     pub async fn command_consumption_auto(&self) -> Result<(), anyhow::Error> {
-
+        
         let args = self.telebot_service.get_input_text();
-
+        
         let re: Regex = Regex::new(r"\[.*?\]\n?")?; 
         let replace_string = re.replace_all(&args, "").to_string(); /* Remove the '[~]' string. */
         
@@ -566,23 +565,28 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
             .filter(|s| !s.is_empty())
             .collect(); /* It convert the string into an array */
         
-
+        
         match self.command_service.process_by_consume_type(&split_args_vec).await {
-            Ok(res) => res,
+            Ok(res) => {
+                let format = res.to_string();
+                self.telebot_service
+                    .send_message_confirm(&format)
+                    .await?;
+
+            },
             Err(e) => {
                 self.telebot_service
                     .send_message_confirm("There is a problem with the parameter you entered. Please check again.")
                     .await?;
 
-                return Err(e)
+                return Err(anyhow!(e))
             }
         }
         
         Ok(())
     }
     
-
-
+    
 
     /* ==================================== Python API ==================================== */
     /* ==================================================================================== */

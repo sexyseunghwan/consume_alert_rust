@@ -43,8 +43,8 @@ pub struct DBServicePub;
 
 #[async_trait]
 impl DBService for DBServicePub {
-
-
+    
+    
     // #[doc = "Function to get ProdtTypeInfo keyword_type information from Elasticsearch"]
     // async fn get_classification_type(&self, index_name: &str) -> Result<Vec<String>, anyhow::Error> {
         
@@ -149,13 +149,6 @@ impl DBService for DBServicePub {
     //     //     }
 
     //         //keyword_type_hashmap.insert(keyword_type, results);
-
-    //         // 아래처럼 하면 너무 복잡해지는데?
-    
-    // 전위 순회는 뿌리-> 왼쪽 자식 ->오른쪽 자식 순
-    // 중위 순회는 왼쪽자식-> 뿌리-> 오른쪽 자식
-    // 후위 순회는 왼쪽자식->오른쪽 자식-> 뿌리
-    // 층별 순회는 그냥 노드의 순서대로
     
     //         // if let Some(keywords) = inner_res["hits"]["hits"].as_array() {
     //         //     for key_word in keywords {
@@ -234,7 +227,7 @@ impl DBService for DBServicePub {
         };
         
         //let duration = start.elapsed(); // 경과 시간 계산
-
+        
         let mut results: Vec<ConsumeIndexProd> = hits.as_array()
             .ok_or_else(|| anyhow!("[Error][total_cost_detail_specific_period()] error"))?
             .iter()
@@ -251,12 +244,12 @@ impl DBService for DBServicePub {
 
         /* 어떤 소비타입인지 분류해주는 로직필요 */
         let total = results.len();
-        let chunk_size = total / 5;
+        let chunk_size = total / 2;
         
-        let tasks: Vec<_> = (0..5).map(|i| {
+        let tasks: Vec<_> = (0..2).map(|i| {
             
             let start = i * chunk_size;
-            let end = if i == 4 { total } else { start + chunk_size };
+            let end = if i == 1 { total } else { start + chunk_size };
             let slice = results[start..end].to_vec();  
                       
             tokio::spawn(async move {
@@ -463,8 +456,8 @@ impl DBService for DBServicePub {
             "query": {
                 "range": {
                     "@timestamp": {
-                        "gte": "2023-11-27",//&current_date,
-                        "lte": "2023-11-27"//&current_date
+                        "gte": "2023-11-27",    //&current_date,
+                        "lte": "2023-11-27"     //&current_date
                     }
                 }
             },
