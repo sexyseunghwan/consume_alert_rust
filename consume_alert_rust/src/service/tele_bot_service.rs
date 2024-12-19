@@ -24,7 +24,7 @@ pub trait TelebotService {
     where
     'life1: 'life2,
     T: Send + Sync;
-
+    
     async fn send_message_consume_split
     (
         &self,
@@ -54,6 +54,8 @@ pub trait TelebotService {
 
 
     fn get_input_text(&self) -> String;
+
+    async fn send_message_struct_info<T: Serialize + Sync>(&self, obj_struct: &T) -> Result<(), anyhow::Error>;
 
 }
 
@@ -144,18 +146,61 @@ impl TelebotServicePub {
 
 #[async_trait]
 impl TelebotService for TelebotServicePub {
+    
 
+    #[doc = "This async function serializes a generic struct into a formatted string"]
+    async fn send_message_struct_info<T: Serialize + Sync>(&self, obj_struct: &T) -> Result<(), anyhow::Error> {
+
+        let obj_val: Value = serde_json::to_value(obj_struct)
+            .map_err(|err| anyhow!("[Error][convert_json_from_struct()] Failed to serialize struct to JSON: {}", err))?;
+
+
+        if let Some(obj) = obj_val.as_object() {
+            
+            let mut result_string = String::new();
+            
+            //.to_formatted_string(&Locale::ko)
+
+            for (key, value) in obj {
+                
+                match value {
+                    Value::Number(num) => {
+                        
+                    },
+                    _ => {
+                        
+                    }
+                }
+                //result_string.push_str(&format!("{}: {}, \n", key, value));
+            }
+            
+            if !result_string.is_empty() {
+                for _n in 0..3 {
+                    result_string.pop(); 
+                }
+            }
+            
+            self.send_message_confirm(&result_string).await?;
+
+        } else {
+            return Err(anyhow!("Parsed JSON is not an object"))
+        }
+        
+        Ok(())
+    }
+    
+    
     #[doc = "Send message via Telegram Bot"]
     async fn tele_bot_send_msg(&self, msg: &str) -> Result<(), anyhow::Error> {
         
         self.bot.send_message(self.chat_id, msg)
             .await
             .context("[Telebot Error][tele_bot_send_msg()] Failed to send command response.")?;
-
+        
         Ok(())
     }
     
-
+    
     #[doc = "Retry sending messages"]
     async fn send_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error> {
         self.try_send_operation(|| self.tele_bot_send_msg(msg), 6, Duration::from_secs(40)).await
@@ -246,8 +291,8 @@ impl TelebotService for TelebotServicePub {
             &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)) 
         ).await
     }
-
-
+    
+    
     #[doc = "Function that sends messages related to consumption type history"]
     async fn send_message_consume_type(
         &self,
@@ -273,6 +318,7 @@ impl TelebotService for TelebotServicePub {
         ).await
     }
 
+
     #[doc = "Function that sends "]    
     async fn send_message_consume_type_list(
         &self,
@@ -288,6 +334,7 @@ impl TelebotService for TelebotServicePub {
         ).await
 
     } 
+    
     
     #[doc = "String entered through `Telegram`"] 
     fn get_input_text(&self) -> String {

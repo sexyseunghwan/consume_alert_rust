@@ -197,16 +197,14 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
             consume_name.to_string(), 
             consume_cash_i64, prodt_type);
         
-        let document = convert_json_from_struct(con_index_prod)?;
+        let document = convert_json_from_struct(&con_index_prod)?;
         
         let es_client = get_elastic_conn()?; 
         es_client.post_query(&document, CONSUME_DETAIL).await?;
         
-        // let format = document.to_string();
-        
-        // self.telebot_service
-        //     .send_message_confirm(&format)
-        //     .await?;
+        self.telebot_service
+            .send_message_struct_info(&con_index_prod)
+            .await?;
 
 
         Ok(())
@@ -278,8 +276,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                     .parse()?;
                 
                 //get_parsed_value_from_vector(&split_args_vec, 1)?;
-                
-
+                                
                 let date_start = get_naivedate(year, month, 1)?;
                 let date_end = get_lastday_naivedate(date_start)?;
 
