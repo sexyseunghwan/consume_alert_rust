@@ -48,44 +48,20 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         
         let input_text = self.telebot_service.get_input_text();
 
-        if input_text.starts_with("c ") {
-            self.command_consumption().await?;
-        }
-        else if input_text.starts_with("cd") {
-            self.command_delete_recent_cunsumption().await?;
-        }
-        else if input_text.starts_with("cm") {
-            self.command_consumption_per_mon().await?;
-        }
-        else if input_text.starts_with("ctr") {
-            self.command_consumption_per_term().await?;
-        }
-        else if input_text.starts_with("ct") {
-            self.command_consumption_per_day().await?;
-        }
-        else if input_text.starts_with("cs") {
-            self.command_consumption_per_salary().await?;
-        }
-        else if input_text.starts_with("cw") {
-            self.command_consumption_per_week().await?;
-        }
-        else if input_text.starts_with("mc") {
-            self.command_record_fasting_time().await?;
-        }
-        else if input_text.starts_with("mt") {
-            self.command_check_fasting_time().await?;
-        }
-        else if input_text.starts_with("md") {
-            self.command_delete_fasting_time().await?;
-        }
-        else if input_text.starts_with("cy") {
-            self.command_consumption_per_year().await?;
-        }
-        else if input_text.starts_with("list") {
-            self.command_get_consume_type_list().await?;
-        }
-        else {
-            self.command_consumption_auto().await?;
+        match input_text.split_whitespace().next().unwrap_or("") {
+            "c" => self.command_consumption().await?,
+            "cd" => self.command_delete_recent_cunsumption().await?,
+            "cm" => self.command_consumption_per_mon().await?,
+            "ctr" => self.command_consumption_per_term().await?,
+            "ct" => self.command_consumption_per_day().await?,
+            "cs" => self.command_consumption_per_salary().await?,
+            "cw" => self.command_consumption_per_week().await?,
+            "mc" => self.command_record_fasting_time().await?,
+            "mt" => self.command_check_fasting_time().await?,
+            "md" => self.command_delete_fasting_time().await?,
+            "cy" => self.command_consumption_per_year().await?,
+            "list" => self.command_get_consume_type_list().await?,
+            _ => self.command_consumption_auto().await?, /* Basic Action */ 
         }
 
         Ok(())
@@ -118,7 +94,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     /// # Returns
     /// * Result<(), anyhow::Error>
     async fn process_calculate_and_post_python_api(&self, permon_datetime: PerDatetime) -> Result<(), anyhow::Error> {
-
+        
         /* Consumption Type Information Vectors - Get all classification of consumption data `ex) Meals, cafes, etc...` */
         // let consume_type_vec: Vec<ProdtTypeInfo> = 
         //     self.db_service
@@ -128,30 +104,30 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         //     self.db_service
         //         .get_classification_consumption_type("consuming_index_prod_type").await?;
         
-        let start = std::time::Instant::now(); // 시작 시간 측정
+        // let start = std::time::Instant::now(); // 시작 시간 측정
 
-        let mut cur_consume_detail_infos = 
+        // let mut cur_consume_detail_infos = 
+        //     self.db_service
+        //         .get_consume_detail_specific_period( permon_datetime.date_start,  permon_datetime.date_end).await?;
+        
+        // println!("here");
+        // println!("{:?}", cur_consume_detail_infos.1);
+        // // let mut versus_consume_detail_infos = 
+        // //     self.db_service
+        // //         .get_consume_detail_specific_period( permon_datetime.n_date_start,  permon_datetime.n_date_end).await?;
+        
+
+
+        // let duration = start.elapsed(); // 경과 시간 계산
+        // println!("Time elapsed in expensive_function() is: {:?}", duration);
+        
+        let cur_mon_total_cost_infos = 
             self.db_service
-                .get_consume_detail_specific_period( permon_datetime.date_start,  permon_datetime.date_end).await?;
+                .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_map).await?;
         
-        println!("here");
-        println!("{:?}", cur_consume_detail_infos.1);
-        // let mut versus_consume_detail_infos = 
-        //     self.db_service
-        //         .get_consume_detail_specific_period( permon_datetime.n_date_start,  permon_datetime.n_date_end).await?;
-        
-
-
-        let duration = start.elapsed(); // 경과 시간 계산
-        println!("Time elapsed in expensive_function() is: {:?}", duration);
-        
-        // let cur_mon_total_cost_infos = 
-        //     self.db_service
-        //         .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_map).await?;
-        
-        // let pre_mon_total_cost_infos = 
-        //     self.db_service
-        //         .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_map).await?;
+        let pre_mon_total_cost_infos = 
+            self.db_service
+                .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_map).await?;
         
         /* Python api */
         //self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
@@ -436,9 +412,9 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 return Err(anyhow!("[Parameter Error][command_consumption_per_day()] Invalid format of 'text' variable entered as parameter. : {:?}", self.telebot_service.get_input_text()));
             }
         };
-
+        
         println!("{:?}", permon_datetime);
-
+        
         self.process_calculate_and_post_python_api(permon_datetime).await?;
         
         Ok(())
@@ -492,14 +468,14 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
 
         let permon_datetime: PerDatetime = match split_args_vec.len() {
             1 => {
-
+                
                 let cur_year = get_current_kor_naivedate().year();
                 let start_date = get_naivedate(cur_year, 1, 1)?;  
                 let end_date = get_naivedate(cur_year, 12, 31)?; 
                 
                 self.command_service
                     .get_nmonth_to_current_date(start_date, end_date, -12)?
-
+                
             },
             2 if split_args_vec
                 .get(1)

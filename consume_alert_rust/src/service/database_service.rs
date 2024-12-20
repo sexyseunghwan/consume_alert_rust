@@ -799,7 +799,7 @@ async fn get_classification_consume_detail_v1(consume_details: &mut Vec<ConsumeI
     for consume_detail in consume_details {
 
         let prodt_name = consume_detail.prodt_name();
-
+        
         let query = json!({
             "query": {
                 "match": {
