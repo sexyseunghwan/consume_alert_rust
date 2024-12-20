@@ -1,3 +1,5 @@
+use futures::Sink;
+
 use crate::common::*;
 
 use crate::service::database_service::*;
@@ -7,6 +9,7 @@ use crate::utils_modules::numeric_utils::*;
 use crate::utils_modules::time_utils::*;
 use crate::utils_modules::file_manager_utils::*;
 use crate::utils_modules::common_function::*;
+use crate::utils_modules::io_utils::*;
 
 use crate::model::TotalCostInfo::*;
 use crate::model::ToPythonGraphLine::*;
@@ -25,12 +28,12 @@ pub trait CommandService {
     /* inner Common Service */
     fn get_consume_time(&self, consume_time_name_vec: &Vec<String>) -> Result<String, anyhow::Error>;
     fn get_string_vector_by_replace(&self, intput_str: &str, replacements: &Vec<&str>) -> Result<Vec<String>, anyhow::Error>;
-    fn get_consume_prodt_money(&self, consume_price_vec: &Vec<String>, idx: usize) -> Result<i32, anyhow::Error>;
+    fn get_consume_prodt_money(&self, consume_price_vec: &Vec<String>, idx: usize) -> Result<i64, anyhow::Error>;
     
     //async fn get_check_word_consume_type(&self, ) -> Result<>
 
     /* Service */
-    async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<Value, anyhow::Error>;
+    async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<ConsumeIndexProdNew, anyhow::Error>;
     fn get_consume_prodt_name(&self, consume_time_name_vec: &Vec<String>, idx: usize) -> Result<String, anyhow::Error>;
     fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PerDatetime, anyhow::Error>;
     fn get_nday_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nday: i32) -> Result<PerDatetime, anyhow::Error>;
@@ -45,7 +48,8 @@ pub struct CommandServicePub;
 #[async_trait]
 impl CommandService for CommandServicePub {
     
-    
+
+
     #[doc = "Process processing function based on the type of payment"]
     /// # Arguments
     /// * `split_args_vec` - Array with strings as elements : Payment-related information vector: 
@@ -53,7 +57,7 @@ impl CommandService for CommandServicePub {
     /// 
     /// # Returns
     /// * Result<(), anyhow::Error>
-    async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<Value, anyhow::Error> {
+    async fn process_by_consume_type(&self, split_args_vec: &Vec<String>) -> Result<ConsumeIndexProdNew, anyhow::Error> {
         
         let consume_type = split_args_vec
             .get(0)
@@ -62,7 +66,7 @@ impl CommandService for CommandServicePub {
         let es_client = get_elastic_conn()?;
         let cur_timestamp = get_str_curdatetime();
         let split_val = vec![",", "원"];
-        let document: Value;
+        let res_struct: ConsumeIndexProdNew;
         
         if consume_type.contains("nh") {
             
@@ -89,14 +93,8 @@ impl CommandService for CommandServicePub {
             
             /* Set the product type here */ 
             let prodt_type = self.get_consume_type_judgement(consume_name).await?;
-
-            document = json!({
-                "@timestamp": consume_time,
-                "cur_timestamp": cur_timestamp,
-                "prodt_name": consume_name,
-                "prodt_money": consume_price,
-                "prodt_type": prodt_type
-            });
+            
+            res_struct = ConsumeIndexProdNew::new(consume_time, cur_timestamp, consume_name.clone(), consume_price, prodt_type);
             
         } else if consume_type.contains("삼성"){
 
@@ -124,23 +122,16 @@ impl CommandService for CommandServicePub {
             /* Set the product type here */ 
             let prodt_type = self.get_consume_type_judgement(consume_name).await?;
             
-            document = json!({
-                "@timestamp": consume_time,
-                "cur_timestamp": cur_timestamp,
-                "prodt_name": consume_name,
-                "prodt_money": consume_price,
-                "prodt_type": prodt_type
-            });
+            res_struct = ConsumeIndexProdNew::new(consume_time, cur_timestamp, consume_name.clone(), consume_price, prodt_type);
             
         }  
         else {
             return Err(anyhow!("[Error][process_by_consume_type()] Variable 'consume_type' contains an undefined string."))
         }
         
-        println!("{:?}", document);
-        es_client.post_query(&document, CONSUME_DETAIL).await?;
-        
-        Ok(document)
+        es_client.post_query_struct(&res_struct, CONSUME_DETAIL).await?;
+
+        Ok(res_struct)
     }
 
 
@@ -209,12 +200,12 @@ impl CommandService for CommandServicePub {
     
 
     #[doc = "Function that parses the money spent"]
-    fn get_consume_prodt_money(&self, consume_price_vec: &Vec<String>, idx: usize) -> Result<i32, anyhow::Error> {
+    fn get_consume_prodt_money(&self, consume_price_vec: &Vec<String>, idx: usize) -> Result<i64, anyhow::Error> {
 
         let consume_price = consume_price_vec
             .get(idx)
             .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_prodt_money()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed.", idx))?
-            .parse::<i32>()?;
+            .parse::<i64>()?;
         
         Ok(consume_price)
     }
@@ -281,6 +272,7 @@ impl CommandService for CommandServicePub {
     }
     
     
+    
     #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` months"]
     /// # Arguments
     /// * `date_start`  
@@ -290,9 +282,6 @@ impl CommandService for CommandServicePub {
     /// # Returns
     /// * Result<PermonDatetime, anyhow::Error>
     fn get_nmonth_to_current_date(&self, date_start: NaiveDate, date_end: NaiveDate, nmonth: i32) -> Result<PerDatetime, anyhow::Error> {
-
-        println!("date_start: {:?}", date_start);
-        println!("date_end: {:?}", date_end);
         
         let n_month_start = get_add_month_from_naivedate(date_start, nmonth)
             .map_err(|e| anyhow!("{:?} -> in get_nmonth_to_current_date().n_month_start", e))?;
@@ -305,8 +294,7 @@ impl CommandService for CommandServicePub {
         Ok(per_mon_datetim)
     }
     
-
-
+    
     #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` days"]
     /// # Arguments
     /// * `date_start`  
@@ -325,7 +313,7 @@ impl CommandService for CommandServicePub {
         Ok(per_day_datetim)
     }
     
-
+    
     // #[doc = ""]
     // async fn calculate_total_cost_info<'a>(&self, consume_map: &'a HashMap<String, ConsumingIndexProdType>, consume_index_prod_vector: &'a mut Vec<ConsumeIndexProd>) -> Result<TotalCostInfo, anyhow::Error> {
 

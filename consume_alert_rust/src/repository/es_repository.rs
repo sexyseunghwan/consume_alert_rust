@@ -1,5 +1,7 @@
 use crate::common::*;
 
+use crate::utils_modules::io_utils::*;
+
 
 #[doc = "Elasticsearch connection object to be used in a single tone"]
 static ELASTICSEARCH_CONN_POOL: once_lazy<Arc<Mutex<VecDeque<EsRepositoryPub>>>> = once_lazy::new(|| {
@@ -77,6 +79,8 @@ pub trait EsRepository {
     async fn get_search_query(&self, es_query: &Value, index_name: &str) -> Result<Value, anyhow::Error>;
     async fn post_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error>;
     async fn delete_query(&self, doc_id: &str, index_name: &str) -> Result<(), anyhow::Error>;
+
+    async fn post_query_struct<T: Serialize + Sync>(&self, param_struct: &T, index_name: &str) -> Result<(), anyhow::Error>;
 }
 
 
@@ -147,6 +151,7 @@ impl EsRepositoryPub {
 }
 
 
+/* RAII pattern */
 impl Drop for EsRepositoryPub {
 
     fn drop(&mut self) {
@@ -191,6 +196,16 @@ impl EsRepository for EsRepositoryPub {
             Err(anyhow!("[Elasticsearch Error][node_search_query()] response status is failed: {:?}", error_body))
         }
     }
+    
+    
+    #[doc = "Function that EXECUTES elasticsearch queries - indexing struct"]
+    async fn post_query_struct<T: Serialize + Sync>(&self, param_struct: &T, index_name: &str) -> Result<(), anyhow::Error> {
+        
+        let struct_json = convert_json_from_struct(param_struct)?;
+        self.post_query(&struct_json, index_name).await?;
+        
+        Ok(())
+    }   
 
     
     #[doc = "Function that EXECUTES elasticsearch queries - indexing"]
@@ -220,14 +235,26 @@ impl EsRepository for EsRepositoryPub {
         
     #[doc = "Function that EXECUTES elasticsearch queries - delete"]
     async fn delete_query(&self, doc_id: &str, index_name: &str) -> Result<(), anyhow::Error> {
-        
+
         let response = self.execute_on_any_node(|es_client| async move {
-    
+            
+            // let body = serde_json::json!({
+            //     "query": {
+            //         "ids": {
+            //             "values": [doc_id]
+            //         }
+            //     }
+            // });
+            
             let response = es_client
                 .es_conn
+                //.delete_by_query(DeleteByQueryParts::Index(&[index_name]))
+                //.body(body)
                 .delete(DeleteParts::IndexId(index_name, doc_id))
                 .send()
                 .await?;
+
+            println!("{:?}", response);
 
             Ok(response)
         })

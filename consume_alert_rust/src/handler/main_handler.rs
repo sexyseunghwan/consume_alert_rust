@@ -52,7 +52,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
             self.command_consumption().await?;
         }
         else if input_text.starts_with("cd") {
-            self.command_consumption_per_mon().await?;
+            self.command_delete_recent_cunsumption().await?;
         }
         else if input_text.starts_with("cm") {
             self.command_consumption_per_mon().await?;
@@ -159,7 +159,8 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         Ok(())
     } 
     
-
+    
+    
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch. -> c"]
     async fn command_consumption(&self) -> Result<(), anyhow::Error> {
 
@@ -206,50 +207,50 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
             .send_message_struct_info(&con_index_prod)
             .await?;
 
-
         Ok(())
     }
     
     
-
+    
     #[doc = "command handler: Function to erase the most recent consumption history data -> cd"]
     pub async fn command_delete_recent_cunsumption(&self) -> Result<(), anyhow::Error> {
         
         let split_args_vec = self.preprocess_string(" ");
         
+        match split_args_vec.len() {
+
+            1 => {
+                
+                let recent_consumes: Vec<(String, ConsumeIndexProdNew)> = 
+                    self.db_service.get_recent_consume_info_order_by("cur_timestamp", 1).await?;
+                
+                let recent_consume_info = recent_consumes
+                    .get(0)
+                    .ok_or_else(|| anyhow!("[Error][command_delete_recent_cunsumption()] doc_id is not exists."))?;
+                
+                let doc_id = &recent_consume_info.0;
+                let consume_info = &recent_consume_info.1;
+                
+                /* Delete Index */ 
+                self.db_service.delete_es_doc(CONSUME_DETAIL, doc_id).await?;
+
+                /* To confirm the deleted document. */ 
+                self.telebot_service
+                    .send_message_struct_info(consume_info)
+                    .await?;
+            },
+            _ => {
+                self.telebot_service
+                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) cd")
+                    .await?;
+            }
+        }
         
-
-        // let permon_datetime: PerDatetime = match split_args_vec.len() {
-
-        //     2 if split_args_vec.get(1)
-        //         .map_or(false, |d| validate_date_format(d, r"^\d{4}\.\d{2}\.\d{2}-\d{4}\.\d{2}\.\d{2}$")
-        //         .unwrap_or(false)) => 
-        //         {
-        //             let dates = split_args_vec[1].split('-').collect::<Vec<&str>>();
-
-        //             let start_date = NaiveDate::parse_from_str(dates[0], "%Y.%m.%d")
-        //                 .map_err(|e| anyhow!("[Error][command_consumption_per_term()] This does not fit the date format : {:?}", e))?;
-                    
-        //             let end_date = NaiveDate::parse_from_str(dates[1], "%Y.%m.%d")
-        //                 .map_err(|e| anyhow!("[Error][command_consumption_per_term()] This does not fit the date format : {:?}", e))?;
-
-        //             self.command_service
-        //                 .get_nmonth_to_current_date(start_date, end_date, -1)?
-        //         },
-        //     _ => {
-        //         self.telebot_service
-        //             .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) ctr 2023.07.07-2023.08.01")
-        //             .await?;
-
-        //         return Err(anyhow!("[Parameter Error][command_consumption_per_term()] Invalid format of 'text' variable entered as parameter. : {:?}", self.telebot_service.get_input_text()));           
-        //     }
-        // };
-
-
         Ok(())
     }
-
-
+    
+    
+    
     #[doc = "command handler: Checks how much you have consumed during a month -> cm"]
     pub async fn command_consumption_per_mon(&self) -> Result<(), anyhow::Error> {
 
@@ -274,8 +275,6 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 let month: u32 = dates.get(1)
                     .ok_or_else(|| anyhow!("test"))?
                     .parse()?;
-                
-                //get_parsed_value_from_vector(&split_args_vec, 1)?;
                                 
                 let date_start = get_naivedate(year, month, 1)?;
                 let date_end = get_lastday_naivedate(date_start)?;
@@ -306,13 +305,13 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         let split_args_vec = self.preprocess_string(" ");
         
         let permon_datetime: PerDatetime = match split_args_vec.len() {
-
+            
             2 if split_args_vec.get(1)
                 .map_or(false, |d| validate_date_format(d, r"^\d{4}\.\d{2}\.\d{2}-\d{4}\.\d{2}\.\d{2}$")
                 .unwrap_or(false)) => 
                 {
                     let dates = split_args_vec[1].split('-').collect::<Vec<&str>>();
-
+                    
                     let start_date = NaiveDate::parse_from_str(dates[0], "%Y.%m.%d")
                         .map_err(|e| anyhow!("[Error][command_consumption_per_term()] This does not fit the date format : {:?}", e))?;
                     
@@ -326,7 +325,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 self.telebot_service
                     .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) ctr 2023.07.07-2023.08.01")
                     .await?;
-
+                
                 return Err(anyhow!("[Parameter Error][command_consumption_per_term()] Invalid format of 'text' variable entered as parameter. : {:?}", self.telebot_service.get_input_text()));           
             }
         };
@@ -614,14 +613,11 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
             .filter(|s| !s.is_empty())
             .collect(); /* It convert the string into an array */
         
-        
         match self.command_service.process_by_consume_type(&split_args_vec).await {
             Ok(res) => {
-                let format = res.to_string();
                 self.telebot_service
-                    .send_message_confirm(&format)
+                    .send_message_struct_info(&res)
                     .await?;
-
             },
             Err(e) => {
                 self.telebot_service

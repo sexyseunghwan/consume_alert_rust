@@ -56,7 +56,7 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2024-09-12 Seunghwan Shin       # [v.2.2.0] Add list command
               2024-09-17 Seunghwan Shin       # [v.2.2.1] Manage logs with ''KAFKA'' -> Elasticsearch with 'logstash'
               2024-09-19 Seunghwan Shin       # [v.2.2.2] Lowercase Input Processing
-              2024-00-00 Seunghwan Shin       # [v.3.0.0]
+              2024-00-00 Seunghwan Shin       # [v.3.0.0] 
 */ 
 mod common;
 use common::*;

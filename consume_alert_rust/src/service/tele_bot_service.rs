@@ -149,29 +149,36 @@ impl TelebotService for TelebotServicePub {
     
 
     #[doc = "This async function serializes a generic struct into a formatted string"]
+    /// # Arguments
+    /// * obj_struct - Distinguishing characters
+    /// 
+    /// # Returns
+    /// * Result<(), anyhow::Error>
     async fn send_message_struct_info<T: Serialize + Sync>(&self, obj_struct: &T) -> Result<(), anyhow::Error> {
 
         let obj_val: Value = serde_json::to_value(obj_struct)
             .map_err(|err| anyhow!("[Error][convert_json_from_struct()] Failed to serialize struct to JSON: {}", err))?;
-
-
+        
         if let Some(obj) = obj_val.as_object() {
             
             let mut result_string = String::new();
-            
-            //.to_formatted_string(&Locale::ko)
 
             for (key, value) in obj {
                 
+                let mut value_str: String = String::from("");
+                
                 match value {
                     Value::Number(num) => {
-                        
+                        if let Some(n) = num.as_i64() {
+                            value_str = n.to_formatted_string(&Locale::ko);
+                        }
                     },
                     _ => {
-                        
+                        value_str = value.to_string();
                     }
                 }
-                //result_string.push_str(&format!("{}: {}, \n", key, value));
+
+                result_string.push_str(&format!("{}: {}, \n", key, value_str));
             }
             
             if !result_string.is_empty() {

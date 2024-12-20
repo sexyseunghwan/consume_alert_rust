@@ -1,5 +1,3 @@
-use std::hash::Hash;
-
 use crate::common::*;
 
 //use crate::service::es_service::*;
@@ -19,6 +17,7 @@ use crate::model::ToPythonGraphLine::*;
 use crate::model::MealCheckIndex::*;
 use crate::model::ConsumingIndexProdType::*;
 use crate::model::ConsumeIndexProd::*;
+use crate::model::ConsumeIndexProdNew::*;
 
 
 #[async_trait]
@@ -35,6 +34,9 @@ pub trait DBService {
     async fn get_recent_mealtime_data_from_elastic(&self, query_size: i32) -> Result<Vec<MealCheckIndex>, anyhow::Error>;
     
     async fn post_model_to_es<T: Serialize + Send>(&self, index_name: &str, model: T) -> Result<(), anyhow::Error>;
+
+    async fn get_recent_consume_info_order_by(&self, order_by_info: &str, size: i64) -> Result<Vec<(String, ConsumeIndexProdNew)>, anyhow::Error>;
+    async fn delete_es_doc(&self, index_name: &str, doc_id: &str) -> Result<(), anyhow::Error>;
 }   
 
 #[derive(Debug, Getters, new)]
@@ -43,6 +45,67 @@ pub struct DBServicePub;
 
 #[async_trait]
 impl DBService for DBServicePub {
+    
+    
+    #[doc = "Function to remove specific document from index"]
+    /// # Arguments
+    /// * `index_name`
+    /// * `doc_id`
+    /// 
+    /// # Returns
+    /// * Result<(), anyhow::Error>
+    async fn delete_es_doc(&self, index_name: &str, doc_id: &str) -> Result<(), anyhow::Error> {
+
+        let es_client = get_elastic_conn()?;
+        es_client.delete_query(doc_id, index_name).await?;
+
+        info!("Delete success - index: {}, doc_id: {}", index_name, doc_id);
+
+        Ok(())
+    }
+    
+
+    #[doc = ""]
+    /// # Arguments
+    /// * `order_by_info`
+    /// 
+    /// # Returns
+    /// * Result<(&str,ConsumeIndexProdNew), anyhow::Error>
+    async fn get_recent_consume_info_order_by(&self, order_by_info: &str, size: i64) -> Result<Vec<(String, ConsumeIndexProdNew)>, anyhow::Error> {
+        
+        let es_client = get_elastic_conn()?;
+        let mut res_vec: Vec<(String, ConsumeIndexProdNew)> = Vec::new();
+
+        /* Get the most up-to-date data through 'order_by' information. */ 
+        let query = json!({
+            "sort": {
+                order_by_info : "desc"
+            },
+            "size": size
+        });
+        
+        /* The information and ID of the consumption data are obtained and returned. */ 
+        let response_body = es_client.get_search_query(&query, CONSUME_DETAIL).await?;
+        let hits = &response_body["hits"]["hits"];
+
+        if let Some(hit_array) = hits.as_array() {
+            for hit in hit_array {
+                let doc_id = hit.get("_id")
+                    .ok_or_else(|| anyhow!("[Error][get_recent_consume_info_order_by()] Missing 'doc_id' field"))?
+                    .to_string();
+
+                let doc_id_trim = doc_id.trim_matches('"');
+
+                let consume_info: ConsumeIndexProdNew = hit.get("_source")
+                    .ok_or_else(|| anyhow!("[Error][get_recent_consume_info_order_by()] Missing '_source' field"))
+                    .and_then(|source| serde_json::from_value(source.clone()).map_err(Into::into))?;
+                
+                res_vec.push((doc_id_trim.to_string(), consume_info));
+            }
+        }  
+        
+        Ok(res_vec)
+    }
     
     
     // #[doc = "Function to get ProdtTypeInfo keyword_type information from Elasticsearch"]
@@ -176,12 +239,8 @@ impl DBService for DBServicePub {
         
     //     //Ok(keyword_type_hashmap)
     // }
-
     
     
-
-
-
     #[doc = "Functions that show the details of total consumption and consumption over a specific period of time"]
     /// # Arguments
     /// * `start_date`      
