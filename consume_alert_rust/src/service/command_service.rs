@@ -228,7 +228,7 @@ impl CommandService for CommandServicePub {
                 }
             }
         });
-
+        
         let response_body = es_client.get_search_query(&query, CONSUME_TYPE).await?;
         let hits = &response_body["hits"]["hits"];
         
@@ -245,7 +245,7 @@ impl CommandService for CommandServicePub {
         if results.len() == 0 { 
             return Ok(String::from("etc"))
         } else {
-
+            
             let mut score_pair: HashMap<String, usize> = HashMap::new();
             
             for consume_type in &results {
@@ -257,7 +257,7 @@ impl CommandService for CommandServicePub {
                 let entry = score_pair.entry(keyword_type.to_string()).or_insert(word_dist);
                 *entry += word_dist;   
             }
-
+            
             let top_score_consume_type = match score_pair.iter()
                 .min_by_key(|entry| entry.1)
                 .map(|(key, _)| key.to_string()) {

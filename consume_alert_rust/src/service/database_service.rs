@@ -18,6 +18,7 @@ use crate::model::MealCheckIndex::*;
 use crate::model::ConsumingIndexProdType::*;
 use crate::model::ConsumeIndexProd::*;
 use crate::model::ConsumeIndexProdNew::*;
+use crate::model::ConsumeGraphInfo::*;
 
 
 #[async_trait]
@@ -25,7 +26,8 @@ pub trait DBService {
     //async fn get_classification_type(&self, index_name: &str) -> Result<Vec<String>, anyhow::Error>;
     //async fn get_classification_consumption_type(&self, index_name: &str) -> Result<HashMap<String, ConsumingIndexProdType>, anyhow::Error>;
     //async fn get_classification_consumption_type(&self, index_name: &str) -> Result<HashMap<String, ConsumingIndexProdType>, anyhow::Error>;
-    async fn get_consume_detail_specific_period(&self, start_date: NaiveDate, end_date: NaiveDate) -> Result<(f64, Vec<ConsumeIndexProd>), anyhow::Error>;
+    async fn get_consume_detail_specific_period(&self, start_date: NaiveDate, end_date: NaiveDate) -> Result<ConsumeGraphInfo, anyhow::Error>;
+    async fn get_consume_detail_specific_period__deprecated(&self, start_date: NaiveDate, end_date: NaiveDate) -> Result<(f64, Vec<ConsumeIndexProd>), anyhow::Error>;
     //async fn get_classification_consume_detail(&self, consume_details: &mut [ConsumeIndexProd]) -> Result<(), anyhow::Error>;
     //async fn get_consume_info_by_classification_type<'a>(&self, consume_type_vec: &'a Vec<ProdtTypeInfo>, consume_info: &'a mut ConsumeInfo) -> Result<(), anyhow::Error>;
     // async fn get_consume_type_graph(total_cost: f64, start_dt: NaiveDate, end_dt: NaiveDate, consume_list: &Vec<ConsumeInfo>) -> Result<(Vec<ConsumeTypeInfo>, String), anyhow::Error>;
@@ -240,6 +242,62 @@ impl DBService for DBServicePub {
     //     //Ok(keyword_type_hashmap)
     // }
     
+    #[doc = "Functions that show the details of total consumption and consumption over a specific period of time"]
+    /// # Arguments
+    /// * `start_date`      
+    /// * `end_date`            
+    /// 
+    /// # Returns
+    /// * Result<(f64, Vec<ConsumeIndexProd>), anyhow::Error> - (total cost, Vec<ConsumeIndexProd>)
+    async fn get_consume_detail_specific_period(&self, start_date: NaiveDate, end_date: NaiveDate) -> Result<ConsumeGraphInfo, anyhow::Error> {
+
+        let query = json!({
+            "size": 10000,
+            "query": {
+                "range": {
+                    "@timestamp": {
+                        "gte": get_str_from_naivedate(start_date),
+                        "lte": get_str_from_naivedate(end_date)
+                    }
+                }
+            },
+            "aggs": {
+                "total_prodt_money": {
+                    "sum": {
+                        "field": "prodt_money"
+                    }
+                }
+            },
+            "sort": {
+                "@timestamp": { "order": "asc" }
+            }
+        });
+
+        let es_client = get_elastic_conn()?; 
+        let response_body = es_client.get_search_query(&query, CONSUME_DETAIL).await?;
+        let hits = &response_body["hits"]["hits"];
+        
+        /* Total money spent in a particular period of time */
+        let total_cost = match &response_body["aggregations"]["total_prodt_money"]["value"].as_f64() {
+            Some(total_cost) => *total_cost,
+            None => return Err(anyhow!("[Error][get_consume_detail_specific_period()] 'total_cost' error"))
+        };
+        
+        let consume_list: Vec<ConsumeIndexProdNew> = hits.as_array()
+            .ok_or_else(|| anyhow!("[Error][get_consume_detail_specific_period()] Failed to initialize variable 'consume_list'."))?
+            .iter()
+            .map(|hit| {
+                hit.get("_source") 
+                    .ok_or_else(|| anyhow!("[Error][get_consume_detail_specific_period()] Missing '_source' field"))
+                    .and_then(|source| serde_json::from_value(source.clone()).map_err(Into::into))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        
+        let consume_grapth_info: ConsumeGraphInfo = ConsumeGraphInfo::new(total_cost, consume_list, start_date, end_date);
+        
+        Ok(consume_grapth_info)
+    }
+
     
     #[doc = "Functions that show the details of total consumption and consumption over a specific period of time"]
     /// # Arguments
@@ -249,7 +307,7 @@ impl DBService for DBServicePub {
     /// 
     /// # Returns
     /// * Result<(f64, Vec<ConsumeIndexProd>), anyhow::Error> - (total cost, Vec<ConsumeIndexProd>)
-    async fn get_consume_detail_specific_period(&self, start_date: NaiveDate, end_date: NaiveDate) -> Result<(f64, Vec<ConsumeIndexProd>), anyhow::Error> {
+    async fn get_consume_detail_specific_period__deprecated(&self, start_date: NaiveDate, end_date: NaiveDate) -> Result<(f64, Vec<ConsumeIndexProd>), anyhow::Error> {
          
         //let start = std::time::Instant::now();
 

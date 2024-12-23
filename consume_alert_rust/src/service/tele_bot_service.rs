@@ -2,6 +2,7 @@ use crate::common::*;
 
 use crate::model::ConsumeInfo::*;
 use crate::model::ConsumeTypeInfo::*;
+use crate::model::ConsumeIndexProdNew::*;
 
 
 #[async_trait]
@@ -28,7 +29,7 @@ pub trait TelebotService {
     async fn send_message_consume_split
     (
         &self,
-        consume_list: &Vec<ConsumeInfo>, 
+        consume_list: &Vec<ConsumeIndexProdNew>, 
         total_cost: f64, 
         start_dt: NaiveDate, 
         end_dt: NaiveDate,
@@ -277,7 +278,7 @@ impl TelebotService for TelebotServicePub {
     #[doc = "Functions that send messages related to consumption details"]
     async fn send_message_consume_split(
         &self,
-        consume_list: &Vec<ConsumeInfo>, 
+        consume_list: &Vec<ConsumeIndexProdNew>, 
         total_cost: f64, 
         start_dt: NaiveDate, 
         end_dt: NaiveDate,
@@ -325,8 +326,8 @@ impl TelebotService for TelebotServicePub {
         ).await
     }
 
-
-    #[doc = "Function that sends "]    
+    
+    #[doc = ""]    
     async fn send_message_consume_type_list(
         &self,
         consume_type_list: &Vec<String>, 

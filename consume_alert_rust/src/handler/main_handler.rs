@@ -22,6 +22,7 @@ use crate::model::TotalCostInfo::*;
 use crate::model::MealCheckIndex::*;
 use crate::model::ConsumingIndexProdType::*;
 use crate::model::ConsumeIndexProdNew::*;
+use crate::model::ConsumeGraphInfo::*;
 
 
 pub struct MainHandler<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> {
@@ -85,6 +86,30 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
 
         split_args_vec
     }
+    
+    
+    #[doc = ""]
+    /// # Arguments
+    /// * `permon_datetime` - Objects containing comparison group date data
+    /// 
+    /// # Returns
+    /// * Result<(), anyhow::Error>
+    async fn process_python_api(&self, permon_datetime: PerDatetime) -> Result<(), anyhow::Error> {
+
+        let cur_consume_detail_infos: ConsumeGraphInfo = 
+            self.db_service
+                .get_consume_detail_specific_period( permon_datetime.date_start,  permon_datetime.date_end).await?;
+        
+        let versus_consume_detail_info: ConsumeGraphInfo = 
+            self.db_service
+                .get_consume_detail_specific_period( permon_datetime.n_date_start,  permon_datetime.n_date_end).await?;
+        
+
+        /* Python api */
+        self.command_common_double(cur_consume_detail_infos, versus_consume_detail_info).await?;
+
+        Ok(())
+    }
 
 
     #[doc = "Function reponsible for calculation consumption data and linking python api"]
@@ -121,13 +146,13 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         // let duration = start.elapsed(); // 경과 시간 계산
         // println!("Time elapsed in expensive_function() is: {:?}", duration);
         
-        let cur_mon_total_cost_infos = 
-            self.db_service
-                .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_map).await?;
+        // let cur_mon_total_cost_infos = 
+        //     self.db_service
+        //         .total_cost_detail_specific_period(permon_datetime.date_start, permon_datetime.date_end, "consuming_index_prod_new", &consume_type_map).await?;
         
-        let pre_mon_total_cost_infos = 
-            self.db_service
-                .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_map).await?;
+        // let pre_mon_total_cost_infos = 
+        //     self.db_service
+        //         .total_cost_detail_specific_period(permon_datetime.n_date_start, permon_datetime.n_date_end, "consuming_index_prod_new", &consume_type_map).await?;
         
         /* Python api */
         //self.command_common_double(cur_mon_total_cost_infos, pre_mon_total_cost_infos).await?;
@@ -245,11 +270,11 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
                 let dates = split_args_vec[1].split('.').collect::<Vec<&str>>();
 
                 let year: i32 = dates.get(0)
-                    .ok_or_else(|| anyhow!("test"))?
+                    .ok_or_else(|| anyhow!("[Error][command_consumption_per_mon()] 'year' variable has not been initialized."))?
                     .parse()?;
                 
                 let month: u32 = dates.get(1)
-                    .ok_or_else(|| anyhow!("test"))?
+                    .ok_or_else(|| anyhow!("[Error][command_consumption_per_mon()] 'month' variable has not been initialized."))?
                     .parse()?;
                                 
                 let date_start = get_naivedate(year, month, 1)?;
@@ -268,7 +293,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         
         println!("{:?}", permon_datetime);
 
-        self.process_calculate_and_post_python_api(permon_datetime).await?;
+        self.process_python_api(permon_datetime).await?;
 
         Ok(())
     }
@@ -415,7 +440,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
         
         println!("{:?}", permon_datetime);
         
-        self.process_calculate_and_post_python_api(permon_datetime).await?;
+        //self.process_calculate_and_post_python_api(permon_datetime).await?;
         
         Ok(())
     }
@@ -660,10 +685,85 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
     
 
     #[doc = "docs"]
-    async fn command_common_double(&self) -> Result<(), anyhow::Error> {
+    async fn command_common_double(&self, cur_total_cost_infos: ConsumeGraphInfo, pre_total_cost_infos: ConsumeGraphInfo) -> Result<(), anyhow::Error> { 
+
+        
+        let cur_total_cost = cur_total_cost_infos.total_consume_pay();
+        let cur_consume_list = cur_total_cost_infos.consume_list();
+        let cur_start_dt = cur_total_cost_infos.start_dt();
+        let cur_end_dt = cur_total_cost_infos.end_dt();
+        let empty_flag = !cur_consume_list.is_empty();
+        
+        let comparison_total_cost = pre_total_cost_infos.total_consume_pay();
+        let comparison_consume_list = pre_total_cost_infos.consume_list();
+        let comparison_start_dt = pre_total_cost_infos.start_dt();
+        let comparison_end_dt = pre_total_cost_infos.end_dt();
+        
+        /* Hand over the consumption details to Telegram bot. */
+        self.telebot_service.send_message_consume_split(cur_consume_list, *cur_total_cost, *cur_start_dt, *cur_end_dt, empty_flag).await?;
+        
+        /// ==== ==== ==== ==== ==== ==== ==== ==== ==== ==== ==== ==== ==== ==== ==== ==== ==== ==== ==== ==== ==== 
+        // let cur_total_cost = cur_total_cost_infos.total_cost;
+        // let cur_consume_list = cur_total_cost_infos.consume_list();
+        // let cur_empty_flag = cur_total_cost_infos.empty_flag;
+        // let cur_start_dt = cur_total_cost_infos.start_dt;
+        // let cur_end_dt = cur_total_cost_infos.end_dt;
+        
+        // let pre_total_cost = pre_total_cost_infos.total_cost;
+        // let pre_consume_list = pre_total_cost_infos.consume_list();
+        // let pre_start_dt = pre_total_cost_infos.start_dt;
+        // let pre_end_dt = pre_total_cost_infos.end_dt;
+        
+
+        // // Hand over the consumption details to Telegram bot.
+        // send_message_consume_split(&self.bot, 
+        //     self.message_id, 
+        //     cur_consume_list, 
+        //     cur_total_cost, 
+        //     cur_start_dt, 
+        //     cur_end_dt,
+        //     cur_empty_flag
+        // ).await?;  
+        
+        
+        // // ( consumption type information, consumption type graph storage path )
+        // let comsume_type_infos = get_consume_type_graph(cur_total_cost, cur_start_dt, cur_end_dt, cur_consume_list).await?;
+        // let consume_type_list = &comsume_type_infos.0;
+        // let consume_type_img = comsume_type_infos.1; 
+
+        // let mut python_graph_line_info_cur = ToPythonGraphLine::new(
+        //     "cur", 
+        //     get_str_from_naivedate(cur_start_dt).as_str(), 
+        //     get_str_from_naivedate(cur_end_dt).as_str(), 
+        //     cur_total_cost, 
+        //     cur_consume_list.clone())?;
+        
+        // let mut python_graph_line_info_pre = ToPythonGraphLine::new(
+        // "pre", 
+        // get_str_from_naivedate(pre_start_dt).as_str(), 
+        // get_str_from_naivedate(pre_end_dt).as_str(), 
+        // pre_total_cost, 
+        // pre_consume_list.clone())?;
+        
+        // let graph_path = get_consume_detail_graph_double(&mut python_graph_line_info_cur, &mut python_graph_line_info_pre).await?;
 
 
+        // send_photo_confirm(&self.bot, self.message_id, &graph_path).await?;
+        // send_photo_confirm(&self.bot, self.message_id, &consume_type_img).await?;
+
+        // send_message_consume_type(&self.bot, 
+        //             self.message_id, 
+        //                     consume_type_list, 
+        //                     cur_total_cost, 
+        //                     cur_start_dt, 
+        //                     cur_end_dt,
+        //                     cur_empty_flag).await?;  
+        
+        // let delete_target_vec: Vec<String> = vec![consume_type_img, graph_path];
+        // delete_file(delete_target_vec)?;
+        
         Ok(())
+
     }
     /* ==================================================================================== */
     /* ==================================================================================== */

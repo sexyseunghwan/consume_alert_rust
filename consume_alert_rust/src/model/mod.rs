@@ -10,3 +10,4 @@ pub mod MealCheckIndex;
 pub mod ConsumingIndexProdType;
 pub mod ConsumeIndexProd;
 pub mod ConsumeIndexProdNew;
+pub mod ConsumeGraphInfo;
