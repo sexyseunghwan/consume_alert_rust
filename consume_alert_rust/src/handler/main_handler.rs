@@ -592,7 +592,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> Mai
 
         Ok(())
     }
-
+    
     async fn command_get_consume_type_list(&self) -> Result<(), anyhow::Error> {
 
         Ok(())
