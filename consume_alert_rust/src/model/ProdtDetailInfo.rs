@@ -4,5 +4,5 @@ use crate::common::*;
 #[getset(get = "pub")]
 pub struct ProdtDetailInfo {
     pub keyword: String,
-    pub bias_value: i32
+    pub bias_value: i32,
 }

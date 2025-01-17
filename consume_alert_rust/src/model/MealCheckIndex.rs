@@ -6,5 +6,5 @@ pub struct MealCheckIndex {
     #[serde(rename = "@timestamp")]
     pub timestamp: String,
     pub alarminfo: i64,
-    pub laststamp: i64
+    pub laststamp: i64,
 }

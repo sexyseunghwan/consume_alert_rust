@@ -10,5 +10,5 @@ pub struct ConsumeIndexProdNew {
     pub cur_timestamp: String,
     pub prodt_name: String,
     pub prodt_money: i64,
-    pub prodt_type: String
+    pub prodt_type: String,
 }

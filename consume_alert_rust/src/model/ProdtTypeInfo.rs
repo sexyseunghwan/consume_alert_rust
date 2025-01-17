@@ -5,5 +5,5 @@ use crate::model::ProdtDetailInfo::*;
 #[getset(get = "pub")]
 pub struct ProdtTypeInfo {
     pub keyword_type: String,
-    pub prodt_detail_list: Vec<ProdtDetailInfo>
+    pub prodt_detail_list: Vec<ProdtDetailInfo>,
 }

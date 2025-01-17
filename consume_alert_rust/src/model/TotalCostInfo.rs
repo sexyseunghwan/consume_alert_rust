@@ -8,5 +8,5 @@ pub struct TotalCostInfo {
     pub consume_list: Vec<ConsumeIndexProd>,
     pub empty_flag: bool,
     pub start_dt: NaiveDate,
-    pub end_dt: NaiveDate
+    pub end_dt: NaiveDate,
 }

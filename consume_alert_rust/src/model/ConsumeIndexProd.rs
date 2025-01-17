@@ -10,5 +10,5 @@ pub struct ConsumeIndexProd {
     pub prodt_money: i64,
     pub prodt_name: String,
     pub prodt_type: Option<String>,
-    pub prodt_type_query_res: Option<Vec<ConsumingIndexProdType>>
+    pub prodt_type_query_res: Option<Vec<ConsumingIndexProdType>>,
 }
