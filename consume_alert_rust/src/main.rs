@@ -60,38 +60,80 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
 */
 mod common;
 use common::*;
-mod handler;
-mod model;
+// mod handler;
+// mod model;
 mod repository;
-mod service;
+// mod service;
 mod utils_modules;
-
-// use handler::main_handler;
-// use handler::main_handler::*;
-use utils_modules::logger_utils::*;
-
 use utils_modules::common_function::*;
+use utils_modules::logger_utils::*;
 use utils_modules::time_utils::*;
-
-// use service::command_service::*;
-// use service::database_service::*;
-// use service::graph_api_service::*;
-// use service::tele_bot_service::*;
-// use service::mysql_query_service::*;
-// use service::es_query_service::*;
 
 mod schema;
 
 mod services;
+use services::elastic_query_service::*;
+use services::graph_api_service::*;
+use services::mysql_query_service::*;
+use services::telebot_service::*;
+
+mod controller;
+use controller::main_controller::*;
+
+mod models;
 
 //use controller::test_controller::*;
 #[tokio::main]
 async fn main() {
     /* Initiate Logger */
     set_global_logger();
+    infok("Consume Alert Program Start").await;
 
     /* Select compilation environment */
     dotenv().ok();
+
+    /* Telegram Bot object data */
+    let bot: Arc<Bot> = Arc::new(Bot::from_env());
+
+    let graph_api_service: Arc<GraphApiServicePub> = Arc::new(GraphApiServicePub::new());
+    let elastic_query_service: Arc<ElasticQueryServicePub> =
+        Arc::new(ElasticQueryServicePub::new());
+    let mysql_query_service: Arc<MysqlQueryServicePub> = Arc::new(MysqlQueryServicePub::new());
+
+    /* As soon as the event comes in, the code below continues to be executed. */
+    teloxide::repl(Arc::clone(&bot), move |message: Message, bot: Arc<Bot>| {
+        let graph_api_service_clone: Arc<GraphApiServicePub> = Arc::clone(&graph_api_service);
+        let elastic_query_service_clone: Arc<ElasticQueryServicePub> =
+            Arc::clone(&elastic_query_service);
+        let mysql_query_service_clone: Arc<MysqlQueryServicePub> = Arc::clone(&mysql_query_service);
+
+        async move {
+            let tele_bot_service: TelebotServicePub = TelebotServicePub::new(bot, message);
+            let main_controller: MainController<
+                GraphApiServicePub,
+                ElasticQueryServicePub,
+                MysqlQueryServicePub,
+                TelebotServicePub,
+            > = MainController::new(
+                graph_api_service_clone,
+                elastic_query_service_clone,
+                mysql_query_service_clone,
+                tele_bot_service,
+            );
+
+            match main_controller.main_call_function().await {
+                Ok(_) => {
+                    info!("respond success.");
+                }
+                Err(e) => {
+                    errork(e).await;
+                }
+            };
+
+            respond(())
+        }
+    })
+    .await;
 
     //prod().await;
     //dev().await;
