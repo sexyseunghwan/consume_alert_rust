@@ -1,8 +1,8 @@
 use crate::common::*;
 
-#[doc = "consume_index_prodt 인덱스와 맵핑되는 구조체 - 소비정보가 담겨있는 구조체정보"]
-#[derive(Debug, Getters, Serialize, Deserialize, Clone, new)]
-#[getset(get = "pub")]
+#[doc = "Structure containing consumption information."]
+#[derive(Debug, Getters, Setters, Serialize, Deserialize, Clone, new)]
+#[getset(get = "pub", set = "pub")]
 pub struct ConsumeProdtInfo {
     #[serde(rename = "@timestamp")]
     pub timestamp: String,

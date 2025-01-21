@@ -45,7 +45,7 @@ pub use elasticsearch::{
 pub use anyhow::{anyhow, Context, Result};
 
 pub use derive_new::new;
-pub use getset::Getters;
+pub use getset::{Getters,Setters};
 
 pub use teloxide::{
     prelude::*,

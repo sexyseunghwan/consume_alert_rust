@@ -2,8 +2,8 @@ use crate::common::*;
 
 use crate::repository::es_repository::*;
 
-use crate::models::score_manager::*;
 use crate::models::consume_index_prodt_type::*;
+use crate::models::score_manager::*;
 
 #[async_trait]
 pub trait ElasticQueryService {
@@ -15,7 +15,6 @@ pub struct ElasticQueryServicePub;
 
 #[async_trait]
 impl ElasticQueryService for ElasticQueryServicePub {
-
     #[doc = "Function that classifies the consumption details provided as parameters into a specific consumption type"]
     /// # Arguments
     /// * `prodt_name` - consumtion name
@@ -36,7 +35,7 @@ impl ElasticQueryService for ElasticQueryServicePub {
         let response_body: Value = es_client.get_search_query(&es_query, CONSUME_TYPE).await?;
         let hits: &Value = &response_body["hits"]["hits"];
 
-        let results: Vec<ConsumingIndexProdType> = hits
+        let results: Vec<ConsumingIndexProdtType> = hits
             .as_array()
             .ok_or_else(|| anyhow!("[Error][get_consume_type_judgement()] error"))?
             .iter()
@@ -77,8 +76,4 @@ impl ElasticQueryService for ElasticQueryServicePub {
             return Ok(prodt_type);
         }
     }
-
 }
-
-
-

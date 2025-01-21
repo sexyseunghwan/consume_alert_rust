@@ -3,37 +3,51 @@ use crate::common::*;
 use crate::services::elastic_query_service::*;
 use crate::services::graph_api_service::*;
 use crate::services::mysql_query_service::*;
+use crate::services::process_service::*;
 use crate::services::telebot_service::*;
 
 use crate::utils_modules::io_utils::*;
 use crate::utils_modules::time_utils::*;
+
+use crate::repository::es_repository::*;
+
+use crate::models::consume_prodt_info::*;
 
 pub struct MainController<
     G: GraphApiService,
     E: ElasticQueryService,
     M: MysqlQueryService,
     T: TelebotService,
+    P: ProcessService,
 > {
     graph_api_service: Arc<G>,
     elastic_query_service: Arc<E>,
     mysql_query_service: Arc<M>,
     tele_bot_service: T,
+    process_service: Arc<P>,
 }
 
-impl<G: GraphApiService, E: ElasticQueryService, M: MysqlQueryService, T: TelebotService>
-    MainController<G, E, M, T>
+impl<
+        G: GraphApiService,
+        E: ElasticQueryService,
+        M: MysqlQueryService,
+        T: TelebotService,
+        P: ProcessService,
+    > MainController<G, E, M, T, P>
 {
     pub fn new(
         graph_api_service: Arc<G>,
         elastic_query_service: Arc<E>,
         mysql_query_service: Arc<M>,
         tele_bot_service: T,
+        process_service: Arc<P>,
     ) -> Self {
         Self {
             graph_api_service,
             elastic_query_service,
             mysql_query_service,
             tele_bot_service,
+            process_service,
         }
     }
 
@@ -103,7 +117,7 @@ impl<G: GraphApiService, E: ElasticQueryService, M: MysqlQueryService, T: Telebo
                 return Err(anyhow!("[Parameter Error][command_consumption()] Non-numeric 'cash' parameter: {:?} : {:?}", consume_cash, e));
             }
         };
-        
+
         /* Set the product type here */
         let prodt_type: String = self
             .elastic_query_service
@@ -111,7 +125,7 @@ impl<G: GraphApiService, E: ElasticQueryService, M: MysqlQueryService, T: Telebo
             .await?;
         let cur_time: String = get_str_curdatetime();
 
-        let con_index_prod: ConsumeIndexProdNew = ConsumeIndexProdNew::new(
+        let con_index_prod: ConsumeProdtInfo = ConsumeProdtInfo::new(
             cur_time.clone(),
             cur_time.clone(),
             consume_name.to_string(),
@@ -124,16 +138,36 @@ impl<G: GraphApiService, E: ElasticQueryService, M: MysqlQueryService, T: Telebo
         let es_client: EsRepositoryPub = get_elastic_conn()?;
         es_client.post_query(&document, CONSUME_DETAIL).await?;
 
-        self.telebot_service
+        self.tele_bot_service
             .send_message_struct_info(&con_index_prod)
             .await?;
-
 
         Ok(())
     }
 
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch."]
     pub async fn command_consumption_auto(&self) -> Result<(), anyhow::Error> {
+        let args: String = self.tele_bot_service.get_input_text();
+
+        let re: Regex = Regex::new(r"\[.*?\]\n?")?;
+        let replace_string: String = re.replace_all(&args, "").to_string(); /* Remove the '[~]' string. */
+
+        let split_args_vec: Vec<String> = replace_string
+            .split('\n')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect(); /* It convert the string into an array */
+
+        let mut filter_consume_info: ConsumeProdtInfo = self
+            .process_service
+            .process_by_consume_filter(&split_args_vec)?;
+        let consume_type: String = self
+            .elastic_query_service
+            .get_consume_type_judgement(filter_consume_info.prodt_name())
+            .await?;
+
+        filter_consume_info.set_prodt_type(consume_type);
+        
         Ok(())
     }
 }

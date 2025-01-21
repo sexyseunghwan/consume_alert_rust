@@ -75,6 +75,7 @@ mod services;
 use services::elastic_query_service::*;
 use services::graph_api_service::*;
 use services::mysql_query_service::*;
+use services::process_service::*;
 use services::telebot_service::*;
 
 mod controller;
@@ -99,6 +100,7 @@ async fn main() {
     let elastic_query_service: Arc<ElasticQueryServicePub> =
         Arc::new(ElasticQueryServicePub::new());
     let mysql_query_service: Arc<MysqlQueryServicePub> = Arc::new(MysqlQueryServicePub::new());
+    let process_service: Arc<ProcessServicePub> = Arc::new(ProcessServicePub::new());
 
     /* As soon as the event comes in, the code below continues to be executed. */
     teloxide::repl(Arc::clone(&bot), move |message: Message, bot: Arc<Bot>| {
@@ -106,6 +108,7 @@ async fn main() {
         let elastic_query_service_clone: Arc<ElasticQueryServicePub> =
             Arc::clone(&elastic_query_service);
         let mysql_query_service_clone: Arc<MysqlQueryServicePub> = Arc::clone(&mysql_query_service);
+        let process_service_clone: Arc<ProcessServicePub> = Arc::clone(&process_service);
 
         async move {
             let tele_bot_service: TelebotServicePub = TelebotServicePub::new(bot, message);
@@ -114,11 +117,13 @@ async fn main() {
                 ElasticQueryServicePub,
                 MysqlQueryServicePub,
                 TelebotServicePub,
+                ProcessServicePub,
             > = MainController::new(
                 graph_api_service_clone,
                 elastic_query_service_clone,
                 mysql_query_service_clone,
                 tele_bot_service,
+                process_service_clone,
             );
 
             match main_controller.main_call_function().await {
