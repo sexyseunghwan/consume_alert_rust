@@ -1,5 +1,3 @@
-use futures::Sink;
-
 use crate::common::*;
 
 use crate::service::database_service::*;
@@ -250,7 +248,7 @@ impl CommandService for CommandServicePub {
 
         Ok(consume_price)
     }
-    
+
     #[doc = "Function that classifies the consumption details provided as parameters into a specific consumption type"]
     /// # Arguments
     /// * `prodt_name` - consumtion name
@@ -267,7 +265,7 @@ impl CommandService for CommandServicePub {
                 }
             }
         });
-        
+
         let response_body: Value = es_client.get_search_query(&es_query, CONSUME_TYPE).await?;
         let hits: &Value = &response_body["hits"]["hits"];
 

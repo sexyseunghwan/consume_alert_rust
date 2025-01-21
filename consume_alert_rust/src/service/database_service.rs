@@ -50,7 +50,7 @@ pub trait DBService {
         index_name: &str,
         model: T,
     ) -> Result<(), anyhow::Error>;
-    
+
     async fn get_recent_consume_info_order_by(
         &self,
         order_by_info: &str,
@@ -301,7 +301,7 @@ impl DBService for DBServicePub {
                 "@timestamp": { "order": "asc" }
             }
         });
-        
+
         let es_client = get_elastic_conn()?;
         let response_body = es_client.get_search_query(&query, CONSUME_DETAIL).await?;
         let hits = &response_body["hits"]["hits"];
@@ -335,9 +335,9 @@ impl DBService for DBServicePub {
 
     // #[doc = "Functions that show the details of total consumption and consumption over a specific period of time"]
     // /// # Arguments
-    // /// * `start_date`      
-    // /// * `end_date`        
-    // ///    
+    // /// * `start_date`
+    // /// * `end_date`
+    // ///
     // ///
     // /// # Returns
     // /// * Result<(f64, Vec<ConsumeIndexProd>), anyhow::Error> - (total cost, Vec<ConsumeIndexProd>)

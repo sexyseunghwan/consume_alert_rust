@@ -66,32 +66,34 @@ mod repository;
 mod service;
 mod utils_modules;
 
-use handler::main_handler;
-use handler::main_handler::*;
+// use handler::main_handler;
+// use handler::main_handler::*;
 use utils_modules::logger_utils::*;
 
 use utils_modules::common_function::*;
 use utils_modules::time_utils::*;
 
-use service::command_service::*;
-use service::database_service::*;
-use service::graph_api_service::*;
-use service::tele_bot_service::*;
+// use service::command_service::*;
+// use service::database_service::*;
+// use service::graph_api_service::*;
+// use service::tele_bot_service::*;
+// use service::mysql_query_service::*;
+// use service::es_query_service::*;
 
 mod schema;
+
+mod services;
 
 //use controller::test_controller::*;
 #[tokio::main]
 async fn main() {
-    // Initiate Logger
+    /* Initiate Logger */
     set_global_logger();
 
-    // Select compilation environment
+    /* Select compilation environment */
     dotenv().ok();
 
-    initialize_db_connection();
-
-    prod().await;
+    //prod().await;
     //dev().await;
 
     // let data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -132,74 +134,79 @@ async fn main() {
     // println!("{:?}", *data);
 }
 
-#[doc = "Operating environment"]
-async fn prod() {
-    let bot: Arc<Bot> = Arc::new(Bot::from_env());
+// #[doc = "Operating environment"]
+// async fn prod() {
+//     let bot: Arc<Bot> = Arc::new(Bot::from_env());
 
-    let graph_api_service: Arc<GraphApiServicePub> = Arc::new(GraphApiServicePub::new());
-    let db_service: Arc<DBServicePub> = Arc::new(DBServicePub::new());
-    let command_service: Arc<CommandServicePub> = Arc::new(CommandServicePub::new());
+//     let graph_api_service: Arc<GraphApiServicePub> = Arc::new(GraphApiServicePub::new());
+//     let mysql_query_service: Arc<MySqlQueryServicePub> = Arc::new(MySqlQueryServicePub::new());
+//     let es_query_service: Arc<EsQueryServicePub> = Arc::new(EsQueryServicePub::new());
+//     let command_service: Arc<CommandServicePub> = Arc::new(CommandServicePub::new());
 
-    infok("Consume Alert Program Start").await;
+//     infok("Consume Alert Program Start").await;
 
-    /* As soon as the event comes in, the code below continues to be executed. */
-    teloxide::repl(Arc::clone(&bot), move |message: Message, bot: Arc<Bot>| {
-        let graph_api_service_clone: Arc<GraphApiServicePub> = Arc::clone(&graph_api_service);
-        let db_service_clone: Arc<DBServicePub> = Arc::clone(&db_service);
-        let command_service_clone: Arc<CommandServicePub> = Arc::clone(&command_service);
+//     /* As soon as the event comes in, the code below continues to be executed. */
+//     teloxide::repl(Arc::clone(&bot), move |message: Message, bot: Arc<Bot>| {
+//         let graph_api_service_clone: Arc<GraphApiServicePub> = Arc::clone(&graph_api_service);
+//         let mysql_query_service_clone: Arc<MySqlQueryServicePub> = Arc::clone(&mysql_query_service);
+//         let es_query_service_clone: Arc<EsQueryServicePub> = Arc::clone(&es_query_service);
+//         let command_service_clone: Arc<CommandServicePub> = Arc::clone(&command_service);
 
-        async move {
-            let telebot_service: TelebotServicePub = TelebotServicePub::new(bot, message);
-            let main_handler: MainHandler<
-                GraphApiServicePub,
-                DBServicePub,
-                TelebotServicePub,
-                CommandServicePub,
-            > = MainHandler::new(
-                graph_api_service_clone,
-                db_service_clone,
-                telebot_service,
-                command_service_clone,
-            );
+//         async move {
+//             let telebot_service: TelebotServicePub = TelebotServicePub::new(bot, message);
+//             let main_handler: MainHandler<
+//                 GraphApiServicePub,
+//                 TelebotServicePub,
+//                 CommandServicePub,
+//                 MySqlQueryServicePub,
+//                 EsQueryServicePub
+//             > = MainHandler::new(
+//                 graph_api_service_clone,
+//                 telebot_service,
+//                 command_service_clone,
+//                 mysql_query_service_clone,
+//                 es_query_service_clone
+//             );
 
-            match main_handler.main_call_function().await {
-                Ok(_) => (),
-                Err(e) => {
-                    errork(e).await;
-                }
-            };
+//             match main_handler.main_call_function().await {
+//                 Ok(_) => {
+//                     info!("respond success.");
+//                 },
+//                 Err(e) => {
+//                     errork(e).await;
+//                 }
+//             };
 
-            respond(())
-        }
-    })
-    .await;
-}
+//             respond(())
+//         }
+//     })
+//     .await;
+// }
 
-#[doc = "Development environment"]
-async fn dev() {
-    print!("Enter some text: ");
-    std::io::stdout().flush().unwrap(); /* Empty the buffer after outputting without a new line. */
+// #[doc = "Development environment"]
+// async fn dev() {
+//     print!("Enter some text: ");
+//     std::io::stdout().flush().unwrap(); /* Empty the buffer after outputting without a new line. */
+//     let mut input = String::new();
 
-    let mut input = String::new();
+//     match std::io::stdin().read_line(&mut input) {
+//         Ok(_) => {
+//             let bot = Arc::new(Bot::from_env());
 
-    match std::io::stdin().read_line(&mut input) {
-        Ok(_) => {
-            let bot = Arc::new(Bot::from_env());
+//             let graph_api_service = Arc::new(GraphApiServicePub::new());
+//             let calculate_service = Arc::new(DBServicePub::new());
+//             let command_service = Arc::new(CommandServicePub::new());
 
-            let graph_api_service = Arc::new(GraphApiServicePub::new());
-            let calculate_service = Arc::new(DBServicePub::new());
-            let command_service = Arc::new(CommandServicePub::new());
+//             let telebot_service = TelebotServicePub::new_test(bot, input.trim());
+//             let main_handler = MainHandler::new(
+//                 graph_api_service,
+//                 calculate_service,
+//                 telebot_service,
+//                 command_service,
+//             );
 
-            let telebot_service = TelebotServicePub::new_test(bot, input.trim());
-            let main_handler = MainHandler::new(
-                graph_api_service,
-                calculate_service,
-                telebot_service,
-                command_service,
-            );
-
-            main_handler.command_consumption_auto().await.unwrap();
-        }
-        Err(e) => println!("Failed to read input: {}", e),
-    }
-}
+//             main_handler.command_consumption_auto().await.unwrap();
+//         }
+//         Err(e) => println!("Failed to read input: {}", e),
+//     }
+// }

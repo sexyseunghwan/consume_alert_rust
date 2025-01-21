@@ -1,5 +1,3 @@
-use chrono::format::parse;
-
 use crate::common::*;
 
 //::ConsumeIndexProdNew;
@@ -10,6 +8,8 @@ use crate::service::command_service::*;
 use crate::service::database_service::*;
 use crate::service::graph_api_service::*;
 use crate::service::tele_bot_service::*;
+use crate::service::es_query_service::*;
+use crate::service::mysql_query_service::*;
 
 use crate::utils_modules::common_function::*;
 use crate::utils_modules::io_utils::*;
@@ -24,34 +24,37 @@ use crate::model::PerDatetime::*;
 use crate::model::ProdtTypeInfo::*;
 use crate::model::TotalCostInfo::*;
 
-pub struct MainHandler<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService> {
+pub struct MainHandler<G: GraphApiService, T: TelebotService, C: CommandService, M: MySqlQueryService, E: EsQueryService> {
     graph_api_service: Arc<G>,
-    db_service: Arc<D>,
     telebot_service: T,
     command_service: Arc<C>,
+    mysql_query_service: Arc<M>,
+    es_query_service: Arc<E>
 }
 
-impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService>
-    MainHandler<G, D, T, C>
+impl<G: GraphApiService, T: TelebotService, C: CommandService, M: MySqlQueryService, E: EsQueryService>
+    MainHandler<G, T, C, M, E>
 {
     pub fn new(
         graph_api_service: Arc<G>,
-        db_service: Arc<D>,
         telebot_service: T,
         command_service: Arc<C>,
+        mysql_query_service: Arc<M>,
+        es_query_service: Arc<E>
     ) -> Self {
         Self {
             graph_api_service,
-            db_service,
             telebot_service,
             command_service,
+            mysql_query_service,
+            es_query_service
         }
     }
 
     #[doc = "Function that processes the request when the request is received through telegram bot"]
     pub async fn main_call_function(&self) -> Result<(), anyhow::Error> {
-        let input_text = self.telebot_service.get_input_text();
-
+        let input_text: String = self.telebot_service.get_input_text();
+        
         match input_text.split_whitespace().next().unwrap_or("") {
             "c" => self.command_consumption().await?,
             "cd" => self.command_delete_recent_cunsumption().await?,
@@ -78,8 +81,8 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService>
     /// # Returns
     /// * Vec<String> - Distinguishing String vector
     fn preprocess_string(&self, split_gubun: &str) -> Vec<String> {
-        let args = self.telebot_service.get_input_text();
-        let args_aplit = &args[2..];
+        let args: String = self.telebot_service.get_input_text();
+        let args_aplit: &str = &args[2..];
         let split_args_vec: Vec<String> = args_aplit
             .split(split_gubun)
             .map(|s| s.trim().to_string())
@@ -102,7 +105,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService>
                 permon_datetime.date_end,
             )
             .await?;
-        
+
         let versus_consume_detail_info: ConsumeGraphInfo = self
             .db_service
             .get_consume_detail_specific_period(
@@ -169,7 +172,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService>
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch. -> c"]
     async fn command_consumption(&self) -> Result<(), anyhow::Error> {
         let split_args_vec: Vec<String> = self.preprocess_string(":");
-
+        
         if split_args_vec.len() != 2 {
             self.telebot_service
                 .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) c snack:15000")
@@ -199,7 +202,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService>
             .get_consume_type_judgement(consume_name)
             .await?;
         let cur_time: String = get_str_curdatetime();
-        
+
         let con_index_prod: ConsumeIndexProdNew = ConsumeIndexProdNew::new(
             cur_time.clone(),
             cur_time.clone(),
@@ -216,7 +219,7 @@ impl<G: GraphApiService, D: DBService, T: TelebotService, C: CommandService>
         self.telebot_service
             .send_message_struct_info(&con_index_prod)
             .await?;
-        
+
         Ok(())
     }
 

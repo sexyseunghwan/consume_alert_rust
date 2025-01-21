@@ -55,7 +55,6 @@ pub fn initialize_elastic_clients() -> VecDeque<EsRepositoryPub> {
     es_pool_vec
 }
 
-// Option<Arc<Mutex<EsRepositoryPub>>>
 #[doc = "Function to get elasticsearch connection"]
 pub fn get_elastic_conn() -> Result<EsRepositoryPub, anyhow::Error> {
     let mut pool: MutexGuard<'_, VecDeque<EsRepositoryPub>> = match ELASTICSEARCH_CONN_POOL.lock() {
@@ -130,10 +129,10 @@ impl EsRepositoryPub {
         F: Fn(EsClient) -> Fut + Send + Sync,
         Fut: Future<Output = Result<Response, anyhow::Error>> + Send,
     {
-        let mut last_error = None;
+        let mut last_error: Option<anyhow::Error> = None;
 
-        let mut rng = StdRng::from_entropy();
-        let mut shuffled_clients = self.es_clients.clone();
+        let mut rng: StdRng = StdRng::from_entropy();
+        let mut shuffled_clients: Vec<EsClient> = self.es_clients.clone();
         shuffled_clients.shuffle(&mut rng);
 
         for es_client in shuffled_clients {
@@ -188,10 +187,10 @@ impl EsRepository for EsRepositoryPub {
             .await?;
 
         if response.status_code().is_success() {
-            let response_body = response.json::<Value>().await?;
+            let response_body: Value = response.json::<Value>().await?;
             Ok(response_body)
         } else {
-            let error_body = response.text().await?;
+            let error_body: String = response.text().await?;
             Err(anyhow!(
                 "[Elasticsearch Error][node_search_query()] response status is failed: {:?}",
                 error_body
@@ -205,7 +204,7 @@ impl EsRepository for EsRepositoryPub {
         param_struct: &T,
         index_name: &str,
     ) -> Result<(), anyhow::Error> {
-        let struct_json = convert_json_from_struct(param_struct)?;
+        let struct_json: Value = convert_json_from_struct(param_struct)?;
         self.post_query(&struct_json, index_name).await?;
 
         Ok(())
@@ -213,7 +212,7 @@ impl EsRepository for EsRepositoryPub {
 
     #[doc = "Function that EXECUTES elasticsearch queries - indexing"]
     async fn post_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error> {
-        let response = self
+        let response: Response = self
             .execute_on_any_node(|es_client| async move {
                 let response = es_client
                     .es_conn
@@ -236,16 +235,8 @@ impl EsRepository for EsRepositoryPub {
 
     #[doc = "Function that EXECUTES elasticsearch queries - delete"]
     async fn delete_query(&self, doc_id: &str, index_name: &str) -> Result<(), anyhow::Error> {
-        let response = self
+        let response: Response = self
             .execute_on_any_node(|es_client| async move {
-                // let body = serde_json::json!({
-                //     "query": {
-                //         "ids": {
-                //             "values": [doc_id]
-                //         }
-                //     }
-                // });
-
                 let response = es_client
                     .es_conn
                     //.delete_by_query(DeleteByQueryParts::Index(&[index_name]))
