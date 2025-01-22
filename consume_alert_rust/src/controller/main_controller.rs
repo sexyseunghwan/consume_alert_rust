@@ -118,7 +118,7 @@ impl<
                 "prodt_money",
             )
             .await?;
-            
+
         let versus_consume_detail_info: AggResultSet<ConsumeProdtInfo> = self
             .elastic_query_service
             .get_info_orderby_aggs_range(
