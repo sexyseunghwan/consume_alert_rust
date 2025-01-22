@@ -197,7 +197,6 @@ impl ProcessService for ProcessServicePub {
         }
     }
 
-
     #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` months"]
     /// # Arguments
     /// * `date_start`  
@@ -218,7 +217,8 @@ impl ProcessService for ProcessServicePub {
         let n_month_end: NaiveDate = get_add_month_from_naivedate(date_end, nmonth)
             .map_err(|e| anyhow!("{:?} -> in get_nmonth_to_current_date().n_month_end", e))?;
 
-        let per_mon_datetim: PerDatetime = PerDatetime::new(date_start, date_end, n_month_start, n_month_end);
+        let per_mon_datetim: PerDatetime =
+            PerDatetime::new(date_start, date_end, n_month_start, n_month_end);
 
         Ok(per_mon_datetim)
     }

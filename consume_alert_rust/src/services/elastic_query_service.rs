@@ -1,9 +1,14 @@
 use crate::common::*;
 
+use crate::utils_modules::time_utils::*;
+
 use crate::repository::es_repository::*;
 
+use crate::models::agg_result_set::*;
 use crate::models::consume_index_prodt_type::*;
+use crate::models::consume_prodt_info::*;
 use crate::models::document_with_id::*;
+use crate::models::per_datetime::*;
 use crate::models::score_manager::*;
 
 #[async_trait]
@@ -21,11 +26,23 @@ pub trait ElasticQueryService {
         top_size: i64,
         asc_yn: bool,
     ) -> Result<Vec<DocumentWithId<T>>, anyhow::Error>;
+    async fn get_info_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
+        &self,
+        index_name: &str,
+        range_field: &str,
+        start_date: NaiveDate,
+        end_date: NaiveDate,
+        order_by_field: &str,
+        asc_yn: bool,
+        aggs_field: &str,
+    ) -> Result<AggResultSet<T>, anyhow::Error>;
     async fn delete_es_doc<T: Send + Sync>(
         &self,
         index_name: &str,
         doc: &DocumentWithId<T>,
     ) -> Result<(), anyhow::Error>;
+
+    //async fn get_versus_consume_detail_infos(&self, permon_datetime: PerDatetime) -> Result<(), anyhow::Error>;
 }
 
 #[derive(Debug, Getters, Clone, new)]
@@ -157,9 +174,76 @@ impl ElasticQueryService for ElasticQueryServicePub {
         Ok(res)
     }
 
+    #[doc = "Functions that return aggregate result data for a particular index"]
+    /// # Arguments
+    /// * `index_name` - index name
+    /// * `start_date` - start date
+    /// * `end_date` - end date
+    /// * `order_by_field` - Field Name Targeted for 'order by'
+    /// * `asc_yn` - ascending order or descending order
+    /// * `aggs_field` - Name of the field to be aggregated
+    ///
+    /// # Returns
+    /// * Result<AggResultSet<T>, anyhow::Error>
+    async fn get_info_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
+        &self,
+        index_name: &str,
+        range_field: &str,
+        start_date: NaiveDate,
+        end_date: NaiveDate,
+        order_by_field: &str,
+        asc_yn: bool,
+        aggs_field: &str,
+    ) -> Result<AggResultSet<T>, anyhow::Error> {
+        let es_client: EsRepositoryPub = get_elastic_conn()?;
+
+        let order_by_asc: &str = if asc_yn { "asc" } else { "desc" };
+
+        let query: Value = json!({
+            "size": 10000,
+            "query": {
+                "range": {
+                    range_field: {
+                        "gte": get_str_from_naivedate(start_date),
+                        "lte": get_str_from_naivedate(end_date)
+                    }
+                }
+            },
+            "aggs": {
+                "aggs_result": {
+                    "sum": {
+                        "field": aggs_field
+                    }
+                }
+            },
+            "sort": {
+                order_by_field: { "order": order_by_asc }
+            }
+        });
+
+        let response_body: Value = es_client.get_search_query(&query, index_name).await?; // CONSUME_DETAIL
+
+        let agg_result: f64 = match &response_body["aggregations"]["aggs_result"]["value"].as_f64()
+        {
+            Some(agg_result) => *agg_result,
+            None => {
+                return Err(anyhow!(
+                    "[Error][get_info_orderby_aggs_range()] 'agg_result' error"
+                ))
+            }
+        };
+
+        let consume_list: Vec<DocumentWithId<T>> =
+            self.get_query_result_vec(&response_body).await?;
+
+        let result: AggResultSet<T> = AggResultSet::new(agg_result, consume_list);
+
+        Ok(result)
+    }
+
     #[doc = "Functions that erase specific documents in the index"]
     /// # Arguments
-    /// * `index_name` - index name 
+    /// * `index_name` - index name
     /// * `doc` - Document Objects to Clear
     ///
     /// # Returns

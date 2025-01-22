@@ -11,6 +11,7 @@ use crate::utils_modules::time_utils::*;
 
 use crate::repository::es_repository::*;
 
+use crate::models::agg_result_set::*;
 use crate::models::consume_prodt_info::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
@@ -92,6 +93,51 @@ impl<
 
         split_args_vec
     }
+
+    #[doc = "Common Processing Controller Function -> Responsible for Python API calls."]
+    /// # Arguments
+    /// * `index_name` - Index name
+    /// * `permon_datetime` - Structures with date data to compare with date
+    ///
+    /// # Returns
+    /// * Result<(), anyhow::Error>
+    async fn common_process_python_double(
+        &self,
+        index_name: &str,
+        permon_datetime: PerDatetime,
+    ) -> Result<(), anyhow::Error> {
+        let consume_detail_info: AggResultSet<ConsumeProdtInfo> = self
+            .elastic_query_service
+            .get_info_orderby_aggs_range(
+                index_name,
+                "@timestamp",
+                permon_datetime.date_start,
+                permon_datetime.date_end,
+                "@timestamp",
+                true,
+                "prodt_money",
+            )
+            .await?;
+            
+        let versus_consume_detail_info: AggResultSet<ConsumeProdtInfo> = self
+            .elastic_query_service
+            .get_info_orderby_aggs_range(
+                index_name,
+                "@timestamp",
+                permon_datetime.n_date_start,
+                permon_datetime.n_date_end,
+                "@timestamp",
+                true,
+                "prodt_money",
+            )
+            .await?;
+
+        /* Using Python API */
+
+        Ok(())
+    }
+
+    //fn common_process_python_single(&self, )
 
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch. -> c"]
     async fn command_consumption(&self) -> Result<(), anyhow::Error> {
@@ -219,14 +265,14 @@ impl<
                     .await?;
             }
         }
-        
+
         Ok(())
     }
 
     #[doc = "command handler: Checks how much you have consumed during a month -> cm"]
     pub async fn command_consumption_per_mon(&self) -> Result<(), anyhow::Error> {
         let split_args_vec: Vec<String> = self.preprocess_string(" ");
-        
+
         let permon_datetime: PerDatetime = match split_args_vec.len() {
             1 => {
                 let date_start: NaiveDate = get_current_kor_naivedate_first_date()?;
@@ -248,7 +294,7 @@ impl<
                 let month: u32 = dates.get(1)
                     .ok_or_else(|| anyhow!("[Error][command_consumption_per_mon()] 'month' variable has not been initialized."))?
                     .parse()?;
-                
+
                 let date_start: NaiveDate = get_naivedate(year, month, 1)?;
                 let date_end: NaiveDate = get_lastday_naivedate(date_start)?;
 
@@ -265,7 +311,7 @@ impl<
                 return Err(anyhow!("[Parameter Error][command_consumption_per_mon()] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text()));
             }
         };
-        
+
         Ok(())
     }
 }
