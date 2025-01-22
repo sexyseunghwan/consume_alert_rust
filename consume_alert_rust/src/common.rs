@@ -45,7 +45,7 @@ pub use elasticsearch::{
 pub use anyhow::{anyhow, Context, Result};
 
 pub use derive_new::new;
-pub use getset::{Getters,Setters};
+pub use getset::{Getters, Setters};
 
 pub use teloxide::{
     prelude::*,
@@ -90,5 +90,5 @@ pub use rayon::prelude::*;
 /* Elasticsearch index name to use globally */
 pub static CONSUME_DETAIL: &str = "consuming_index_prod_new_v10";
 pub static CONSUME_DETAIL_REMOVE: &str = "consuming_index_prod_new_remove";
-pub static CONSUME_TYPE: &str = "consuming_index_prod_type_v2";
+pub static CONSUME_TYPE: &str = "consuming_index_prod_type_v10";
 pub static MEAL_CHECK: &str = "meal_check_index";

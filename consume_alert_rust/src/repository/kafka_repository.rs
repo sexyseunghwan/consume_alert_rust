@@ -108,10 +108,7 @@ pub struct KafkaRepositoryPub {
 impl KafkaRepository for KafkaRepositoryPub {
     #[doc = "Function that send message to Kafka"]
     fn produce_message(&mut self, topic: &str, message: &str) -> Result<(), anyhow::Error> {
-        // let produce_broker = &mut self
-
         let produce_broker = &mut self.produce_broker;
-
         let _result = produce_broker.send(&KafkaRecord::from_value(topic, message))?;
 
         Ok(())

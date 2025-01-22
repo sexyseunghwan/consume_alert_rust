@@ -3,6 +3,7 @@ use crate::common::*;
 use crate::utils_modules::time_utils::*;
 
 use crate::models::consume_prodt_info::*;
+use crate::models::per_datetime::*;
 
 #[async_trait]
 pub trait ProcessService {
@@ -24,6 +25,12 @@ pub trait ProcessService {
         &self,
         split_args_vec: &Vec<String>,
     ) -> Result<ConsumeProdtInfo, anyhow::Error>;
+    fn get_nmonth_to_current_date(
+        &self,
+        date_start: NaiveDate,
+        date_end: NaiveDate,
+        nmonth: i32,
+    ) -> Result<PerDatetime, anyhow::Error>;
 }
 
 #[derive(Debug, Getters, Clone, new)]
@@ -188,5 +195,31 @@ impl ProcessService for ProcessServicePub {
         } else {
             return Err(anyhow!("[Error][process_by_consume_type()] Variable 'consume_type' contains an undefined string."));
         }
+    }
+
+
+    #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` months"]
+    /// # Arguments
+    /// * `date_start`  
+    /// * `date_end`    
+    /// * `nmonth` - Before or after `N` months
+    ///
+    /// # Returns
+    /// * Result<PermonDatetime, anyhow::Error>  
+    fn get_nmonth_to_current_date(
+        &self,
+        date_start: NaiveDate,
+        date_end: NaiveDate,
+        nmonth: i32,
+    ) -> Result<PerDatetime, anyhow::Error> {
+        let n_month_start: NaiveDate = get_add_month_from_naivedate(date_start, nmonth)
+            .map_err(|e| anyhow!("{:?} -> in get_nmonth_to_current_date().n_month_start", e))?;
+
+        let n_month_end: NaiveDate = get_add_month_from_naivedate(date_end, nmonth)
+            .map_err(|e| anyhow!("{:?} -> in get_nmonth_to_current_date().n_month_end", e))?;
+
+        let per_mon_datetim: PerDatetime = PerDatetime::new(date_start, date_end, n_month_start, n_month_end);
+
+        Ok(per_mon_datetim)
     }
 }

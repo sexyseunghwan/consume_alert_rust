@@ -301,7 +301,7 @@ impl DBService for DBServicePub {
                 "@timestamp": { "order": "asc" }
             }
         });
-
+        
         let es_client = get_elastic_conn()?;
         let response_body = es_client.get_search_query(&query, CONSUME_DETAIL).await?;
         let hits = &response_body["hits"]["hits"];

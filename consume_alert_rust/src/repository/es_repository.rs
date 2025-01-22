@@ -206,7 +206,7 @@ impl EsRepository for EsRepositoryPub {
     ) -> Result<(), anyhow::Error> {
         let struct_json: Value = convert_json_from_struct(param_struct)?;
         self.post_query(&struct_json, index_name).await?;
-
+        
         Ok(())
     }
 
@@ -226,6 +226,7 @@ impl EsRepository for EsRepositoryPub {
             .await?;
 
         if response.status_code().is_success() {
+            info!("[Indexing Success] index_name: {}", index_name);
             Ok(())
         } else {
             let error_message = format!("[Elasticsearch Error][node_post_query()] Failed to index document: Status Code: {}", response.status_code());
@@ -239,19 +240,16 @@ impl EsRepository for EsRepositoryPub {
             .execute_on_any_node(|es_client| async move {
                 let response = es_client
                     .es_conn
-                    //.delete_by_query(DeleteByQueryParts::Index(&[index_name]))
-                    //.body(body)
                     .delete(DeleteParts::IndexId(index_name, doc_id))
                     .send()
                     .await?;
-
-                println!("{:?}", response);
 
                 Ok(response)
             })
             .await?;
 
         if response.status_code().is_success() {
+            info!("[Success Delete] index name: {}, doc_id: {}", index_name, doc_id);
             Ok(())
         } else {
             let error_message = format!("[Elasticsearch Error][node_delete_query()] Failed to delete document: Status Code: {}, Document ID: {}", response.status_code(), doc_id);
