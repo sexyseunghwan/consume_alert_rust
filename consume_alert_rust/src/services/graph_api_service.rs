@@ -16,9 +16,14 @@ pub trait GraphApiService {
         uri: &str,
         to_python_graph: T,
     ) -> Result<String, anyhow::Error>;
-    async fn call_python_matplot_consume_detail(
+    async fn call_python_matplot_consume_detail_single(
         &self,
-        comparison_info: &Vec<ToPythonGraphLine>,
+        python_graph_info: &ToPythonGraphLine,
+    ) -> Result<String, anyhow::Error>;
+    async fn call_python_matplot_consume_detail_double(
+        &self,
+        cur_python_graph_info: &ToPythonGraphLine,
+        versus_python_graph_info: &ToPythonGraphLine,
     ) -> Result<String, anyhow::Error>;
 }
 
@@ -56,7 +61,7 @@ impl GraphApiService for GraphApiServicePub {
         let client: &once_lazy<Client> = &HTTP_CLIENT;
 
         let res: reqwest::Response = client.post(&post_uri).json(&to_python_graph).send().await?;
-        
+
         if res.status().is_success() {
             let response_body: String = res.text().await?;
             Ok(response_body)
@@ -68,16 +73,46 @@ impl GraphApiService for GraphApiServicePub {
         }
     }
 
-    #[doc = ""]
+    #[doc = "Function that calls python api to draw a line chart. - single"]
     /// # Arguments
-    /// * `comparison_info` - uri information
+    /// * `python_graph_info` - Objects for representing consumption details in a Python graph
     ///
     /// # Returns
-    /// * Result<String, anyhow::Error>
-    async fn call_python_matplot_consume_detail(
+    /// * Result<String, anyhow::Error> -> image file name
+    async fn call_python_matplot_consume_detail_single(
         &self,
-        comparison_info: &Vec<ToPythonGraphLine>,
+        python_graph_info: &ToPythonGraphLine,
     ) -> Result<String, anyhow::Error> {
-        Ok(String::from("test"))
+        let mut python_graph_vec: Vec<ToPythonGraphLine> = Vec::new();
+        python_graph_vec.push(python_graph_info.clone());
+
+        let resp_body: String = self
+            .post_api("/api/consume_detail", python_graph_vec)
+            .await?;
+
+        Ok(resp_body)
+    }
+
+    #[doc = "Function that calls python api to draw a line chart. - double"]
+    /// # Arguments
+    /// * `cur_python_graph_info` - Objects for representing consumption details in a Python graph
+    /// * `versus_python_graph_info` - Objects for representing consumption details in a Python graph (comparative group)
+    ///
+    /// # Returns
+    /// * Result<String, anyhow::Error> -> image file name
+    async fn call_python_matplot_consume_detail_double(
+        &self,
+        cur_python_graph_info: &ToPythonGraphLine,
+        versus_python_graph_info: &ToPythonGraphLine,
+    ) -> Result<String, anyhow::Error> {
+        let mut python_graph_vec: Vec<ToPythonGraphLine> = Vec::new();
+        python_graph_vec.push(cur_python_graph_info.clone());
+        python_graph_vec.push(versus_python_graph_info.clone());
+
+        let resp_body: String = self
+            .post_api("/api/consume_detail", python_graph_vec)
+            .await?;
+
+        Ok(resp_body)
     }
 }

@@ -2,8 +2,13 @@ use crate::common::*;
 
 use crate::utils_modules::time_utils::*;
 
+use crate::models::agg_result_set::*;
 use crate::models::consume_prodt_info::*;
+use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
+use crate::models::to_python_graph_line::*;
+use crate::models::distinct_object::*;
+use crate::models::agg_result_set::*;
 
 #[async_trait]
 pub trait ProcessService {
@@ -31,6 +36,8 @@ pub trait ProcessService {
         date_end: NaiveDate,
         nmonth: i32,
     ) -> Result<PerDatetime, anyhow::Error>;
+    fn get_consumption_result_by_category(&self, consume_details: &AggResultSet<ConsumeProdtInfo>) -> Result<(), anyhow::Error>;
+
 }
 
 #[derive(Debug, Getters, Clone, new)]
@@ -221,5 +228,35 @@ impl ProcessService for ProcessServicePub {
             PerDatetime::new(date_start, date_end, n_month_start, n_month_end);
 
         Ok(per_mon_datetim)
+    }
+
+    #[doc = ""]
+    fn get_consumption_result_by_category(&self, consume_details: &AggResultSet<ConsumeProdtInfo>) -> Result<(), anyhow::Error> {
+
+        let mut cost_map: HashMap<String, i64> = HashMap::new();
+
+        let consume_details: &Vec<DocumentWithId<ConsumeProdtInfo>> = consume_details.source_list();
+
+        let mut cost_map: HashMap<String, i64> = consume_details
+            .iter()
+            .fold(HashMap::new(), |mut acc, consume_detail| {
+                let detail: &ConsumeProdtInfo = consume_detail.source();
+                let prodt_type: String = detail.prodt_type().to_string();
+                let prodt_money: i64 = *detail.prodt_money();
+
+                acc.entry(prodt_type)
+                    .and_modify(|value| *value += prodt_money)
+                    .or_insert(prodt_money);
+                acc
+            });
+        
+        let (prodt_type_vec, prodt_type_cost_vec): (Vec<String>, Vec<i64>) = cost_map
+            .into_iter()
+            .unzip();
+        
+        
+        
+
+        Ok(())
     }
 }

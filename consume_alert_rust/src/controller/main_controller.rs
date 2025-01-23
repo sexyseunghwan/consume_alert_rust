@@ -1,5 +1,6 @@
 use crate::common::*;
 
+use crate::models::to_python_graph_line::ToPythonGraphLine;
 use crate::services::elastic_query_service::*;
 use crate::services::graph_api_service::*;
 use crate::services::mysql_query_service::*;
@@ -13,6 +14,7 @@ use crate::repository::es_repository::*;
 
 use crate::models::agg_result_set::*;
 use crate::models::consume_prodt_info::*;
+use crate::models::distinct_object::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 
@@ -132,7 +134,46 @@ impl<
             )
             .await?;
 
+        let cur_python_graph: ToPythonGraphLine = ToPythonGraphLine::new(
+            "cur",
+            permon_datetime.date_start,
+            permon_datetime.date_end,
+            &consume_detail_info,
+        )?;
+
+        let versus_python_graph: ToPythonGraphLine = ToPythonGraphLine::new(
+            "versus",
+            permon_datetime.n_date_start,
+            permon_datetime.n_date_end,
+            &versus_consume_detail_info,
+        )?;
+
+        /* The consumption details are sent through the Telegram bot. */
+        // self.tele_bot_service
+        //     .send_message_consume_split(&cur_python_graph, &consume_detail_info.source_list())
+        //     .await?;
+
         /* Using Python API */
+        let mut delete_files: Vec<String> = Vec::new();
+
+        /* Graph of consumption details */
+        let cnosume_detail_img_file_path: String = self
+            .graph_api_service
+            .call_python_matplot_consume_detail_double(&cur_python_graph, &versus_python_graph)
+            .await?;
+
+        /* Send consumption details graph photo */
+        self.tele_bot_service
+            .send_photo_confirm(&cnosume_detail_img_file_path)
+            .await?;
+
+        delete_files.push(cnosume_detail_img_file_path);
+
+        
+        
+        
+        /* Delete Image file */
+        delete_file(delete_files)?;
 
         Ok(())
     }
@@ -311,6 +352,9 @@ impl<
                 return Err(anyhow!("[Parameter Error][command_consumption_per_mon()] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text()));
             }
         };
+
+        self.common_process_python_double(CONSUME_DETAIL, permon_datetime)
+            .await?;
 
         Ok(())
     }

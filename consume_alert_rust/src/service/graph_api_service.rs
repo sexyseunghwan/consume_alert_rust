@@ -152,7 +152,7 @@ impl GraphApiService for GraphApiServicePub {
 
             let prodt_per = (prodt_cost as f64 / total_cost) * 100.0;
             let prodt_per_rounded = (prodt_per * 10.0).round() / 10.0; /* Round to the second decimal place */
-
+            
             let consume_type_info = ConsumeTypeInfo::new(prodt_type, prodt_cost, prodt_per_rounded);
             consume_type_list.push(consume_type_info);
         }

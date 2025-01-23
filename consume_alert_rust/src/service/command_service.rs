@@ -1346,7 +1346,7 @@ impl CommandService for CommandServicePub {
 //                         send_message_confirm(bot, message.chat.id, "This is the type that already exists.").await?;
 //                     } else {
 
-//                         let document = json!({
+//                         let document = json!({ 
 //                             "keyword_type": input_keyword_type,
 //                             "keyword": input_keyword,
 //                             "bias_value": bias_val

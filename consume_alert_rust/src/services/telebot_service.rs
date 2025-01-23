@@ -2,6 +2,8 @@ use crate::common::*;
 
 use crate::models::consume_prodt_info::*;
 use crate::models::consume_type_info::*;
+use crate::models::document_with_id::*;
+use crate::models::to_python_graph_line::*;
 
 #[async_trait]
 pub trait TelebotService {
@@ -24,11 +26,8 @@ pub trait TelebotService {
 
     async fn send_message_consume_split(
         &self,
-        consume_list: &Vec<ConsumeProdtInfo>,
-        total_cost: f64,
-        start_dt: NaiveDate,
-        end_dt: NaiveDate,
-        empty_flag: bool,
+        to_python_graph_line: &ToPythonGraphLine,
+        consume_detail_list: &Vec<DocumentWithId<ConsumeProdtInfo>>,
     ) -> Result<(), anyhow::Error>;
 
     async fn send_message_consume_type(
@@ -216,7 +215,7 @@ impl TelebotService for TelebotServicePub {
 
     #[doc = "tele_bot_send_photo"]
     async fn tele_bot_send_photo(&self, image_path: &str) -> Result<(), anyhow::Error> {
-        let photo = InputFile::file(Path::new(image_path));
+        let photo: InputFile = InputFile::file(Path::new(image_path));
         self.bot
             .send_photo(self.chat_id, photo)
             .await
@@ -248,16 +247,16 @@ impl TelebotService for TelebotServicePub {
         'life1: 'life2, /* 'life1' should live longer than 'life2' */
         T: Send + Sync,
     {
-        let cnt = 10;
-        let items_len = items.len();
-        let loop_cnt = (items_len / cnt) + (if items_len % cnt != 0 { 1 } else { 0 });
+        let cnt: usize = 10;
+        let items_len: usize = items.len();
+        let loop_cnt: usize = (items_len / cnt) + (if items_len % cnt != 0 { 1 } else { 0 });
 
         if empty_flag {
             self.send_message_confirm(empty_msg).await?;
         } else {
             for idx in 0..loop_cnt {
-                let mut send_text = String::new();
-                let end_idx = cmp::min(items_len, (idx + 1) * cnt);
+                let mut send_text: String = String::new();
+                let end_idx: usize = cmp::min(items_len, (idx + 1) * cnt);
 
                 if idx == 0 {
                     send_text.push_str(msg_title);
@@ -276,26 +275,37 @@ impl TelebotService for TelebotServicePub {
     }
 
     #[doc = "Functions that send messages related to consumption details"]
+    /// # Arguments
+    /// * `to_python_graph_line` - Objects for drawing graphs
+    /// * `consume_detail_list` - Consumption Details List
+    ///
+    /// # Returns
+    /// * Result<(), anyhow::Error>
     async fn send_message_consume_split(
         &self,
-        consume_list: &Vec<ConsumeProdtInfo>,
-        total_cost: f64,
-        start_dt: NaiveDate,
-        end_dt: NaiveDate,
-        empty_flag: bool,
+        to_python_graph_line: &ToPythonGraphLine,
+        consume_detail_list: &Vec<DocumentWithId<ConsumeProdtInfo>>,
     ) -> Result<(), anyhow::Error> {
-        let total_cost_i32 = total_cost as i32;
+        let start_dt: &String = to_python_graph_line.start_dt();
+        let end_dt: &String = to_python_graph_line.end_dt();
+        let total_cost: i64 = *to_python_graph_line.total_cost();
 
-        self.send_consumption_message(consume_list, |item| {
+        let empty_flag = if consume_detail_list.is_empty() {
+            true
+        } else {
+            false
+        };
+
+        self.send_consumption_message(consume_detail_list, |item| {
             format!(
                 "name : {}\ndate : {}\ncost : {}\n",
-                item.prodt_name(),
-                item.timestamp(),
-                item.prodt_money().to_formatted_string(&Locale::ko)
+                item.source.prodt_name(),
+                item.source.timestamp(),
+                item.source.prodt_money().to_formatted_string(&Locale::ko)
             )},
             empty_flag,
-            &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)),
-            &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)) 
+            &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost.to_formatted_string(&Locale::ko)),
+            &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost.to_formatted_string(&Locale::ko)) 
         ).await
     }
 

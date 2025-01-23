@@ -1,5 +1,6 @@
 use crate::common::*;
 
+use crate::models::agg_result_set::*;
 use crate::models::consume_prodt_info::*;
 
 #[derive(Debug, Getters, Serialize, Deserialize, Clone)]
@@ -8,27 +9,28 @@ pub struct ToPythonGraphLine {
     line_type: String,
     start_dt: String,
     end_dt: String,
-    total_cost: f64,
+    total_cost: i64,
     consume_accumulate_list: Vec<i64>,
 }
 
 impl ToPythonGraphLine {
     pub fn new(
         line_type: &str,
-        start_dt: &str,
-        end_dt: &str,
-        total_cost: f64,
-        consume_detail: Vec<ConsumeProdtInfo>,
+        start_dt: NaiveDate,
+        end_dt: NaiveDate,
+        consume_detail: &AggResultSet<ConsumeProdtInfo>,
     ) -> Result<Self, anyhow::Error> {
         let mut date_consume: HashMap<NaiveDate, i64> = HashMap::new();
 
-        for elem in &consume_detail {
-            let date_part = elem.timestamp.split('T').next().ok_or_else(|| {
+        let total_cost: i64 = *consume_detail.agg_result();
+
+        for elem in consume_detail.source_list() {
+            let date_part: &str = elem.source.timestamp.split('T').next().ok_or_else(|| {
                 anyhow!("[Error][ToPythonGraphLine -> new()] Invalid date. - date_part")
             })?;
 
             let elem_date: NaiveDate = NaiveDate::parse_from_str(date_part, "%Y-%m-%d")?;
-            let prodt_money: i64 = elem.prodt_money;
+            let prodt_money: i64 = elem.source.prodt_money;
 
             date_consume
                 .entry(elem_date)

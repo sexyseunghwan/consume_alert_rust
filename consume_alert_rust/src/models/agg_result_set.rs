@@ -6,6 +6,6 @@ use crate::models::document_with_id::*;
 #[derive(Debug, Serialize, Deserialize, Clone, Getters, Setters, new)]
 #[getset(get = "pub", set = "pub")]
 pub struct AggResultSet<T> {
-    pub agg_result: f64,
+    pub agg_result: i64,
     pub source_list: Vec<DocumentWithId<T>>,
 }
