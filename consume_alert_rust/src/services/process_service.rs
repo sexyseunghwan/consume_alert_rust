@@ -3,12 +3,13 @@ use crate::common::*;
 use crate::utils_modules::time_utils::*;
 
 use crate::models::agg_result_set::*;
+use crate::models::agg_result_set::*;
 use crate::models::consume_prodt_info::*;
+use crate::models::distinct_object::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
+use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
-use crate::models::distinct_object::*;
-use crate::models::agg_result_set::*;
 
 #[async_trait]
 pub trait ProcessService {
@@ -36,8 +37,17 @@ pub trait ProcessService {
         date_end: NaiveDate,
         nmonth: i32,
     ) -> Result<PerDatetime, anyhow::Error>;
-    fn get_consumption_result_by_category(&self, consume_details: &AggResultSet<ConsumeProdtInfo>) -> Result<(), anyhow::Error>;
-
+    fn get_calculate_pie_from_category(
+        &self,
+        total_cost: i64,
+        type_map: &HashMap<String, i64>,
+    ) -> Result<HashMap<String, f64>, anyhow::Error>;
+    fn get_consumption_result_by_category(
+        &self,
+        consume_details: &AggResultSet<ConsumeProdtInfo>,
+        start_dt: NaiveDate,
+        end_dt: NaiveDate,
+    ) -> Result<ToPythonGraphCircle, anyhow::Error>;
 }
 
 #[derive(Debug, Getters, Clone, new)]
@@ -231,32 +241,78 @@ impl ProcessService for ProcessServicePub {
     }
 
     #[doc = ""]
-    fn get_consumption_result_by_category(&self, consume_details: &AggResultSet<ConsumeProdtInfo>) -> Result<(), anyhow::Error> {
+    /// # Arguments
+    /// * `total_mount` -
+    /// * `type_map` -
+    ///
+    /// # Returns
+    /// * Result<HashMap<String, i64>, anyhow::Error>
+    fn get_calculate_pie_from_category(
+        &self,
+        total_cost: i64,
+        type_map: &HashMap<String, i64>,
+    ) -> Result<HashMap<String, f64>, anyhow::Error> {
+        let mut result_map: HashMap<String, f64> = HashMap::new();
 
-        let mut cost_map: HashMap<String, i64> = HashMap::new();
+        for (key, value) in type_map {
+            let prodt_type: String = key.to_string();
+            let prodt_cost: i64 = *value;
 
-        let consume_details: &Vec<DocumentWithId<ConsumeProdtInfo>> = consume_details.source_list();
+            let prodt_per: f64 = (prodt_cost as f64 / total_cost as f64) * 100.0;
+            let prodt_per_rounded: f64 = (prodt_per * 10.0).round() / 10.0; /* Round to the second decimal place */
 
-        let mut cost_map: HashMap<String, i64> = consume_details
-            .iter()
-            .fold(HashMap::new(), |mut acc, consume_detail| {
-                let detail: &ConsumeProdtInfo = consume_detail.source();
-                let prodt_type: String = detail.prodt_type().to_string();
-                let prodt_money: i64 = *detail.prodt_money();
+            result_map.insert(prodt_type, prodt_per_rounded);
+        }
 
-                acc.entry(prodt_type)
-                    .and_modify(|value| *value += prodt_money)
-                    .or_insert(prodt_money);
-                acc
-            });
-        
-        let (prodt_type_vec, prodt_type_cost_vec): (Vec<String>, Vec<i64>) = cost_map
-            .into_iter()
-            .unzip();
-        
-        
-        
+        Ok(result_map)
+    }
 
-        Ok(())
+    #[doc = "Function that converts consumption results by category into Python data"]
+    /// # Arguments
+    /// * `consume_details` - Consumption details
+    /// * `start_dt` - Start date
+    /// * `end_dt` -  End Date
+    ///
+    /// # Returns
+    /// * Result<ToPythonGraphCircle, anyhow::Error>
+    fn get_consumption_result_by_category(
+        &self,
+        consume_details: &AggResultSet<ConsumeProdtInfo>,
+        start_dt: NaiveDate,
+        end_dt: NaiveDate,
+    ) -> Result<ToPythonGraphCircle, anyhow::Error> {
+        let consume_inner_details: &Vec<DocumentWithId<ConsumeProdtInfo>> =
+            consume_details.source_list();
+        let total_cost: i64 = *consume_details.agg_result();
+
+        let cost_map: HashMap<String, i64> =
+            consume_inner_details
+                .iter()
+                .fold(HashMap::new(), |mut acc, consume_detail| {
+                    let detail: &ConsumeProdtInfo = consume_detail.source();
+                    let prodt_type: String = detail.prodt_type().to_string();
+                    let prodt_money: i64 = *detail.prodt_money();
+
+                    acc.entry(prodt_type)
+                        .and_modify(|value| *value += prodt_money)
+                        .or_insert(prodt_money);
+                    acc
+                });
+
+        let cost_map: HashMap<String, f64> =
+            self.get_calculate_pie_from_category(total_cost, &cost_map)?;
+
+        let (prodt_type_vec, prodt_type_cost_vec): (Vec<String>, Vec<f64>) =
+            cost_map.into_iter().unzip();
+
+        let to_python_graph_circle: ToPythonGraphCircle = ToPythonGraphCircle::new(
+            prodt_type_vec,
+            prodt_type_cost_vec,
+            start_dt.to_string(),
+            end_dt.to_string(),
+            total_cost,
+        );
+
+        Ok(to_python_graph_circle)
     }
 }

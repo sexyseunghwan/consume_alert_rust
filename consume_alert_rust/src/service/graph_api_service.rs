@@ -95,7 +95,7 @@ impl GraphApiService for GraphApiServicePub {
             title_vec.push(prodt_type.to_string());
             cost_vec.push(*prodt_cost)
         }
-
+        
         let to_python_graph: ToPythonGraphCircle = ToPythonGraphCircle::new(
             title_vec,
             cost_vec,
@@ -119,7 +119,7 @@ impl GraphApiService for GraphApiServicePub {
             .await?;
         Ok(resp_body)
     }
-
+    
     #[doc = "Function that returns consumption type information (Graphs and detailed consumption details)"]
     async fn get_consume_type_graph(
         &self,

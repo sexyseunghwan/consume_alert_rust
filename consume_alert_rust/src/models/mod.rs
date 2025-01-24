@@ -6,5 +6,5 @@ pub mod distinct_object;
 pub mod document_with_id;
 pub mod per_datetime;
 pub mod score_manager;
-pub mod to_python_graph_line;
 pub mod to_python_graph_circle;
+pub mod to_python_graph_line;

@@ -1,6 +1,5 @@
 use crate::common::*;
 
-use crate::models::to_python_graph_line::ToPythonGraphLine;
 use crate::services::elastic_query_service::*;
 use crate::services::graph_api_service::*;
 use crate::services::mysql_query_service::*;
@@ -17,6 +16,8 @@ use crate::models::consume_prodt_info::*;
 use crate::models::distinct_object::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
+use crate::models::to_python_graph_circle::*;
+use crate::models::to_python_graph_line::*;
 
 pub struct MainController<
     G: GraphApiService,
@@ -162,6 +163,14 @@ impl<
             .call_python_matplot_consume_detail_double(&cur_python_graph, &versus_python_graph)
             .await?;
 
+        /* Graph of consumption t */
+        let to_python_circle_graph: ToPythonGraphCircle =
+            self.process_service.get_consumption_result_by_category(
+                &consume_detail_info,
+                permon_datetime.date_start,
+                permon_datetime.date_end,
+            )?;
+
         /* Send consumption details graph photo */
         self.tele_bot_service
             .send_photo_confirm(&cnosume_detail_img_file_path)
@@ -169,9 +178,6 @@ impl<
 
         delete_files.push(cnosume_detail_img_file_path);
 
-        
-        
-        
         /* Delete Image file */
         delete_file(delete_files)?;
 

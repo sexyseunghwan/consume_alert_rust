@@ -1,5 +1,6 @@
 use crate::common::*;
 
+use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
 
 static HTTP_CLIENT: once_lazy<Client> = once_lazy::new(|| initialize_http_clients());
@@ -24,6 +25,10 @@ pub trait GraphApiService {
         &self,
         cur_python_graph_info: &ToPythonGraphLine,
         versus_python_graph_info: &ToPythonGraphLine,
+    ) -> Result<String, anyhow::Error>;
+    async fn call_python_matplot_consume_type(
+        &self,
+        to_python_graph_circle: &ToPythonGraphCircle,
     ) -> Result<String, anyhow::Error>;
 }
 
@@ -113,6 +118,22 @@ impl GraphApiService for GraphApiServicePub {
             .post_api("/api/consume_detail", python_graph_vec)
             .await?;
 
+        Ok(resp_body)
+    }
+
+    #[doc = ""]
+    /// # Arguments
+    /// * `to_python_graph_circle` -
+    ///
+    /// # Returns
+    /// * Result<String, anyhow::Error>
+    async fn call_python_matplot_consume_type(
+        &self,
+        to_python_graph_circle: &ToPythonGraphCircle,
+    ) -> Result<String, anyhow::Error> {
+        let resp_body: String = self
+            .post_api("/api/category", to_python_graph_circle)
+            .await?;
         Ok(resp_body)
     }
 }
