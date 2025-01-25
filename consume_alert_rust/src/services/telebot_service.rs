@@ -1,16 +1,17 @@
 use crate::common::*;
 
 use crate::models::consume_prodt_info::*;
-use crate::models::consume_type_info::*;
+use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
 use crate::models::to_python_graph_line::*;
+use crate::models::to_python_graph_circle::*;
 
 #[async_trait]
 pub trait TelebotService {
     async fn tele_bot_send_msg(&self, msg: &str) -> Result<(), anyhow::Error>;
     async fn send_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error>;
     async fn tele_bot_send_photo(&self, image_path: &str) -> Result<(), anyhow::Error>;
-    async fn send_photo_confirm(&self, image_path: &str) -> Result<(), anyhow::Error>;
+    async fn send_photo_confirm(&self, image_path_vec: &Vec<String>) -> Result<(), anyhow::Error>;
 
     async fn send_consumption_message<'life1, 'life2, 'msg, T>(
         &self,
@@ -30,20 +31,23 @@ pub trait TelebotService {
         consume_detail_list: &Vec<DocumentWithId<ConsumeProdtInfo>>,
     ) -> Result<(), anyhow::Error>;
 
-    async fn send_message_consume_type(
-        &self,
-        consume_type_list: &Vec<ConsumeTypeInfo>,
-        total_cost: f64,
-        start_dt: NaiveDate,
-        end_dt: NaiveDate,
-        empty_flag: bool,
-    ) -> Result<(), anyhow::Error>;
+    // async fn send_message_consume_type(
+    //     &self,
+    //     consume_type_list: &Vec<ConsumeTypeInfo>,
+    //     total_cost: f64,
+    //     start_dt: NaiveDate,
+    //     end_dt: NaiveDate,
+    //     empty_flag: bool,
+    // ) -> Result<(), anyhow::Error>;
 
-    async fn send_message_consume_type_list(
-        &self,
-        consume_type_list: &Vec<String>,
-        empty_flag: bool,
-    ) -> Result<(), anyhow::Error>;
+    // async fn send_message_consume_type_list(
+    //     &self,
+    //     consume_type_list: &Vec<String>,
+    //     empty_flag: bool,
+    // ) -> Result<(), anyhow::Error>;
+
+    async fn send_message_consume_info_by_typelist(&self, type_consume_info: &ToPythonGraphCircle) -> Result<(), anyhow::Error>; 
+
 
     fn get_input_text(&self) -> String;
 
@@ -90,14 +94,14 @@ impl TelebotServicePub {
 
     #[doc = "Generator for TEST"]
     /// # Arguments
-    /// * `bot`         -
-    /// * `input_str`   -
+    /// * `bot`         - Object Telegram bot
+    /// * `input_str`   - String to be entered
     ///
     /// # Returns
     /// * Self
     pub fn new_test(bot: Arc<Bot>, input_str: &str) -> Self {
-        let chat_id = ChatId(5346196727);
-        let input_text = input_str.to_string().to_lowercase();
+        let chat_id: ChatId = ChatId(5346196727);
+        let input_text: String = input_str.to_string().to_lowercase();
 
         Self {
             bot,
@@ -107,6 +111,13 @@ impl TelebotServicePub {
     }
 
     #[doc = "Generic function to retry operations"]
+    /// # Arguments
+    /// * `operation` - 
+    /// * `max_retries` -
+    /// * `retry_delay` - 
+    ///
+    /// # Returns
+    /// * Result<(), anyhow::Error>
     async fn try_send_operation<F, Fut>(
         &self,
         operation: F,
@@ -224,14 +235,23 @@ impl TelebotService for TelebotServicePub {
         Ok(())
     }
 
-    #[doc = "Retry sending photos"]
-    async fn send_photo_confirm(&self, image_path: &str) -> Result<(), anyhow::Error> {
-        self.try_send_operation(
-            || self.tele_bot_send_photo(image_path),
-            6,
-            Duration::from_secs(40),
-        )
-        .await
+    #[doc = "Function that transfers pictures"]
+    /// # Arguments
+    /// * `image_path_vec` - Vector that elements the paths of a photo file
+    ///
+    /// # Returns
+    /// * Result<(), anyhow::Error>
+    async fn send_photo_confirm(&self, image_path_vec: &Vec<String>) -> Result<(), anyhow::Error> {
+        for image_path in image_path_vec {
+            self.try_send_operation(
+                || self.tele_bot_send_photo(image_path),
+                6,
+                Duration::from_secs(40),
+            )
+            .await?;
+        }
+
+        Ok(())
     }
 
     #[doc = "Functions that send messages related to consumption details"]
@@ -309,45 +329,83 @@ impl TelebotService for TelebotServicePub {
         ).await
     }
 
-    #[doc = "Function that sends messages related to consumption type history"]
-    async fn send_message_consume_type(
-        &self,
-        consume_type_list: &Vec<ConsumeTypeInfo>,
-        total_cost: f64,
-        start_dt: NaiveDate,
-        end_dt: NaiveDate,
-        empty_flag: bool,
-    ) -> Result<(), anyhow::Error> {
-        let total_cost_i32 = total_cost as i32;
-
-        self.send_consumption_message(consume_type_list, |item| {
-            format!(
-                "category name : {}\ncost : {}\ncost(%) : {}%\n",
-                item.prodt_type(),
-                item.prodt_cost().to_formatted_string(&Locale::ko),
-                item.prodt_per()
-            )},
-            empty_flag,
-            &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)),
-            &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko))
-        ).await
-    }
-
     #[doc = ""]
-    async fn send_message_consume_type_list(
-        &self,
-        consume_type_list: &Vec<String>,
-        empty_flag: bool,
-    ) -> Result<(), anyhow::Error> {
-        self.send_consumption_message(
-            consume_type_list,
-            |item| format!("{}\n", item.to_string()),
-            empty_flag,
-            "'consume_type' does not exist.",
-            "ConsumeType List\n=========[DETAIL]=========\n",
-        )
-        .await
+    /// # Arguments
+    /// * `type_consume_info` - Index name
+    ///
+    /// # Returns
+    /// * Result<(), anyhow::Error>
+    async fn send_message_consume_info_by_typelist(&self, type_consume_info: &ToPythonGraphCircle) -> Result<(), anyhow::Error> {
+
+        //let total_cost_i32 = total_cost as i32;
+
+        // self.send_consumption_message(consume_type_list, |item| {
+        //     format!(
+        //         "category name : {}\ncost : {}\ncost(%) : {}%\n",
+        //         item.prodt_type(),
+        //         item.prodt_cost().to_formatted_string(&Locale::ko),
+        //         item.prodt_per()
+        //     )},
+        //     empty_flag,
+        //     &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)),
+        //     &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko))
+        // ).await
+        
+
+        Ok(())
     }
+
+    // #[doc = "Function that sends messages related to consumption type history"]
+    // /// # Arguments
+    // /// * `consume_type_list` - Index name
+    // /// * `total_cost` - Structures with date data to compare with date
+    // ///
+    // /// # Returns
+    // /// * Result<(), anyhow::Error>
+    // async fn send_message_consume_type(
+    //     &self,
+    //     consume_type_list: &Vec<ConsumeTypeInfo>,
+    //     total_cost: f64,
+    //     start_dt: NaiveDate,
+    //     end_dt: NaiveDate,
+    //     empty_flag: bool,
+    // ) -> Result<(), anyhow::Error> {
+    //     let total_cost_i32 = total_cost as i32;
+
+    //     self.send_consumption_message(consume_type_list, |item| {
+    //         format!(
+    //             "category name : {}\ncost : {}\ncost(%) : {}%\n",
+    //             item.prodt_type(),
+    //             item.prodt_cost().to_formatted_string(&Locale::ko),
+    //             item.prodt_per()
+    //         )},
+    //         empty_flag,
+    //         &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko)),
+    //         &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i32.to_formatted_string(&Locale::ko))
+    //     ).await
+    // }
+    
+    // #[doc = "Function that sends messages related to consumption type history"]
+    // /// # Arguments
+    // /// * `consume_type_list` - Index name
+    // /// * `total_cost` - Structures with date data to compare with date
+    // ///
+    // /// # Returns
+    // /// * Result<(), anyhow::Error>
+    // async fn send_message_consume_type_list(
+    //     &self,
+    //     consume_type_list: &Vec<String>,
+    //     empty_flag: bool,
+    // ) -> Result<(), anyhow::Error> {
+    //     self.send_consumption_message(
+    //         consume_type_list,
+    //         |item| format!("{}\n", item.to_string()),
+    //         empty_flag,
+    //         "'consume_type' does not exist.",
+    //         "ConsumeType List\n=========[DETAIL]=========\n",
+    //     )
+    //     .await
+    // }
 
     #[doc = "String entered through `Telegram`"]
     fn get_input_text(&self) -> String {

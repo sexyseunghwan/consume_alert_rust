@@ -10,6 +10,7 @@ use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
+use crate::models::consume_result_by_type::*;
 
 #[async_trait]
 pub trait ProcessService {
@@ -38,16 +39,17 @@ pub trait ProcessService {
         nmonth: i32,
     ) -> Result<PerDatetime, anyhow::Error>;
     fn get_calculate_pie_from_category(
-        &self,
+        &self,    
         total_cost: i64,
         type_map: &HashMap<String, i64>,
     ) -> Result<HashMap<String, f64>, anyhow::Error>;
+    //fn convert_
     fn get_consumption_result_by_category(
         &self,
         consume_details: &AggResultSet<ConsumeProdtInfo>,
         start_dt: NaiveDate,
         end_dt: NaiveDate,
-    ) -> Result<ToPythonGraphCircle, anyhow::Error>;
+    ) -> Result<Vec<ConsumeResultByType>, anyhow::Error>;
 }
 
 #[derive(Debug, Getters, Clone, new)]
@@ -240,10 +242,10 @@ impl ProcessService for ProcessServicePub {
         Ok(per_mon_datetim)
     }
 
-    #[doc = ""]
+    #[doc = "Function that calculates the money spent by category"]
     /// # Arguments
-    /// * `total_mount` -
-    /// * `type_map` -
+    /// * `total_mount` - total money spent
+    /// * `type_map` - <Consumption classification, money spent>
     ///
     /// # Returns
     /// * Result<HashMap<String, i64>, anyhow::Error>
@@ -263,7 +265,7 @@ impl ProcessService for ProcessServicePub {
 
             result_map.insert(prodt_type, prodt_per_rounded);
         }
-
+        
         Ok(result_map)
     }
 
@@ -280,7 +282,7 @@ impl ProcessService for ProcessServicePub {
         consume_details: &AggResultSet<ConsumeProdtInfo>,
         start_dt: NaiveDate,
         end_dt: NaiveDate,
-    ) -> Result<ToPythonGraphCircle, anyhow::Error> {
+    ) -> Result<Vec<ConsumeResultByType>, anyhow::Error> {
         let consume_inner_details: &Vec<DocumentWithId<ConsumeProdtInfo>> =
             consume_details.source_list();
         let total_cost: i64 = *consume_details.agg_result();
@@ -298,21 +300,34 @@ impl ProcessService for ProcessServicePub {
                         .or_insert(prodt_money);
                     acc
                 });
-
+         
         let cost_map: HashMap<String, f64> =
             self.get_calculate_pie_from_category(total_cost, &cost_map)?;
+        
+        let consume_result_by_types: Vec<ConsumeResultByType> = cost_map
+            .into_iter()
+            .map(|(key, value)| ConsumeResultByType::new(key, value))
+            .collect();
 
-        let (prodt_type_vec, prodt_type_cost_vec): (Vec<String>, Vec<f64>) =
-            cost_map.into_iter().unzip();
+        Ok(consume_result_by_types)
+        // let (prodt_type_vec, prodt_type_cost_vec): (Vec<String>, Vec<f64>) =
+        //     cost_map.into_iter().unzip();
+        
+        /* 'prodt_type_vec' and 'prodt_type_cost_vec' should be one-to-one correspondence.
+            If the length of the two vectors is different, an error occurs.
+        */
+        // if prodt_type_vec.len() != prodt_type_cost_vec.len() {
+        //     return Err(anyhow!("[Error][get_consumption_result_by_category()] The length of 'prodt_type_vec' and 'prodt_type_cost_vec' vectors is different."));
+        // }
+        
+        // let to_python_graph_circle: ToPythonGraphCircle = ToPythonGraphCircle::new(
+        //     prodt_type_vec,
+        //     prodt_type_cost_vec,
+        //     start_dt.to_string(),
+        //     end_dt.to_string(),
+        //     total_cost,
+        // );
 
-        let to_python_graph_circle: ToPythonGraphCircle = ToPythonGraphCircle::new(
-            prodt_type_vec,
-            prodt_type_cost_vec,
-            start_dt.to_string(),
-            end_dt.to_string(),
-            total_cost,
-        );
-
-        Ok(to_python_graph_circle)
+        //Ok(to_python_graph_circle)
     }
 }

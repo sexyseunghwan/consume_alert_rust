@@ -67,7 +67,7 @@ impl<
             "cm" => self.command_consumption_per_mon().await?,
             // "ctr" => self.command_consumption_per_term().await?,
             // "ct" => self.command_consumption_per_day().await?,
-            // "cs" => self.command_consumption_per_salary().await?,
+            "cs" => self.command_consumption_per_salary().await?,
             // "cw" => self.command_consumption_per_week().await?,
             // "mc" => self.command_record_fasting_time().await?,
             // "mt" => self.command_check_fasting_time().await?,
@@ -150,36 +150,43 @@ impl<
         )?;
 
         /* The consumption details are sent through the Telegram bot. */
-        // self.tele_bot_service
-        //     .send_message_consume_split(&cur_python_graph, &consume_detail_info.source_list())
-        //     .await?;
+        self.tele_bot_service
+            .send_message_consume_split(&cur_python_graph, &consume_detail_info.source_list())
+            .await?;
 
         /* Using Python API */
-        let mut delete_files: Vec<String> = Vec::new();
+        let mut img_files: Vec<String> = Vec::new();
 
-        /* Graph of consumption details */
+        /* ======== Graph of consumption details - image path ======== */
         let cnosume_detail_img_file_path: String = self
             .graph_api_service
             .call_python_matplot_consume_detail_double(&cur_python_graph, &versus_python_graph)
             .await?;
 
-        /* Graph of consumption t */
+        img_files.push(cnosume_detail_img_file_path);
+
+        /* ======== Graph of consumption type - image path ======== */
         let to_python_circle_graph: ToPythonGraphCircle =
             self.process_service.get_consumption_result_by_category(
                 &consume_detail_info,
                 permon_datetime.date_start,
                 permon_datetime.date_end,
             )?;
+        let python_circle_graph_path: String = self
+            .graph_api_service
+            .call_python_matplot_consume_type(&to_python_circle_graph)
+            .await?;
+        
+        img_files.push(python_circle_graph_path);
 
         /* Send consumption details graph photo */
-        self.tele_bot_service
-            .send_photo_confirm(&cnosume_detail_img_file_path)
-            .await?;
-
-        delete_files.push(cnosume_detail_img_file_path);
+        self.tele_bot_service.send_photo_confirm(&img_files).await?;
+        
+        /* The consumption details are summarized and shown by category. */
+        
 
         /* Delete Image file */
-        delete_file(delete_files)?;
+        delete_file(img_files)?;
 
         Ok(())
     }
@@ -356,6 +363,62 @@ impl<
                     .await?;
 
                 return Err(anyhow!("[Parameter Error][command_consumption_per_mon()] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text()));
+            }
+        };
+
+        self.common_process_python_double(CONSUME_DETAIL, permon_datetime)
+            .await?;
+
+        Ok(())
+    }
+
+    #[doc = "command handler: Check the consumption details from the date of payment to the next payment. -> cs"]
+    pub async fn command_consumption_per_salary(&self) -> Result<(), anyhow::Error> {
+        let split_args_vec: Vec<String> = self.preprocess_string(" ");
+
+        let permon_datetime: PerDatetime = match split_args_vec.len() {
+            1 => {
+                let cur_day: NaiveDate = get_current_kor_naivedate();
+                let cur_year: i32 = cur_day.year();
+                let cur_month: u32 = cur_day.month();
+                let cur_date: u32 = cur_day.day();
+
+                let cur_date_start: NaiveDate = if cur_date < 25 {
+                    let date: NaiveDate = get_naivedate(cur_year, cur_month, 25)?;
+                    get_add_month_from_naivedate(date, -1)?
+                } else {
+                    get_naivedate(cur_year, cur_month, 25)?
+                };
+
+                let cur_date_end: NaiveDate = if cur_date < 25 {
+                    get_naivedate(cur_year, cur_month, 25)?
+                } else {
+                    let date: NaiveDate = get_naivedate(cur_year, cur_month, 25)?;
+                    get_add_month_from_naivedate(date, 1)?
+                };
+
+                self.process_service
+                    .get_nmonth_to_current_date(cur_date_start, cur_date_end, -1)?
+            }
+            2 if split_args_vec.get(1).map_or(false, |d| {
+                validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)
+            }) =>
+            {
+                let curdate_str: String = format!("{}.01", &split_args_vec[1]);
+                let cur_date: NaiveDate = NaiveDate::parse_from_str(&curdate_str, "%Y.%m.%d")
+                        .map_err(|e| anyhow!("[Error][command_consumption_per_salary()] This does not fit the date format : {:?}", e))?;
+
+                let cur_date_end: NaiveDate = get_naivedate(cur_date.year(), cur_date.month(), 25)?;
+                let cur_date_start: NaiveDate = get_add_month_from_naivedate(cur_date_end, -1)?;
+
+                self.process_service
+                    .get_nmonth_to_current_date(cur_date_start, cur_date_end, -1)?
+            }
+            _ => {
+                self.tele_bot_service
+                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) cs or cs 2023.11").await?;
+
+                return Err(anyhow!("[Parameter Error][command_consumption_per_day()] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text()));
             }
         };
 
