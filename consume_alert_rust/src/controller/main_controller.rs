@@ -18,6 +18,7 @@ use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
+use crate::models::consume_result_by_type::*;
 
 pub struct MainController<
     G: GraphApiService,
@@ -166,12 +167,13 @@ impl<
         img_files.push(cnosume_detail_img_file_path);
 
         /* ======== Graph of consumption type - image path ======== */
-        let to_python_circle_graph: ToPythonGraphCircle =
+        let consume_result_by_type: Vec<ConsumeResultByType> =
             self.process_service.get_consumption_result_by_category(
                 &consume_detail_info,
                 permon_datetime.date_start,
                 permon_datetime.date_end,
             )?;
+        
         let python_circle_graph_path: String = self
             .graph_api_service
             .call_python_matplot_consume_type(&to_python_circle_graph)

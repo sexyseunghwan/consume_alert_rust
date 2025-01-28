@@ -43,7 +43,10 @@ pub trait ProcessService {
         total_cost: i64,
         type_map: &HashMap<String, i64>,
     ) -> Result<HashMap<String, f64>, anyhow::Error>;
-    //fn convert_
+    fn convert_consume_result_by_type_to_python_graph_circle(
+        &self,
+        consume_result_by_types: Vec<ConsumeResultByType>
+    ) -> Result<ToPythonGraphCircle, anyhow::Error>;
     fn get_consumption_result_by_category(
         &self,
         consume_details: &AggResultSet<ConsumeProdtInfo>,
@@ -327,7 +330,22 @@ impl ProcessService for ProcessServicePub {
         //     end_dt.to_string(),
         //     total_cost,
         // );
-
+        
         //Ok(to_python_graph_circle)
+    }
+
+    #[doc = ""]
+    /// # Arguments
+    /// * `consume_result_by_types` - Consumption results by category
+    ///
+    /// # Returns
+    /// * Result<ToPythonGraphCircle, anyhow::Error>
+    fn convert_consume_result_by_type_to_python_graph_circle(
+        &self,
+        consume_result_by_types: Vec<ConsumeResultByType>
+    ) -> Result<ToPythonGraphCircle, anyhow::Error> {
+
+
+
     }
 }
