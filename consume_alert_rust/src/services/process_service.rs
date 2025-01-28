@@ -5,12 +5,12 @@ use crate::utils_modules::time_utils::*;
 use crate::models::agg_result_set::*;
 use crate::models::agg_result_set::*;
 use crate::models::consume_prodt_info::*;
+use crate::models::consume_result_by_type::*;
 use crate::models::distinct_object::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
-use crate::models::consume_result_by_type::*;
 
 #[async_trait]
 pub trait ProcessService {
@@ -38,21 +38,28 @@ pub trait ProcessService {
         date_end: NaiveDate,
         nmonth: i32,
     ) -> Result<PerDatetime, anyhow::Error>;
-    fn get_calculate_pie_from_category(
-        &self,    
-        total_cost: i64,
+    fn get_calculate_pie_infos_from_category(
+        &self,
+        total_cost: f64,
         type_map: &HashMap<String, i64>,
-    ) -> Result<HashMap<String, f64>, anyhow::Error>;
+    ) -> Result<Vec<ConsumeResultByType>, anyhow::Error>;
     fn convert_consume_result_by_type_to_python_graph_circle(
         &self,
-        consume_result_by_types: Vec<ConsumeResultByType>
+        consume_result_by_types: &Vec<ConsumeResultByType>,
+        total_cost: f64,
+        start_dt: NaiveDate,
+        end_dt: NaiveDate,
     ) -> Result<ToPythonGraphCircle, anyhow::Error>;
     fn get_consumption_result_by_category(
         &self,
         consume_details: &AggResultSet<ConsumeProdtInfo>,
-        start_dt: NaiveDate,
-        end_dt: NaiveDate,
     ) -> Result<Vec<ConsumeResultByType>, anyhow::Error>;
+    fn get_nday_to_current_date(
+        &self,
+        date_start: NaiveDate,
+        date_end: NaiveDate,
+        nday: i32,
+    ) -> Result<PerDatetime, anyhow::Error>;
 }
 
 #[derive(Debug, Getters, Clone, new)]
@@ -252,43 +259,40 @@ impl ProcessService for ProcessServicePub {
     ///
     /// # Returns
     /// * Result<HashMap<String, i64>, anyhow::Error>
-    fn get_calculate_pie_from_category(
+    fn get_calculate_pie_infos_from_category(
         &self,
-        total_cost: i64,
+        total_cost: f64,
         type_map: &HashMap<String, i64>,
-    ) -> Result<HashMap<String, f64>, anyhow::Error> {
-        let mut result_map: HashMap<String, f64> = HashMap::new();
+    ) -> Result<Vec<ConsumeResultByType>, anyhow::Error> {
+        let consume_result_by_types : Vec<ConsumeResultByType> = type_map
+            .iter()
+            .map(|(key, value)| {
+                let prodt_type: String = key.to_string();
+                let prodt_cost: i64 = *value;
 
-        for (key, value) in type_map {
-            let prodt_type: String = key.to_string();
-            let prodt_cost: i64 = *value;
+                let prodt_per: f64 = (prodt_cost as f64 / total_cost as f64) * 100.0;
+                let prodt_per_rounded: f64 = (prodt_per * 10.0).round() / 10.0; /* Round to the second decimal place */
 
-            let prodt_per: f64 = (prodt_cost as f64 / total_cost as f64) * 100.0;
-            let prodt_per_rounded: f64 = (prodt_per * 10.0).round() / 10.0; /* Round to the second decimal place */
+                ConsumeResultByType::new(prodt_type, prodt_cost, prodt_per_rounded)
+            })
+            .collect();
 
-            result_map.insert(prodt_type, prodt_per_rounded);
-        }
-        
-        Ok(result_map)
+        Ok(consume_result_by_types)
     }
 
     #[doc = "Function that converts consumption results by category into Python data"]
     /// # Arguments
     /// * `consume_details` - Consumption details
-    /// * `start_dt` - Start date
-    /// * `end_dt` -  End Date
     ///
     /// # Returns
-    /// * Result<ToPythonGraphCircle, anyhow::Error>
+    /// * Result<Vec<ConsumeResultByType>, anyhow::Error>
     fn get_consumption_result_by_category(
         &self,
         consume_details: &AggResultSet<ConsumeProdtInfo>,
-        start_dt: NaiveDate,
-        end_dt: NaiveDate,
     ) -> Result<Vec<ConsumeResultByType>, anyhow::Error> {
         let consume_inner_details: &Vec<DocumentWithId<ConsumeProdtInfo>> =
             consume_details.source_list();
-        let total_cost: i64 = *consume_details.agg_result();
+        let total_cost: f64 = *consume_details.agg_result();
 
         let cost_map: HashMap<String, i64> =
             consume_inner_details
@@ -303,38 +307,20 @@ impl ProcessService for ProcessServicePub {
                         .or_insert(prodt_money);
                     acc
                 });
-         
-        let cost_map: HashMap<String, f64> =
-            self.get_calculate_pie_from_category(total_cost, &cost_map)?;
-        
-        let consume_result_by_types: Vec<ConsumeResultByType> = cost_map
-            .into_iter()
-            .map(|(key, value)| ConsumeResultByType::new(key, value))
-            .collect();
+
+        let mut consume_result_by_types: Vec<ConsumeResultByType> =
+            self.get_calculate_pie_infos_from_category(total_cost, &cost_map)?;
+
+        consume_result_by_types.sort_by(|a, b| {
+            b.consume_prodt_cost
+                .partial_cmp(&a.consume_prodt_cost)
+                .unwrap_or(Ordering::Equal)
+        });
 
         Ok(consume_result_by_types)
-        // let (prodt_type_vec, prodt_type_cost_vec): (Vec<String>, Vec<f64>) =
-        //     cost_map.into_iter().unzip();
-        
-        /* 'prodt_type_vec' and 'prodt_type_cost_vec' should be one-to-one correspondence.
-            If the length of the two vectors is different, an error occurs.
-        */
-        // if prodt_type_vec.len() != prodt_type_cost_vec.len() {
-        //     return Err(anyhow!("[Error][get_consumption_result_by_category()] The length of 'prodt_type_vec' and 'prodt_type_cost_vec' vectors is different."));
-        // }
-        
-        // let to_python_graph_circle: ToPythonGraphCircle = ToPythonGraphCircle::new(
-        //     prodt_type_vec,
-        //     prodt_type_cost_vec,
-        //     start_dt.to_string(),
-        //     end_dt.to_string(),
-        //     total_cost,
-        // );
-        
-        //Ok(to_python_graph_circle)
     }
 
-    #[doc = ""]
+    #[doc = "Vec<ConsumeResultByType> -> ToPythonGraphCircle"]
     /// # Arguments
     /// * `consume_result_by_types` - Consumption results by category
     ///
@@ -342,10 +328,53 @@ impl ProcessService for ProcessServicePub {
     /// * Result<ToPythonGraphCircle, anyhow::Error>
     fn convert_consume_result_by_type_to_python_graph_circle(
         &self,
-        consume_result_by_types: Vec<ConsumeResultByType>
+        consume_result_by_types: &Vec<ConsumeResultByType>,
+        total_cost: f64,
+        start_dt: NaiveDate,
+        end_dt: NaiveDate,
     ) -> Result<ToPythonGraphCircle, anyhow::Error> {
+        let (prodt_type_vec, prodt_type_cost_per_vec): (Vec<String>, Vec<f64>) =
+            consume_result_by_types
+                .iter()
+                .map(|elem| {
+                    (
+                        elem.consume_prodt_type().to_string(),
+                        *elem.consume_prodt_per(),
+                    )
+                })
+                .unzip();
 
+        let to_python_graph_circle: ToPythonGraphCircle = ToPythonGraphCircle::new(
+            prodt_type_vec,
+            prodt_type_cost_per_vec,
+            start_dt.to_string(),
+            end_dt.to_string(),
+            total_cost,
+        );
 
+        Ok(to_python_graph_circle)
+    }
 
+    #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` days"]
+    /// # Arguments
+    /// * `date_start`  
+    /// * `date_end`    
+    /// * `nday` - Before or after `N` days
+    ///
+    /// # Returns
+    /// * Result<PermonDatetime, anyhow::Error>
+    fn get_nday_to_current_date(
+        &self,
+        date_start: NaiveDate,
+        date_end: NaiveDate,
+        nday: i32,
+    ) -> Result<PerDatetime, anyhow::Error> {
+        let n_day_start: NaiveDate = get_add_date_from_naivedate(date_start, nday)?;
+        let n_day_end: NaiveDate = get_add_date_from_naivedate(date_end, nday)?;
+
+        let per_day_datetim: PerDatetime =
+            PerDatetime::new(date_start, date_end, n_day_start, n_day_end);
+
+        Ok(per_day_datetim)
     }
 }

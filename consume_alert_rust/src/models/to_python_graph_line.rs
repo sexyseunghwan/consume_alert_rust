@@ -9,7 +9,7 @@ pub struct ToPythonGraphLine {
     line_type: String,
     start_dt: String,
     end_dt: String,
-    total_cost: i64,
+    total_cost: f64,
     consume_accumulate_list: Vec<i64>,
 }
 
@@ -22,7 +22,7 @@ impl ToPythonGraphLine {
     ) -> Result<Self, anyhow::Error> {
         let mut date_consume: HashMap<NaiveDate, i64> = HashMap::new();
 
-        let total_cost: i64 = *consume_detail.agg_result();
+        let total_cost: f64 = *consume_detail.agg_result();
 
         for elem in consume_detail.source_list() {
             let date_part: &str = elem.source.timestamp.split('T').next().ok_or_else(|| {

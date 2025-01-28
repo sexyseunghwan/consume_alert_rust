@@ -242,7 +242,7 @@ impl ElasticQueryService for ElasticQueryServicePub {
         let consume_list: Vec<DocumentWithId<T>> =
             self.get_query_result_vec(&response_body).await?;
 
-        let result: AggResultSet<T> = AggResultSet::new(agg_result as i64, consume_list);
+        let result: AggResultSet<T> = AggResultSet::new(agg_result, consume_list);
 
         Ok(result)
     }
