@@ -1,5 +1,6 @@
 use crate::common::*;
 
+use crate::models::consume_prodt_info;
 use crate::utils_modules::time_utils::*;
 
 use crate::models::agg_result_set::*;
@@ -8,6 +9,7 @@ use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 use crate::models::to_python_graph_circle::*;
+use crate::models::consume_prodt_info_by_installment::*;
 
 #[async_trait]
 pub trait ProcessService {
@@ -25,10 +27,15 @@ pub trait ProcessService {
         &self,
         consume_time_name_vec: &Vec<String>,
     ) -> Result<String, anyhow::Error>;
+    fn get_installment_payment_filtering(&self, payment_type: &str) -> Result<i64, anyhow::Error>;
     fn process_by_consume_filter(
         &self,
         split_args_vec: &Vec<String>,
-    ) -> Result<ConsumeProdtInfo, anyhow::Error>;
+    ) -> Result<ConsumeProdtInfoByInstallment, anyhow::Error>;
+    fn get_consume_prodt_info_installment_process(
+        &self,
+        consume_prodt_info_by_installment: &ConsumeProdtInfoByInstallment,
+    ) -> Result<Vec<ConsumeProdtInfo>, anyhow::Error>;
     fn get_nmonth_to_current_date(
         &self,
         date_start: NaiveDate,
@@ -138,6 +145,25 @@ impl ProcessService for ProcessServicePub {
         Ok(format_datetime.format("%Y-%m-%dT%H:%M:%SZ").to_string())
     }
 
+    #[doc = "Installment filtering function : string -> i64"]
+    /// # Arguments
+    /// * `payment_type` - Lump sum or installment payment type
+    ///
+    /// # Returns
+    /// * Result<i64, anyhow::Error>
+    fn get_installment_payment_filtering(&self, payment_type: &str) -> Result<i64, anyhow::Error> {
+        let installment_payment: i64 = match payment_type {
+            "일시불" => 0,
+            "03개월" => 3,
+            "06개월" => 6,
+            "09개월" => 9,
+            "12개월" => 12,
+            _ => 0,
+        };
+
+        Ok(installment_payment)
+    }
+
     #[doc = "Process processing function based on the type of payment"]
     /// # Arguments
     /// * `split_args_vec` - Array with strings as elements : Payment-related information vector:
@@ -148,7 +174,7 @@ impl ProcessService for ProcessServicePub {
     fn process_by_consume_filter(
         &self,
         split_args_vec: &Vec<String>,
-    ) -> Result<ConsumeProdtInfo, anyhow::Error> {
+    ) -> Result<ConsumeProdtInfoByInstallment, anyhow::Error> {
         let consume_type: &String = split_args_vec
             .get(0)
             .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_type()] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
@@ -186,15 +212,26 @@ impl ProcessService for ProcessServicePub {
                 String::from("etc"),
             );
 
-            Ok(res_struct)
+            let consume_prodt_info_by_installment: ConsumeProdtInfoByInstallment =
+                ConsumeProdtInfoByInstallment::new(0, res_struct);
+
+            Ok(consume_prodt_info_by_installment)
         } else if consume_type.contains("삼성") {
-            let consume_price_vec = self.get_string_vector_by_replace(split_args_vec
+            let consume_price_vec: Vec<String> = self.get_string_vector_by_replace(split_args_vec
                 .get(1)
                 .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 1, split_args_vec))?,
                 &split_val
             )?;
 
             let consume_price: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
+
+            let payment_type: &str = consume_price_vec
+                .get(1)
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'split_args_vec' vector was accessed.", 1))?
+                .trim();
+            
+            /* It determines whether it is an 'installment payment' or a 'lump sum payment.' */
+            let monthly_installment_plan: i64 = self.get_installment_payment_filtering(payment_type)?;
 
             let consume_time_vec: Vec<String> = split_args_vec
                 .get(2)
@@ -217,10 +254,55 @@ impl ProcessService for ProcessServicePub {
                 String::from("etc"),
             );
 
-            Ok(res_struct)
+            let consume_prodt_info_by_installment: ConsumeProdtInfoByInstallment =
+                ConsumeProdtInfoByInstallment::new(monthly_installment_plan, res_struct);
+
+            Ok(consume_prodt_info_by_installment)
         } else {
             return Err(anyhow!("[Error][process_by_consume_type()] Variable 'consume_type' contains an undefined string."));
         }
+    }
+
+    #[doc = "Functions that take into account installment payments"]
+    /// # Arguments
+    /// * `consume_prodt_info` - Consumption information
+    ///
+    /// # Returns
+    /// * Result<Vec<ConsumeProdtInfo>, anyhow::Error>
+    fn get_consume_prodt_info_installment_process(
+        &self,
+        consume_prodt_info_by_installment: &ConsumeProdtInfoByInstallment,
+    ) -> Result<Vec<ConsumeProdtInfo>, anyhow::Error> {
+        let consume_prodt_info: &ConsumeProdtInfo = consume_prodt_info_by_installment.consume_prodt_info();
+        let mut consume_prodt_info_vec: Vec<ConsumeProdtInfo> = Vec::new();
+
+        if *consume_prodt_info_by_installment.installment() > 0 {
+            let prodt_money: i64 = consume_prodt_info.prodt_money;
+            let prodt_money_ceil: i64 = (prodt_money as f64
+                / consume_prodt_info_by_installment.installment as f64)
+                .ceil() as i64;
+            
+            for idx in 0..consume_prodt_info_by_installment.installment {
+                let mut consume_prodt_info_clone: ConsumeProdtInfo = consume_prodt_info.clone();
+
+                let timestamp: NaiveDateTime = get_naive_datetime_from_str(
+                    consume_prodt_info_clone.timestamp(),
+                    "%Y-%m-%dT%H:%M:%SZ",
+                )?;
+                let calculate_timestamp: NaiveDateTime =
+                    timestamp + chrono::Duration::days(30 * (idx as i64));
+
+                consume_prodt_info_clone.set_timestamp(calculate_timestamp.to_string());
+                consume_prodt_info_clone.set_prodt_money(prodt_money_ceil);
+                consume_prodt_info_clone.set_prodt_name(format!("{}-{}/{}", consume_prodt_info.prodt_name(), idx + 1, consume_prodt_info_by_installment.installment));
+
+                consume_prodt_info_vec.push(consume_prodt_info_clone);
+            }
+        } else {
+            consume_prodt_info_vec.push(consume_prodt_info.clone());
+        }
+
+        Ok(consume_prodt_info_vec)
     }
 
     #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` months"]

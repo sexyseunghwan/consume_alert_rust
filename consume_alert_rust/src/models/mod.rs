@@ -8,3 +8,4 @@ pub mod per_datetime;
 pub mod score_manager;
 pub mod to_python_graph_circle;
 pub mod to_python_graph_line;
+pub mod consume_prodt_info_by_installment;

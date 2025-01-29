@@ -16,8 +16,8 @@ pub fn get_str_from_naive_datetime(naive_datetime: NaiveDateTime) -> String {
 
 #[doc = "Function that returns real-time UTC time to string"]
 pub fn get_str_curdatetime() -> String {
-    let kor_now = get_current_kor_naive_datetime();
-    let formatted_time = kor_now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    let kor_now: NaiveDateTime = get_current_kor_naive_datetime();
+    let formatted_time: String = kor_now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
 
     formatted_time
 }
@@ -148,8 +148,8 @@ pub fn get_add_month_from_naivedate(
     naive_date: NaiveDate,
     add_month: i32,
 ) -> Result<NaiveDate, anyhow::Error> {
-    let mut new_year = naive_date.year() + (naive_date.month() as i32 + add_month - 1) / 12;
-    let mut new_month = (naive_date.month() as i32 + add_month - 1) % 12 + 1;
+    let mut new_year: i32 = naive_date.year() + (naive_date.month() as i32 + add_month - 1) / 12;
+    let mut new_month: i32 = (naive_date.month() as i32 + add_month - 1) % 12 + 1;
 
     /* Adjust if the month is out of range */
     if new_month <= 0 {

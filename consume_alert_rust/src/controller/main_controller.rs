@@ -20,6 +20,7 @@ use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
+use crate::models::consume_prodt_info_by_installment::*;
 
 pub struct MainController<
     G: GraphApiService,
@@ -207,8 +208,6 @@ impl<
         Ok(())
     }
 
-    //fn common_process_python_single(&self, )
-
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch. -> c"]
     async fn command_consumption(&self) -> Result<(), anyhow::Error> {
         let split_args_vec: Vec<String> = self.preprocess_string(":");
@@ -278,10 +277,12 @@ impl<
             .filter(|s| !s.is_empty())
             .collect(); /* It convert the string into an array */
 
-        let mut filter_consume_info: ConsumeProdtInfo = self
+        let mut consume_prodt_info_by_installment: ConsumeProdtInfoByInstallment = self
             .process_service
             .process_by_consume_filter(&split_args_vec)?;
 
+        let mut filter_consume_info: ConsumeProdtInfo = consume_prodt_info_by_installment.consume_prodt_info().clone();
+        
         /* It determines the type of consumption. */
         let consume_type: String = self
             .elastic_query_service
@@ -289,12 +290,23 @@ impl<
             .await?;
 
         filter_consume_info.set_prodt_type(consume_type);
+        consume_prodt_info_by_installment.set_consume_prodt_info(filter_consume_info.clone());
 
-        /* Index that object to Elasticsearch. */
-        es_conn
-            .post_query_struct(&filter_consume_info, &CONSUME_DETAIL)
-            .await?;
-
+        /*
+        It determines whether it is an installment payment or a lump sum payment.
+        - It does different things when it's installment and when it's a lump sum payment.
+        */
+        let consume_prodt_infos: Vec<ConsumeProdtInfo> = self
+            .process_service
+            .get_consume_prodt_info_installment_process(&consume_prodt_info_by_installment)?;
+        
+        for consume_prodt_info in consume_prodt_infos {
+            /* Index that object to Elasticsearch. */
+            es_conn
+                .post_query_struct(&consume_prodt_info, &CONSUME_DETAIL)
+                .await?;
+        }
+        
         self.tele_bot_service
             .send_message_struct_info(&filter_consume_info)
             .await?;

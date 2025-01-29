@@ -205,6 +205,7 @@ impl EsRepository for EsRepositoryPub {
         index_name: &str,
     ) -> Result<(), anyhow::Error> {
         let struct_json: Value = convert_json_from_struct(param_struct)?;
+        println!("struct_json: {:?}", struct_json);
         self.post_query(&struct_json, index_name).await?;
 
         Ok(())
@@ -212,6 +213,9 @@ impl EsRepository for EsRepositoryPub {
 
     #[doc = "Function that EXECUTES elasticsearch queries - indexing"]
     async fn post_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error> {
+        
+        println!("{:?}", document);
+        
         let response: Response = self
             .execute_on_any_node(|es_client| async move {
                 let response = es_client
@@ -224,6 +228,8 @@ impl EsRepository for EsRepositoryPub {
                 Ok(response)
             })
             .await?;
+        
+        println!("{:?}", response);
 
         if response.status_code().is_success() {
             info!("[Indexing Success] index_name: {}", index_name);
