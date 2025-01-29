@@ -3,14 +3,11 @@ use crate::common::*;
 use crate::utils_modules::time_utils::*;
 
 use crate::models::agg_result_set::*;
-use crate::models::agg_result_set::*;
 use crate::models::consume_prodt_info::*;
 use crate::models::consume_result_by_type::*;
-use crate::models::distinct_object::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 use crate::models::to_python_graph_circle::*;
-use crate::models::to_python_graph_line::*;
 
 #[async_trait]
 pub trait ProcessService {
@@ -94,8 +91,8 @@ impl ProcessService for ProcessServicePub {
 
     #[doc = "Function that parses the money spent"]
     /// # Arguments
-    /// * `consume_price_vec`  -
-    /// * `idx`-
+    /// * `consume_price_vec`  - Vector with money spent data
+    /// * `idx`- Index of the vector to be accessed
     ///
     /// # Returns
     /// * Result<i64, anyhow::Error
@@ -228,8 +225,8 @@ impl ProcessService for ProcessServicePub {
 
     #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` months"]
     /// # Arguments
-    /// * `date_start`  
-    /// * `date_end`    
+    /// * `date_start` - Start date
+    /// * `date_end` - End date    
     /// * `nmonth` - Before or after `N` months
     ///
     /// # Returns

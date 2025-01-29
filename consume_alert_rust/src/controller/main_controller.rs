@@ -11,10 +11,11 @@ use crate::utils_modules::time_utils::*;
 
 use crate::repository::es_repository::*;
 
+use crate::configuration::elasitc_index_name::*;
+
 use crate::models::agg_result_set::*;
 use crate::models::consume_prodt_info::*;
 use crate::models::consume_result_by_type::*;
-use crate::models::distinct_object::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 use crate::models::to_python_graph_circle::*;
@@ -73,11 +74,11 @@ impl<
             // "mc" => self.command_record_fasting_time().await?,
             // "mt" => self.command_check_fasting_time().await?,
             // "md" => self.command_delete_fasting_time().await?,
-            // "cy" => self.command_consumption_per_year().await?,
+            "cy" => self.command_consumption_per_year().await?,
             // "list" => self.command_get_consume_type_list().await?,
             _ => self.command_consumption_auto().await?, /* Basic Action */
         }
-        
+
         Ok(())
     }
 
@@ -154,7 +155,7 @@ impl<
         self.tele_bot_service
             .send_message_consume_split(&cur_python_graph, &consume_detail_info.source_list())
             .await?;
-        
+
         /* Using Python API */
         let mut img_files: Vec<String> = Vec::new();
 
@@ -253,7 +254,7 @@ impl<
         let document: Value = convert_json_from_struct(&con_index_prod)?;
 
         let es_client: EsRepositoryPub = get_elastic_conn()?;
-        es_client.post_query(&document, CONSUME_DETAIL).await?;
+        es_client.post_query(&document, &CONSUME_DETAIL).await?;
 
         self.tele_bot_service
             .send_message_struct_info(&con_index_prod)
@@ -291,7 +292,7 @@ impl<
 
         /* Index that object to Elasticsearch. */
         es_conn
-            .post_query_struct(&filter_consume_info, CONSUME_DETAIL)
+            .post_query_struct(&filter_consume_info, &CONSUME_DETAIL)
             .await?;
 
         self.tele_bot_service
@@ -309,7 +310,7 @@ impl<
             1 => {
                 let recent_consume_info: Vec<DocumentWithId<ConsumeProdtInfo>> = self
                     .elastic_query_service
-                    .get_info_orderby_cnt(CONSUME_DETAIL, "cur_timestamp", 1, false)
+                    .get_info_orderby_cnt(&CONSUME_DETAIL, "cur_timestamp", 1, false)
                     .await?;
 
                 let top_consume_data: &DocumentWithId<ConsumeProdtInfo> = recent_consume_info
@@ -318,7 +319,7 @@ impl<
 
                 /* Delete Index */
                 self.elastic_query_service
-                    .delete_es_doc(CONSUME_DETAIL, top_consume_data)
+                    .delete_es_doc(&CONSUME_DETAIL, top_consume_data)
                     .await?;
 
                 let consume_info: &ConsumeProdtInfo = top_consume_data.source();
@@ -381,7 +382,7 @@ impl<
             }
         };
 
-        self.common_process_python_double(CONSUME_DETAIL, permon_datetime)
+        self.common_process_python_double(&CONSUME_DETAIL, permon_datetime)
             .await?;
 
         Ok(())
@@ -417,7 +418,7 @@ impl<
             }
         };
 
-        self.common_process_python_double(CONSUME_DETAIL, permon_datetime)
+        self.common_process_python_double(&CONSUME_DETAIL, permon_datetime)
             .await?;
 
         Ok(())
@@ -453,7 +454,7 @@ impl<
             }
         };
 
-        self.common_process_python_double(CONSUME_DETAIL, permon_datetime)
+        self.common_process_python_double(&CONSUME_DETAIL, permon_datetime)
             .await?;
 
         Ok(())
@@ -468,7 +469,7 @@ impl<
                 let now: NaiveDateTime = get_current_kor_naive_datetime();
                 let today: NaiveDate = now.date();
                 let weekday: Weekday = today.weekday();
-                
+
                 let days_until_monday = Weekday::Mon.num_days_from_monday() as i64
                     - weekday.num_days_from_monday() as i64;
                 let monday: NaiveDate = today + chrono::Duration::days(days_until_monday);
@@ -487,7 +488,45 @@ impl<
             }
         };
 
-        self.common_process_python_double(CONSUME_DETAIL, permon_datetime)
+        self.common_process_python_double(&CONSUME_DETAIL, permon_datetime)
+            .await?;
+
+        Ok(())
+    }
+
+    #[doc = "command handler: Checks how much you have consumed during one year -> cy"]
+    async fn command_consumption_per_year(&self) -> Result<(), anyhow::Error> {
+        let split_args_vec: Vec<String> = self.preprocess_string(" ");
+
+        let permon_datetime: PerDatetime = match split_args_vec.len() {
+            1 => {
+                let cur_year: i32 = get_current_kor_naivedate().year();
+                let start_date: NaiveDate = get_naivedate(cur_year, 1, 1)?;
+                let end_date: NaiveDate = get_naivedate(cur_year, 12, 31)?;
+
+                self.process_service
+                    .get_nmonth_to_current_date(start_date, end_date, -12)?
+            }
+            2 if split_args_vec.get(1).map_or(false, |d| {
+                validate_date_format(d, r"^\d{4}$").unwrap_or(false)
+            }) =>
+            {
+                let year: i32 = split_args_vec[1].parse::<i32>()?;
+                let start_date: NaiveDate = get_naivedate(year, 1, 1)?;
+                let end_date: NaiveDate = get_naivedate(year, 12, 31)?;
+
+                self.process_service
+                    .get_nmonth_to_current_date(start_date, end_date, -12)?
+            }
+            _ => {
+                self.tele_bot_service
+                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX01) cy\nEX02) cy 2023").await?;
+
+                return Err(anyhow!("[Parameter Error][command_consumption_per_year()] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text()));
+            }
+        };
+
+        self.common_process_python_double(&CONSUME_DETAIL, permon_datetime)
             .await?;
 
         Ok(())
@@ -543,7 +582,7 @@ impl<
             }
         };
 
-        self.common_process_python_double(CONSUME_DETAIL, permon_datetime)
+        self.common_process_python_double(&CONSUME_DETAIL, permon_datetime)
             .await?;
 
         Ok(())

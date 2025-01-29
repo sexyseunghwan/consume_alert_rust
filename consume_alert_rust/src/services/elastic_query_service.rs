@@ -6,11 +6,10 @@ use crate::repository::es_repository::*;
 
 use crate::models::agg_result_set::*;
 use crate::models::consume_index_prodt_type::*;
-use crate::models::consume_prodt_info::*;
-use crate::models::distinct_object::*;
 use crate::models::document_with_id::*;
-use crate::models::per_datetime::*;
 use crate::models::score_manager::*;
+
+use crate::configuration::elasitc_index_name::*;
 
 #[async_trait]
 pub trait ElasticQueryService {
@@ -114,7 +113,7 @@ impl ElasticQueryService for ElasticQueryServicePub {
             }
         });
 
-        let response_body: Value = es_client.get_search_query(&es_query, CONSUME_TYPE).await?;
+        let response_body: Value = es_client.get_search_query(&es_query, &CONSUME_TYPE).await?;
         let results: Vec<DocumentWithId<ConsumingIndexProdtType>> =
             self.get_query_result_vec(&response_body).await?;
 
@@ -246,54 +245,6 @@ impl ElasticQueryService for ElasticQueryServicePub {
 
         Ok(result)
     }
-
-    // #[doc = "Function to get distinct values for a particular field from Elasticsearch index"] - 필요없어 보이는데.
-    // /// # Arguments
-    // /// * `index_name` - index name
-    // /// * `field_name` -
-    // ///
-    // /// # Returns
-    // /// * Result<Vec<DistinctObject>, anyhow::Error>
-    // async fn get_distinct_field_values(
-    //     &self,
-    //     index_name: &str,
-    //     field_name: &str,
-    // ) -> Result<Vec<DistinctObject>, anyhow::Error> {
-    //     let es_client: EsRepositoryPub = get_elastic_conn()?;
-
-    //     let query: Value = json!({
-    //         "size": 0,
-    //         "aggs": {
-    //             "aggs_result": {
-    //                 "terms": {
-    //                     "field": field_name,
-    //                     "size": 1000
-    //                 }
-    //             }
-    //         }
-    //     });
-
-    //     let response_body: Value = es_client.get_search_query(&query, index_name).await?;
-
-    //     let agg_results: Vec<DistinctObject> =
-    //         match response_body["aggregations"]["aggs_result"]["buckets"].as_array() {
-    //             Some(buckets) => {
-    //                 let agg_results: Vec<DistinctObject> = buckets
-    //                     .iter()
-    //                     .filter_map(|bucket| serde_json::from_value(bucket.clone()).ok())
-    //                     .collect();
-
-    //                 agg_results
-    //             }
-    //             None => {
-    //                 return Err(anyhow!(
-    //                     "[Error][get_distinct_field_values()] Error parsing 'agg_results'."
-    //                 ))
-    //             }
-    //         };
-
-    //     Ok(agg_results)
-    // }
 
     #[doc = "Functions that erase specific documents in the index"]
     /// # Arguments

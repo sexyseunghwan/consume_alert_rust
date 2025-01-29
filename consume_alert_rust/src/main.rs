@@ -56,7 +56,7 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2024-09-12 Seunghwan Shin       # [v.2.2.0] Add list command
               2024-09-17 Seunghwan Shin       # [v.2.2.1] Manage logs with ''KAFKA'' -> Elasticsearch with 'logstash'
               2024-09-19 Seunghwan Shin       # [v.2.2.2] Lowercase Input Processing
-              2025-00-00 Seunghwan Shin       # [v.3.0.0]
+              2025-01-28 Seunghwan Shin       # [v.3.0.0] Change the overall code structure
 */
 mod common;
 use common::*;
@@ -65,9 +65,6 @@ use common::*;
 mod repository;
 // mod service;
 mod utils_modules;
-use utils_modules::common_function::*;
-use utils_modules::logger_utils::*;
-use utils_modules::time_utils::*;
 
 mod schema;
 
@@ -80,6 +77,8 @@ use services::telebot_service::*;
 
 mod controller;
 use controller::main_controller::*;
+
+mod configuration;
 
 mod models;
 
@@ -139,80 +138,3 @@ async fn main() {
     })
     .await;
 }
-
-// #[doc = "Operating environment"]
-// async fn prod() {
-//     let bot: Arc<Bot> = Arc::new(Bot::from_env());
-
-//     let graph_api_service: Arc<GraphApiServicePub> = Arc::new(GraphApiServicePub::new());
-//     let mysql_query_service: Arc<MySqlQueryServicePub> = Arc::new(MySqlQueryServicePub::new());
-//     let es_query_service: Arc<EsQueryServicePub> = Arc::new(EsQueryServicePub::new());
-//     let command_service: Arc<CommandServicePub> = Arc::new(CommandServicePub::new());
-
-//     infok("Consume Alert Program Start").await;
-
-//     /* As soon as the event comes in, the code below continues to be executed. */
-//     teloxide::repl(Arc::clone(&bot), move |message: Message, bot: Arc<Bot>| {
-//         let graph_api_service_clone: Arc<GraphApiServicePub> = Arc::clone(&graph_api_service);
-//         let mysql_query_service_clone: Arc<MySqlQueryServicePub> = Arc::clone(&mysql_query_service);
-//         let es_query_service_clone: Arc<EsQueryServicePub> = Arc::clone(&es_query_service);
-//         let command_service_clone: Arc<CommandServicePub> = Arc::clone(&command_service);
-
-//         async move {
-//             let telebot_service: TelebotServicePub = TelebotServicePub::new(bot, message);
-//             let main_handler: MainHandler<
-//                 GraphApiServicePub,
-//                 TelebotServicePub,
-//                 CommandServicePub,
-//                 MySqlQueryServicePub,
-//                 EsQueryServicePub
-//             > = MainHandler::new(
-//                 graph_api_service_clone,
-//                 telebot_service,
-//                 command_service_clone,
-//                 mysql_query_service_clone,
-//                 es_query_service_clone
-//             );
-
-//             match main_handler.main_call_function().await {
-//                 Ok(_) => {
-//                     info!("respond success.");
-//                 },
-//                 Err(e) => {
-//                     errork(e).await;
-//                 }
-//             };
-
-//             respond(())
-//         }
-//     })
-//     .await;
-// }
-
-// #[doc = "Development environment"]
-// async fn dev() {
-//     print!("Enter some text: ");
-//     std::io::stdout().flush().unwrap(); /* Empty the buffer after outputting without a new line. */
-//     let mut input = String::new();
-
-//     match std::io::stdin().read_line(&mut input) {
-//         Ok(_) => {
-//             let bot = Arc::new(Bot::from_env());
-
-//             let graph_api_service = Arc::new(GraphApiServicePub::new());
-//             let calculate_service = Arc::new(DBServicePub::new());
-//             let command_service = Arc::new(CommandServicePub::new());
-
-//             let telebot_service = TelebotServicePub::new_test(bot, input.trim());
-//             let main_handler = MainHandler::new(
-//                 graph_api_service,
-//                 calculate_service,
-//                 telebot_service,
-//                 command_service,
-//             );
-
-//             main_handler.command_consumption_auto().await.unwrap();
-//         }
-//         Err(e) => println!("Failed to read input: {}", e),
-//     }
-// }

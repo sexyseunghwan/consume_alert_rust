@@ -3,7 +3,6 @@ use crate::common::*;
 use crate::models::consume_prodt_info::*;
 use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
-use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
 
 #[async_trait]
@@ -55,10 +54,10 @@ pub struct TelebotServicePub {
 }
 
 impl TelebotServicePub {
-    #[doc = "Telegram 서비스 생성자"]
+    #[doc = "Telegram Bot Service"]
     /// # Arguments
-    /// * `bot`     - Telegram Bot 객체
-    /// * `message` - message 데이터 객체
+    /// * `bot`     - Telegram Bot
+    /// * `message` - Telegram Message
     ///
     /// # Returns
     /// * Self
@@ -82,29 +81,11 @@ impl TelebotServicePub {
         }
     }
 
-    #[doc = "Generator for TEST"]
-    /// # Arguments
-    /// * `bot`         - Object Telegram bot
-    /// * `input_str`   - String to be entered
-    ///
-    /// # Returns
-    /// * Self
-    pub fn new_test(bot: Arc<Bot>, input_str: &str) -> Self {
-        let chat_id: ChatId = ChatId(5346196727);
-        let input_text: String = input_str.to_string().to_lowercase();
-
-        Self {
-            bot,
-            chat_id,
-            input_text,
-        }
-    }
-
     #[doc = "Generic function to retry operations"]
     /// # Arguments
-    /// * `operation` -
-    /// * `max_retries` -
-    /// * `retry_delay` -
+    /// * `operation` - Operation to be performed
+    /// * `max_retries` - Maximum number of retries
+    /// * `retry_delay` - Delay time for retry
     ///
     /// # Returns
     /// * Result<(), anyhow::Error>
@@ -309,10 +290,11 @@ impl TelebotService for TelebotServicePub {
 
         self.send_consumption_message(consume_detail_list, |item| {
             format!(
-                "name : {}\ndate : {}\ncost : {}\n",
+                "name : {}\ndate : {}\ncost : {}\ntype: {}\n",
                 item.source.prodt_name(),
                 item.source.timestamp(),
-                item.source.prodt_money().to_formatted_string(&Locale::ko)
+                item.source.prodt_money().to_formatted_string(&Locale::ko),
+                item.source.prodt_type()
             )},
             empty_flag,
             &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i64.to_formatted_string(&Locale::ko)),
@@ -323,8 +305,8 @@ impl TelebotService for TelebotServicePub {
     #[doc = "Functions that return consumption aggregate information by category over a specific period of time"]
     /// # Arguments
     /// * `type_consume_info` - Consumption aggregation information by category
-    /// * `start_dt`
-    /// * `end_dt`
+    /// * `start_dt` - Start date
+    /// * `end_dt` - End date
     ///
     /// # Returns
     /// * Result<(), anyhow::Error>
