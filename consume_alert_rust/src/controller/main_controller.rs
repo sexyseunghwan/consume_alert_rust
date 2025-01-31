@@ -159,7 +159,7 @@ impl<
 
         /* Using Python API */
         let mut img_files: Vec<String> = Vec::new();
-
+        
         /* ======== Graph of consumption details - image path ======== */
         let cnosume_detail_img_file_path: String = self
             .graph_api_service

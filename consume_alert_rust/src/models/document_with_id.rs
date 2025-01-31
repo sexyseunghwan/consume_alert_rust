@@ -6,6 +6,8 @@ use crate::common::*;
 pub struct DocumentWithId<T> {
     #[serde(rename = "_id")]
     pub id: String,
+    #[serde(rename = "_score")]
+    pub score: f64,
     #[serde(flatten)]
     pub source: T,
 }
