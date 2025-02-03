@@ -15,12 +15,12 @@ use crate::configuration::elasitc_index_name::*;
 
 use crate::models::agg_result_set::*;
 use crate::models::consume_prodt_info::*;
+use crate::models::consume_prodt_info_by_installment::*;
 use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
-use crate::models::consume_prodt_info_by_installment::*;
 
 pub struct MainController<
     G: GraphApiService,
@@ -159,7 +159,7 @@ impl<
 
         /* Using Python API */
         let mut img_files: Vec<String> = Vec::new();
-        
+
         /* ======== Graph of consumption details - image path ======== */
         let cnosume_detail_img_file_path: String = self
             .graph_api_service
@@ -281,8 +281,10 @@ impl<
             .process_service
             .process_by_consume_filter(&split_args_vec)?;
 
-        let mut filter_consume_info: ConsumeProdtInfo = consume_prodt_info_by_installment.consume_prodt_info().clone();
-        
+        let mut filter_consume_info: ConsumeProdtInfo = consume_prodt_info_by_installment
+            .consume_prodt_info()
+            .clone();
+
         /* It determines the type of consumption. */
         let consume_type: String = self
             .elastic_query_service
@@ -299,14 +301,14 @@ impl<
         let consume_prodt_infos: Vec<ConsumeProdtInfo> = self
             .process_service
             .get_consume_prodt_info_installment_process(&consume_prodt_info_by_installment)?;
-        
+
         for consume_prodt_info in consume_prodt_infos {
             /* Index that object to Elasticsearch. */
             es_conn
                 .post_query_struct(&consume_prodt_info, &CONSUME_DETAIL)
                 .await?;
         }
-        
+
         self.tele_bot_service
             .send_message_struct_info(&filter_consume_info)
             .await?;

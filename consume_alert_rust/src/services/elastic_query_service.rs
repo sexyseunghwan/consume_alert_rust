@@ -72,25 +72,25 @@ impl ElasticQueryService for ElasticQueryServicePub {
             .ok_or_else(|| anyhow!("[Error][get_query_result_vec()] 'hits' field is not an array"))?
             .iter()
             .map(|hit| {
-                
                 let id: &str = hit.get("_id").and_then(|id| id.as_str()).ok_or_else(|| {
                     anyhow!("[Error][get_query_result_vec()] Missing '_id' field")
                 })?;
 
-                let score: f64 = hit.get("_score").and_then(|score| score.as_f64()).ok_or_else(|| {
-                    anyhow!("[Error][get_query_result_vec()] Missing '_score' field")
-                })?;
-                
                 let source: &Value = hit.get("_source").ok_or_else(|| {
                     anyhow!("[Error][get_query_result_vec()] Missing '_source' field")
                 })?;
-
+                
                 let source: T = serde_json::from_value(source.clone()).map_err(|e| {
                     anyhow!(
                         "[Error][get_query_result_vec()] Failed to deserialize source: {:?}",
                         e
                     )
                 })?;
+                
+                let score: f64 = hit
+                    .get("_score")
+                    .and_then(|score| score.as_f64())
+                    .unwrap_or(0.0);
 
                 Ok::<DocumentWithId<T>, anyhow::Error>(DocumentWithId {
                     id: id.to_string(),
@@ -140,7 +140,7 @@ impl ElasticQueryService for ElasticQueryServicePub {
                 let word_dist_i64: i64 = word_dist.try_into()?;
                 manager.insert(word_dist_i64 + score_i64, consume_type.source);
             }
-            
+
             let score_data_keyword: ScoredData<ConsumingIndexProdtType> = match manager.pop_lowest()
             {
                 Some(score_data_keyword) => score_data_keyword,
@@ -219,7 +219,7 @@ impl ElasticQueryService for ElasticQueryServicePub {
                 "range": {
                     range_field: {
                         "gte": get_str_from_naivedate(start_date),
-                        "lte": get_str_from_naivedate(end_date)
+                        "lt": get_str_from_naivedate(end_date)
                     }
                 }
             },

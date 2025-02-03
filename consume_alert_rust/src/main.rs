@@ -57,13 +57,11 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2024-09-17 Seunghwan Shin       # [v.2.2.1] Manage logs with ''KAFKA'' -> Elasticsearch with 'logstash'
               2024-09-19 Seunghwan Shin       # [v.2.2.2] Lowercase Input Processing
               2025-01-28 Seunghwan Shin       # [v.3.0.0] Change the overall code structure
+              2025-02-03 Seunghwan Shin       # [v.3.0.1] Identify and correct aggregation problems
 */
 mod common;
 use common::*;
-// mod handler;
-// mod model;
 mod repository;
-// mod service;
 mod utils_modules;
 
 mod schema;

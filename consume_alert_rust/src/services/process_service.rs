@@ -5,11 +5,11 @@ use crate::utils_modules::time_utils::*;
 
 use crate::models::agg_result_set::*;
 use crate::models::consume_prodt_info::*;
+use crate::models::consume_prodt_info_by_installment::*;
 use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 use crate::models::to_python_graph_circle::*;
-use crate::models::consume_prodt_info_by_installment::*;
 
 #[async_trait]
 pub trait ProcessService {
@@ -229,9 +229,10 @@ impl ProcessService for ProcessServicePub {
                 .get(1)
                 .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'split_args_vec' vector was accessed.", 1))?
                 .trim();
-            
+
             /* It determines whether it is an 'installment payment' or a 'lump sum payment.' */
-            let monthly_installment_plan: i64 = self.get_installment_payment_filtering(payment_type)?;
+            let monthly_installment_plan: i64 =
+                self.get_installment_payment_filtering(payment_type)?;
 
             let consume_time_vec: Vec<String> = split_args_vec
                 .get(2)
@@ -273,7 +274,8 @@ impl ProcessService for ProcessServicePub {
         &self,
         consume_prodt_info_by_installment: &ConsumeProdtInfoByInstallment,
     ) -> Result<Vec<ConsumeProdtInfo>, anyhow::Error> {
-        let consume_prodt_info: &ConsumeProdtInfo = consume_prodt_info_by_installment.consume_prodt_info();
+        let consume_prodt_info: &ConsumeProdtInfo =
+            consume_prodt_info_by_installment.consume_prodt_info();
         let mut consume_prodt_info_vec: Vec<ConsumeProdtInfo> = Vec::new();
 
         if *consume_prodt_info_by_installment.installment() > 0 {
@@ -281,7 +283,7 @@ impl ProcessService for ProcessServicePub {
             let prodt_money_ceil: i64 = (prodt_money as f64
                 / consume_prodt_info_by_installment.installment as f64)
                 .ceil() as i64;
-            
+
             for idx in 0..consume_prodt_info_by_installment.installment {
                 let mut consume_prodt_info_clone: ConsumeProdtInfo = consume_prodt_info.clone();
 
@@ -294,7 +296,12 @@ impl ProcessService for ProcessServicePub {
 
                 consume_prodt_info_clone.set_timestamp(calculate_timestamp.to_string());
                 consume_prodt_info_clone.set_prodt_money(prodt_money_ceil);
-                consume_prodt_info_clone.set_prodt_name(format!("{}-{}/{}", consume_prodt_info.prodt_name(), idx + 1, consume_prodt_info_by_installment.installment));
+                consume_prodt_info_clone.set_prodt_name(format!(
+                    "{}-{}/{}",
+                    consume_prodt_info.prodt_name(),
+                    idx + 1,
+                    consume_prodt_info_by_installment.installment
+                ));
 
                 consume_prodt_info_vec.push(consume_prodt_info_clone);
             }

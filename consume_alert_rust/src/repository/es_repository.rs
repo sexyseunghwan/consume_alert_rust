@@ -68,7 +68,7 @@ pub fn get_elastic_conn() -> Result<EsRepositoryPub, anyhow::Error> {
         anyhow!("[Error][get_elastic_conn()] Cannot Find Elasticsearch Connection")
     })?;
 
-    info!("pool.len = {:?}", pool.len());
+    info!("Elasticsearch Connection pool.len = {:?}", pool.len());
 
     Ok(es_repo)
 }
@@ -213,9 +213,8 @@ impl EsRepository for EsRepositoryPub {
 
     #[doc = "Function that EXECUTES elasticsearch queries - indexing"]
     async fn post_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error> {
-        
         println!("{:?}", document);
-        
+
         let response: Response = self
             .execute_on_any_node(|es_client| async move {
                 let response = es_client
@@ -228,7 +227,7 @@ impl EsRepository for EsRepositoryPub {
                 Ok(response)
             })
             .await?;
-        
+
         println!("{:?}", response);
 
         if response.status_code().is_success() {
