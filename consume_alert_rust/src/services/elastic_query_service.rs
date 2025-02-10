@@ -11,6 +11,8 @@ use crate::models::score_manager::*;
 
 use crate::configuration::elasitc_index_name::*;
 
+use crate::enums::range_operator::*;
+
 #[async_trait]
 pub trait ElasticQueryService {
     async fn get_query_result_vec<T: DeserializeOwned>(
@@ -32,6 +34,8 @@ pub trait ElasticQueryService {
         range_field: &str,
         start_date: NaiveDate,
         end_date: NaiveDate,
+        start_op: RangeOperator,
+        end_op: RangeOperator,
         order_by_field: &str,
         asc_yn: bool,
         aggs_field: &str,
@@ -79,14 +83,14 @@ impl ElasticQueryService for ElasticQueryServicePub {
                 let source: &Value = hit.get("_source").ok_or_else(|| {
                     anyhow!("[Error][get_query_result_vec()] Missing '_source' field")
                 })?;
-                
+
                 let source: T = serde_json::from_value(source.clone()).map_err(|e| {
                     anyhow!(
                         "[Error][get_query_result_vec()] Failed to deserialize source: {:?}",
                         e
                     )
                 })?;
-                
+
                 let score: f64 = hit
                     .get("_score")
                     .and_then(|score| score.as_f64())
@@ -193,6 +197,8 @@ impl ElasticQueryService for ElasticQueryServicePub {
     /// * `index_name` - index name
     /// * `start_date` - start date
     /// * `end_date` - end date
+    /// * `start_op` - Start date included
+    /// * `end_op` - End date included
     /// * `order_by_field` - Field Name Targeted for 'order by'
     /// * `asc_yn` - ascending order or descending order
     /// * `aggs_field` - Name of the field to be aggregated
@@ -205,6 +211,8 @@ impl ElasticQueryService for ElasticQueryServicePub {
         range_field: &str,
         start_date: NaiveDate,
         end_date: NaiveDate,
+        start_op: RangeOperator,
+        end_op: RangeOperator,
         order_by_field: &str,
         asc_yn: bool,
         aggs_field: &str,
@@ -218,8 +226,8 @@ impl ElasticQueryService for ElasticQueryServicePub {
             "query": {
                 "range": {
                     range_field: {
-                        "gte": get_str_from_naivedate(start_date),
-                        "lt": get_str_from_naivedate(end_date)
+                        start_op.as_str() : get_str_from_naivedate(start_date),
+                        end_op.as_str() : get_str_from_naivedate(end_date)
                     }
                 }
             },
@@ -234,6 +242,8 @@ impl ElasticQueryService for ElasticQueryServicePub {
                 order_by_field: { "order": order_by_asc }
             }
         });
+
+        info!("{}", query.to_string());
 
         let response_body: Value = es_client.get_search_query(&query, index_name).await?;
 

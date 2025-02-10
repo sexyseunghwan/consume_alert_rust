@@ -58,6 +58,7 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2024-09-19 Seunghwan Shin       # [v.2.2.2] Lowercase Input Processing
               2025-01-28 Seunghwan Shin       # [v.3.0.0] Change the overall code structure
               2025-02-03 Seunghwan Shin       # [v.3.0.1] Identify and correct aggregation problems
+              2025-02-10 Seunghwan Shin       # [v.3.0.2] Modifying code because there is a problem with the command 'ct'
 */
 mod common;
 use common::*;
@@ -79,6 +80,8 @@ use controller::main_controller::*;
 mod configuration;
 
 mod models;
+
+mod enums;
 
 #[tokio::main]
 async fn main() {

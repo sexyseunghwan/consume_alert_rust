@@ -22,6 +22,8 @@ use crate::models::per_datetime::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
 
+use crate::enums::range_operator::*;
+
 pub struct MainController<
     G: GraphApiService,
     E: ElasticQueryService,
@@ -104,6 +106,8 @@ impl<
     /// # Arguments
     /// * `index_name` - Index name
     /// * `permon_datetime` - Structures with date data to compare with date
+    /// * `start_op` - Start date included
+    /// * `end_op` - End date included
     ///
     /// # Returns
     /// * Result<(), anyhow::Error>
@@ -111,6 +115,8 @@ impl<
         &self,
         index_name: &str,
         permon_datetime: PerDatetime,
+        start_op: RangeOperator,
+        end_op: RangeOperator,
     ) -> Result<(), anyhow::Error> {
         let consume_detail_info: AggResultSet<ConsumeProdtInfo> = self
             .elastic_query_service
@@ -119,6 +125,8 @@ impl<
                 "@timestamp",
                 permon_datetime.date_start,
                 permon_datetime.date_end,
+                start_op,
+                end_op,
                 "@timestamp",
                 true,
                 "prodt_money",
@@ -132,6 +140,8 @@ impl<
                 "@timestamp",
                 permon_datetime.n_date_start,
                 permon_datetime.n_date_end,
+                start_op,
+                end_op,
                 "@timestamp",
                 true,
                 "prodt_money",
@@ -396,8 +406,13 @@ impl<
             }
         };
 
-        self.common_process_python_double(&CONSUME_DETAIL, permon_datetime)
-            .await?;
+        self.common_process_python_double(
+            &CONSUME_DETAIL,
+            permon_datetime,
+            RangeOperator::GreaterThanOrEqual,
+            RangeOperator::LessThanOrEqual,
+        )
+        .await?;
 
         Ok(())
     }
@@ -432,8 +447,13 @@ impl<
             }
         };
 
-        self.common_process_python_double(&CONSUME_DETAIL, permon_datetime)
-            .await?;
+        self.common_process_python_double(
+            &CONSUME_DETAIL,
+            permon_datetime,
+            RangeOperator::GreaterThanOrEqual,
+            RangeOperator::LessThanOrEqual,
+        )
+        .await?;
 
         Ok(())
     }
@@ -444,8 +464,8 @@ impl<
 
         let permon_datetime: PerDatetime = match split_args_vec.len() {
             1 => {
-                let start_dt = get_current_kor_naivedate();
-                let end_dt = get_current_kor_naivedate();
+                let start_dt: NaiveDate = get_current_kor_naivedate();
+                let end_dt: NaiveDate = get_current_kor_naivedate();
 
                 self.process_service
                     .get_nday_to_current_date(start_dt, end_dt, -1)?
@@ -468,8 +488,13 @@ impl<
             }
         };
 
-        self.common_process_python_double(&CONSUME_DETAIL, permon_datetime)
-            .await?;
+        self.common_process_python_double(
+            &CONSUME_DETAIL,
+            permon_datetime,
+            RangeOperator::GreaterThanOrEqual,
+            RangeOperator::LessThanOrEqual,
+        )
+        .await?;
 
         Ok(())
     }
@@ -502,8 +527,13 @@ impl<
             }
         };
 
-        self.common_process_python_double(&CONSUME_DETAIL, permon_datetime)
-            .await?;
+        self.common_process_python_double(
+            &CONSUME_DETAIL,
+            permon_datetime,
+            RangeOperator::GreaterThanOrEqual,
+            RangeOperator::LessThanOrEqual,
+        )
+        .await?;
 
         Ok(())
     }
@@ -540,8 +570,13 @@ impl<
             }
         };
 
-        self.common_process_python_double(&CONSUME_DETAIL, permon_datetime)
-            .await?;
+        self.common_process_python_double(
+            &CONSUME_DETAIL,
+            permon_datetime,
+            RangeOperator::GreaterThanOrEqual,
+            RangeOperator::LessThanOrEqual,
+        )
+        .await?;
 
         Ok(())
     }
@@ -596,8 +631,13 @@ impl<
             }
         };
 
-        self.common_process_python_double(&CONSUME_DETAIL, permon_datetime)
-            .await?;
+        self.common_process_python_double(
+            &CONSUME_DETAIL,
+            permon_datetime,
+            RangeOperator::GreaterThanOrEqual,
+            RangeOperator::LessThan,
+        )
+        .await?;
 
         Ok(())
     }
