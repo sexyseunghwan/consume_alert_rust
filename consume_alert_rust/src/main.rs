@@ -59,6 +59,7 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2025-01-28 Seunghwan Shin       # [v.3.0.0] Change the overall code structure
               2025-02-03 Seunghwan Shin       # [v.3.0.1] Identify and correct aggregation problems
               2025-02-10 Seunghwan Shin       # [v.3.0.2] Modifying code because there is a problem with the command 'ct'
+              2025-02-10 Seunghwan Shin       # [v.3.0.3] Changed the code to disable Kafka for a while.
 */
 mod common;
 use common::*;
