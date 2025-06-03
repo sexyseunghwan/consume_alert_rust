@@ -60,6 +60,7 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2025-02-03 Seunghwan Shin       # [v.3.0.1] Identify and correct aggregation problems
               2025-02-10 Seunghwan Shin       # [v.3.0.2] Modifying code because there is a problem with the command 'ct'
               2025-02-10 Seunghwan Shin       # [v.3.0.3] Changed the code to disable Kafka for a while.
+              2025-06-00 Seunghwan Shin       # [v.3.1.0] Added Shinhan Card Payment Details
 */
 mod common;
 use common::*;
@@ -125,7 +126,7 @@ async fn main() {
                 tele_bot_service,
                 process_service_clone,
             );
-
+            
             match main_controller.main_call_function().await {
                 Ok(_) => {
                     info!("respond success.");

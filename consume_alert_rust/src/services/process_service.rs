@@ -1,3 +1,5 @@
+use serde_json::to_string;
+
 use crate::common::*;
 
 use crate::models::consume_prodt_info;
@@ -259,7 +261,72 @@ impl ProcessService for ProcessServicePub {
                 ConsumeProdtInfoByInstallment::new(monthly_installment_plan, res_struct);
 
             Ok(consume_prodt_info_by_installment)
-        } else {
+        } else if consume_type.contains("신한카드") {
+            let consume_price_vec: Vec<String> = self.get_string_vector_by_replace(split_args_vec
+                .get(0)
+                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 0, split_args_vec))?,
+                &split_val
+            )?;
+            
+            let price_and_date: &String = consume_price_vec
+                .get(2)
+                .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 2th element of consume_price_vec cannot be accessed."))?;
+            
+            let split_by_front: Vec<String> = price_and_date.split("(")
+                .map(|s| s.trim().to_string())
+                .collect();
+
+            let split_by_back: Vec<String> = price_and_date.split(")")
+                .map(|s| s.trim().to_string())
+                .collect();
+
+            let consume_price: i64 = split_by_front
+                .get(0)
+                .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 0th element of split_by_front cannot be accessed."))?
+                .parse::<i64>()?;
+
+            let payment_type: String = split_by_front
+                .get(1)
+                .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 1th element of split_by_front cannot be accessed."))?
+                .replace(")", "");
+
+            let consume_date: String = split_by_back
+                .get(1)
+                .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 1th element of split_by_front cannot be accessed."))?
+                .to_string();
+            
+            let consume_time: String = consume_price_vec
+                .get(3)
+                .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 3th element of consume_price_vec cannot be accessed."))?
+                .to_string();         
+            
+            let consume_time_vec: Vec<String> = vec![consume_date, consume_time];
+
+            /* It determines whether it is an 'installment payment' or a 'lump sum payment.' */
+            let monthly_installment_plan: i64 =
+                self.get_installment_payment_filtering(&payment_type)?;
+
+            let consume_time: String = self.get_consume_time(&consume_time_vec)?;
+
+            let consume_name = consume_price_vec
+                .get(4)
+                .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 4th element of consume_price_vec cannot be accessed."))?;
+
+
+            let res_struct: ConsumeProdtInfo = ConsumeProdtInfo::new(
+                consume_time,
+                cur_timestamp,
+                consume_name.clone(),
+                consume_price,
+                String::from("etc"),
+            );
+
+            let consume_prodt_info_by_installment: ConsumeProdtInfoByInstallment =
+                ConsumeProdtInfoByInstallment::new(monthly_installment_plan, res_struct);
+
+            Ok(consume_prodt_info_by_installment)
+        } 
+        else {
             return Err(anyhow!("[Error][process_by_consume_type()] Variable 'consume_type' contains an undefined string."));
         }
     }
