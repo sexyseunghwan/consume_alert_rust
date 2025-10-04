@@ -446,8 +446,8 @@ impl ProcessService for ProcessServicePub {
         let consume_inner_details: &Vec<DocumentWithId<ConsumeProdtInfo>> =
             consume_details.source_list();
         let total_cost: f64 = *consume_details.agg_result();
-
-        let cost_map: HashMap<String, i64> =
+        
+        let mut cost_map: HashMap<String, i64> =
             consume_inner_details
                 .iter()
                 .fold(HashMap::new(), |mut acc, consume_detail| {
@@ -460,6 +460,8 @@ impl ProcessService for ProcessServicePub {
                         .or_insert(prodt_money);
                     acc
                 });
+
+        cost_map.retain(|_, v| *v >= 0);
 
         let mut consume_result_by_types: Vec<ConsumeResultByType> =
             self.get_calculate_pie_infos_from_category(total_cost, &cost_map)?;
