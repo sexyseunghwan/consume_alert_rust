@@ -27,6 +27,7 @@ impl<R: MysqlRepository> MysqlQueryServiceImpl<R> {}
 
 #[async_trait]
 impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceImpl<R> {
+    #[doc = ""]
     async fn insert_consume_prodt_detail(
         &self,
         consume_info: &ConsumeProdtInfo,
@@ -44,15 +45,16 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         self.db_conn.insert(active_model).await
     }
 
+    #[doc = ""]
     async fn insert_consume_prodt_details_with_transaction(
         &self,
         consume_infos: &Vec<ConsumeProdtInfo>,
     ) -> anyhow::Result<()> {
-        // 모든 ConsumeProdtInfo를 ActiveModel로 변환
+        /* Convert all ConsumeProductInfo to ActiveModel. */
         let mut active_models: Vec<consume_prodt_detail::ActiveModel> = Vec::new();
 
         for consume_info in consume_infos {
-            let active_model = consume_info
+            let active_model: consume_prodt_detail::ActiveModel = consume_info
                 .convert_consume_info_to_active_model()
                 .map_err(|e| anyhow!(
                     "[MysqlQueryServiceImpl::insert_consume_prodt_details_with_transaction] Failed to convert to active model: {:?}",
@@ -62,7 +64,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
             active_models.push(active_model);
         }
 
-        // Transaction을 사용하여 모두 insert (하나라도 실패하면 rollback)
+        /* Use a transaction to insert all recored (roll back if any one fails.) */
         self.db_conn
             .insert_many_with_transaction(active_models)
             .await

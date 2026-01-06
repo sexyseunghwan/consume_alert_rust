@@ -333,7 +333,7 @@ impl<
             .process_service
             .get_consume_prodt_info_installment_process(&consume_prodt_info_by_installment)?;
 
-        /* Transaction을 사용하여 MySQL에 insert (하나라도 실패하면 전체 rollback) */
+        /* Use a transaction to insert all records (roll back if any one fails) */
         self.mysql_query_service
             .insert_consume_prodt_details_with_transaction(&consume_prodt_infos)
             .await
@@ -344,7 +344,7 @@ impl<
                 )
             })?;
 
-        /* MySQL insert가 모두 성공한 후에만 Elasticsearch에 insert */
+        /* Only Insert into Elasticsearch after all MySQL inserts have succeeded. */
         for consume_prodt_info in &consume_prodt_infos {
             self.elastic_query_service
                 .post_query_struct(consume_prodt_info, &CONSUME_DETAIL)

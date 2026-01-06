@@ -44,6 +44,8 @@ impl MysqlRepositoryImpl {
 
 #[async_trait]
 impl MysqlRepository for MysqlRepositoryImpl {
+    
+    #[doc = ""]
     async fn insert<A>(&self, active_model: A) -> anyhow::Result<()>
     where
         A: ActiveModelTrait + ActiveModelBehavior + Send + 'static,
@@ -57,6 +59,7 @@ impl MysqlRepository for MysqlRepositoryImpl {
         Ok(())
     }
 
+    #[doc = ""]
     async fn insert_many<A>(&self, active_models: Vec<A>) -> anyhow::Result<()>
     where
         A: ActiveModelTrait + ActiveModelBehavior + Send + 'static,
@@ -79,6 +82,7 @@ impl MysqlRepository for MysqlRepositoryImpl {
         Ok(())
     }
 
+    #[doc = ""]
     async fn insert_many_with_transaction<A>(&self, active_models: Vec<A>) -> anyhow::Result<()>
     where
         A: ActiveModelTrait + ActiveModelBehavior + Send + 'static,
