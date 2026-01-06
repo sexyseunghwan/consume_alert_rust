@@ -1,7 +1,5 @@
 use crate::common::*;
 
-
-
 #[doc = "Kafka connection object to be used in a single tone"]
 static KAFKA_PRODUCER: once_lazy<Arc<Mutex<KafkaRepositoryPub>>> =
     once_lazy::new(|| initialize_kafka_clients());

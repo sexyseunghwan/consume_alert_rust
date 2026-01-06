@@ -267,16 +267,18 @@ impl ProcessService for ProcessServicePub {
                 .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 0, split_args_vec))?,
                 &split_val
             )?;
-            
+
             let price_and_date: &String = consume_price_vec
                 .get(2)
                 .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 2th element of consume_price_vec cannot be accessed."))?;
-            
-            let split_by_front: Vec<String> = price_and_date.split("(")
+
+            let split_by_front: Vec<String> = price_and_date
+                .split("(")
                 .map(|s| s.trim().to_string())
                 .collect();
 
-            let split_by_back: Vec<String> = price_and_date.split(")")
+            let split_by_back: Vec<String> = price_and_date
+                .split(")")
                 .map(|s| s.trim().to_string())
                 .collect();
 
@@ -294,12 +296,12 @@ impl ProcessService for ProcessServicePub {
                 .get(1)
                 .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 1th element of split_by_front cannot be accessed."))?
                 .to_string();
-            
+
             let consume_time: String = consume_price_vec
                 .get(3)
                 .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 3th element of consume_price_vec cannot be accessed."))?
-                .to_string();         
-            
+                .to_string();
+
             let consume_time_vec: Vec<String> = vec![consume_date, consume_time];
 
             /* It determines whether it is an 'installment payment' or a 'lump sum payment.' */
@@ -311,7 +313,6 @@ impl ProcessService for ProcessServicePub {
             let consume_name = consume_price_vec
                 .get(4)
                 .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 4th element of consume_price_vec cannot be accessed."))?;
-
 
             let res_struct: ConsumeProdtInfo = ConsumeProdtInfo::new(
                 consume_time,
@@ -325,8 +326,7 @@ impl ProcessService for ProcessServicePub {
                 ConsumeProdtInfoByInstallment::new(monthly_installment_plan, res_struct);
 
             Ok(consume_prodt_info_by_installment)
-        } 
-        else {
+        } else {
             return Err(anyhow!("[Error][process_by_consume_type()] Variable 'consume_type' contains an undefined string."));
         }
     }
@@ -358,6 +358,7 @@ impl ProcessService for ProcessServicePub {
                     consume_prodt_info_clone.timestamp(),
                     "%Y-%m-%dT%H:%M:%SZ",
                 )?;
+
                 let calculate_timestamp: NaiveDateTime =
                     timestamp + chrono::Duration::days(30 * (idx as i64));
 
@@ -446,7 +447,7 @@ impl ProcessService for ProcessServicePub {
         let consume_inner_details: &Vec<DocumentWithId<ConsumeProdtInfo>> =
             consume_details.source_list();
         let total_cost: f64 = *consume_details.agg_result();
-        
+
         let mut cost_map: HashMap<String, i64> =
             consume_inner_details
                 .iter()

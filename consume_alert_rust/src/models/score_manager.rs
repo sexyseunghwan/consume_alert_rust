@@ -54,7 +54,7 @@ impl<T> ScoreManager<T> {
     /* Get the lowest score and data */
     pub fn pop_lowest(&mut self) -> Option<ScoredData<T>> {
         /* Get the lowest score in the heap */
-        let lowest_score = self.heap.pop()?.0;
+        let lowest_score: i64 = self.heap.pop()?.0;
 
         /* Pull one out of the data list for that score */
         if let Some(mut data_list) = self.data_map.remove(&lowest_score) {

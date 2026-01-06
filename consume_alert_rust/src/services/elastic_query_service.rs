@@ -1,6 +1,6 @@
 use crate::common::*;
 
-use crate::utils_modules::time_utils::*;
+use crate::utils_modules::{io_utils::*, time_utils::*};
 
 use crate::repository::es_repository::*;
 
@@ -40,25 +40,28 @@ pub trait ElasticQueryService {
         asc_yn: bool,
         aggs_field: &str,
     ) -> Result<AggResultSet<T>, anyhow::Error>;
-    // async fn get_distinct_field_values(
-    //     &self,
-    //     index_name: &str,
-    //     field_name: &str,
-    // ) -> Result<Vec<DistinctObject>, anyhow::Error>; -> 필요없어 보임.
     async fn delete_es_doc<T: Send + Sync>(
         &self,
         index_name: &str,
         doc: &DocumentWithId<T>,
     ) -> Result<(), anyhow::Error>;
-
-    //async fn get_versus_consume_detail_infos(&self, permon_datetime: PerDatetime) -> Result<(), anyhow::Error>;
+    async fn post_query_struct<T: Serialize + Sync>(
+        &self,
+        param_struct: &T,
+        index_name: &str,
+    ) -> anyhow::Result<()>;
+    async fn post_query(&self, document: &Value, index_name: &str) -> anyhow::Result<()>;
 }
 
 #[derive(Debug, Getters, Clone, new)]
-pub struct ElasticQueryServicePub;
+pub struct ElasticQueryServicePub<R: EsRepository> {
+    elastic_conn: R,
+}
 
 #[async_trait]
-impl ElasticQueryService for ElasticQueryServicePub {
+impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
+    for ElasticQueryServicePub<R>
+{
     #[doc = "Functions that return queried results as vectors"]
     /// # Arguments
     /// * `response_body` - Querying Results
@@ -114,8 +117,6 @@ impl ElasticQueryService for ElasticQueryServicePub {
     /// # Returns
     /// * Result<String, anyhow::Error>
     async fn get_consume_type_judgement(&self, prodt_name: &str) -> Result<String, anyhow::Error> {
-        let es_client: EsRepositoryPub = get_elastic_conn()?;
-
         let es_query: Value = json!({
             "query": {
                 "match": {
@@ -124,9 +125,26 @@ impl ElasticQueryService for ElasticQueryServicePub {
             }
         });
 
-        let response_body: Value = es_client.get_search_query(&es_query, &CONSUME_TYPE).await?;
-        let results: Vec<DocumentWithId<ConsumingIndexProdtType>> =
-            self.get_query_result_vec(&response_body).await?;
+        let response_body: Value = self
+            .elastic_conn
+            .get_search_query(&es_query, &CONSUME_TYPE)
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "[ElasticQueryServicePub::get_consume_type_judgement] response_body: {:?}",
+                    e
+                )
+            })?;
+
+        let results: Vec<DocumentWithId<ConsumingIndexProdtType>> = self
+            .get_query_result_vec(&response_body)
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "[ElasticQueryServicePub::get_consume_type_judgement] results: {:?}",
+                    e
+                )
+            })?;
 
         if results.len() == 0 {
             return Ok(String::from("etc"));
@@ -149,7 +167,7 @@ impl ElasticQueryService for ElasticQueryServicePub {
             {
                 Some(score_data_keyword) => score_data_keyword,
                 None => {
-                    return Err(anyhow!("[Error][get_consume_prodt_details_specify_type()] The mapped data for variable 'score_data_keyword' does not exist."));
+                    return Err(anyhow!("[ElasticQueryServicePub::get_consume_type_judgement] The mapped data for variable 'score_data_keyword' does not exist."));
                 }
             };
 
@@ -174,8 +192,6 @@ impl ElasticQueryService for ElasticQueryServicePub {
         top_size: i64,
         asc_yn: bool,
     ) -> Result<Vec<DocumentWithId<T>>, anyhow::Error> {
-        let es_client: EsRepositoryPub = get_elastic_conn()?;
-
         let asc_fileter: &str = if asc_yn { "asc" } else { "desc" };
 
         let query: Value = json!({
@@ -185,7 +201,10 @@ impl ElasticQueryService for ElasticQueryServicePub {
             "size": top_size
         });
 
-        let response_body: Value = es_client.get_search_query(&query, index_name).await?;
+        let response_body: Value = self
+            .elastic_conn
+            .get_search_query(&query, index_name)
+            .await?;
 
         let res: Vec<DocumentWithId<T>> = self.get_query_result_vec(&response_body).await?;
 
@@ -217,8 +236,6 @@ impl ElasticQueryService for ElasticQueryServicePub {
         asc_yn: bool,
         aggs_field: &str,
     ) -> Result<AggResultSet<T>, anyhow::Error> {
-        let es_client: EsRepositoryPub = get_elastic_conn()?;
-
         let order_by_asc: &str = if asc_yn { "asc" } else { "desc" };
 
         let query: Value = json!({
@@ -245,7 +262,10 @@ impl ElasticQueryService for ElasticQueryServicePub {
 
         info!("{}", query.to_string());
 
-        let response_body: Value = es_client.get_search_query(&query, index_name).await?;
+        let response_body: Value = self
+            .elastic_conn
+            .get_search_query(&query, index_name)
+            .await?;
 
         let agg_result: f64 = match &response_body["aggregations"]["aggs_result"]["value"].as_f64()
         {
@@ -277,11 +297,33 @@ impl ElasticQueryService for ElasticQueryServicePub {
         index_name: &str,
         doc: &DocumentWithId<T>,
     ) -> Result<(), anyhow::Error> {
-        let es_client: EsRepositoryPub = get_elastic_conn()?;
-
         let doc_id: &String = doc.id();
 
-        es_client.delete_query(doc_id, index_name).await?;
+        self.elastic_conn.delete_query(doc_id, index_name).await?;
+
+        Ok(())
+    }
+
+    #[doc = "Function that EXECUTES elasticsearch queries - indexing struct"]
+    async fn post_query_struct<T: Serialize + Sync>(
+        &self,
+        param_struct: &T,
+        index_name: &str,
+    ) -> anyhow::Result<()> {
+        let struct_json: Value = convert_json_from_struct(param_struct)?;
+        self.elastic_conn
+            .post_query(&struct_json, index_name)
+            .await?;
+
+        Ok(())
+    }
+
+    #[doc = "Function that EXECUTES elasticsearch queries - indexing"]
+    async fn post_query(&self, document: &Value, index_name: &str) -> anyhow::Result<()> {
+        self.elastic_conn
+            .post_query(document, index_name)
+            .await
+            .map_err(|e| anyhow!("[ElasticQueryServicePub::post_query] {:?}", e))?;
 
         Ok(())
     }

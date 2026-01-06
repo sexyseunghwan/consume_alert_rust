@@ -62,10 +62,14 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2025-02-10 Seunghwan Shin       # [v.3.0.3] Changed the code to disable Kafka for a while.
               2025-06-07 Seunghwan Shin       # [v.3.1.0] Added Shinhan Card Payment Details
               2025-10-04 Seunghwan Shin       # [v.3.1.1] Prevented negative values from being displayed in the pie chart by hiding those sections.
+              2026-01-04 Seunghwan Shin       # [v.4.0.0]
 */
 mod common;
 use common::*;
+
 mod repository;
+use repository::{es_repository::*, mysql_repository::*};
+
 mod utils_modules;
 
 mod schema;
@@ -86,6 +90,8 @@ mod models;
 
 mod enums;
 
+mod entity;
+
 #[tokio::main]
 async fn main() {
     /* Select compilation environment */
@@ -98,26 +104,44 @@ async fn main() {
     /* Telegram Bot object data */
     let bot: Arc<Bot> = Arc::new(Bot::from_env());
 
+    let elastic_conn: EsRepositoryPub = match EsRepositoryPub::new() {
+        Ok(elastic_conn) => elastic_conn,
+        Err(e) => {
+            error!("[main] elastic_conn: {:?}", e);
+            panic!("[main] elastic_conn: {:?}", e)
+        }
+    };
+
+    let mysql_conn: MysqlRepositoryImpl = match MysqlRepositoryImpl::new().await {
+        Ok(mysql_conn) => mysql_conn,
+        Err(e) => {
+            error!("[main] mysql_conn: {:?}", e);
+            panic!("[main] mysql_conn: {:?}", e)
+        }
+    };
+
     let graph_api_service: Arc<GraphApiServicePub> = Arc::new(GraphApiServicePub::new());
-    let elastic_query_service: Arc<ElasticQueryServicePub> =
-        Arc::new(ElasticQueryServicePub::new());
-    let mysql_query_service: Arc<MysqlQueryServicePub> = Arc::new(MysqlQueryServicePub::new());
+    let elastic_query_service: Arc<ElasticQueryServicePub<EsRepositoryPub>> =
+        Arc::new(ElasticQueryServicePub::new(elastic_conn));
+    let mysql_query_service: Arc<MysqlQueryServiceImpl<MysqlRepositoryImpl>> =
+        Arc::new(MysqlQueryServiceImpl::new(mysql_conn));
     let process_service: Arc<ProcessServicePub> = Arc::new(ProcessServicePub::new());
 
     /* As soon as the event comes in, the code below continues to be executed. */
     teloxide::repl(Arc::clone(&bot), move |message: Message, bot: Arc<Bot>| {
         let graph_api_service_clone: Arc<GraphApiServicePub> = Arc::clone(&graph_api_service);
-        let elastic_query_service_clone: Arc<ElasticQueryServicePub> =
+        let elastic_query_service_clone: Arc<ElasticQueryServicePub<EsRepositoryPub>> =
             Arc::clone(&elastic_query_service);
-        let mysql_query_service_clone: Arc<MysqlQueryServicePub> = Arc::clone(&mysql_query_service);
+        let mysql_query_service_clone: Arc<MysqlQueryServiceImpl<MysqlRepositoryImpl>> =
+            Arc::clone(&mysql_query_service);
         let process_service_clone: Arc<ProcessServicePub> = Arc::clone(&process_service);
 
         async move {
             let tele_bot_service: TelebotServicePub = TelebotServicePub::new(bot, message);
             let main_controller: MainController<
                 GraphApiServicePub,
-                ElasticQueryServicePub,
-                MysqlQueryServicePub,
+                ElasticQueryServicePub<EsRepositoryPub>,
+                MysqlQueryServiceImpl<MysqlRepositoryImpl>,
                 TelebotServicePub,
                 ProcessServicePub,
             > = MainController::new(
@@ -127,7 +151,7 @@ async fn main() {
                 tele_bot_service,
                 process_service_clone,
             );
-            
+
             match main_controller.main_call_function().await {
                 Ok(_) => {
                     info!("respond success.");

@@ -9,8 +9,6 @@ use crate::services::telebot_service::*;
 use crate::utils_modules::io_utils::*;
 use crate::utils_modules::time_utils::*;
 
-use crate::repository::es_repository::*;
-
 use crate::configuration::elasitc_index_name::*;
 
 use crate::models::agg_result_set::*;
@@ -227,7 +225,7 @@ impl<
                 .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) c snack:15000")
                 .await?;
 
-            return Err(anyhow!(format!("[Parameter Error][command_consumption()] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text())));
+            return Err(anyhow!(format!("[MainController::command_consumption] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text())));
         }
 
         let (consume_name, consume_cash) = (&split_args_vec[0], &split_args_vec[1]);
@@ -241,7 +239,7 @@ impl<
                     )
                     .await?;
 
-                return Err(anyhow!("[Parameter Error][command_consumption()] Non-numeric 'cash' parameter: {:?} : {:?}", consume_cash, e));
+                return Err(anyhow!("[MainController::command_consumption] Non-numeric 'cash' parameter: {:?} : {:?}", consume_cash, e));
             }
         };
 
@@ -250,6 +248,7 @@ impl<
             .elastic_query_service
             .get_consume_type_judgement(consume_name)
             .await?;
+
         let cur_time: String = get_str_curdatetime();
 
         let con_index_prod: ConsumeProdtInfo = ConsumeProdtInfo::new(
@@ -262,8 +261,28 @@ impl<
 
         let document: Value = convert_json_from_struct(&con_index_prod)?;
 
-        let es_client: EsRepositoryPub = get_elastic_conn()?;
-        es_client.post_query(&document, &CONSUME_DETAIL).await?;
+        /* If the database insert fails, simply trigger an error and terminate. */
+        match self
+            .mysql_query_service
+            .insert_consume_prodt_detail(&con_index_prod)
+            .await
+        {
+            Ok(_) => (),
+            Err(e) => {
+                self.tele_bot_service
+                    .send_message_confirm(
+                        "The data insert has been rejected.\nPlease contact the administrator.",
+                    )
+                    .await
+                    .map_err(|e| anyhow!("[MainController::command_consumption] {:?}", e))?;
+
+                return Err(anyhow!("[MainController::command_consumption] {:?}", e));
+            }
+        }
+
+        self.elastic_query_service
+            .post_query(&document, &CONSUME_DETAIL)
+            .await?;
 
         self.tele_bot_service
             .send_message_struct_info(&con_index_prod)
@@ -276,9 +295,9 @@ impl<
     pub async fn command_consumption_auto(&self) -> Result<(), anyhow::Error> {
         let args: String = self.tele_bot_service.get_input_text();
 
-        let es_conn: EsRepositoryPub = get_elastic_conn()?;
+        let re: Regex = Regex::new(r"\[.*?\]\n?")
+            .map_err(|e| anyhow!("[MainController::command_consumption_auto] {:?}", e))?;
 
-        let re: Regex = Regex::new(r"\[.*?\]\n?")?;
         let replace_string: String = re.replace_all(&args, "").to_string(); /* Remove the '[~]' string. */
 
         let split_args_vec: Vec<String> = replace_string
@@ -286,6 +305,8 @@ impl<
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect(); /* It convert the string into an array */
+
+        /* 할부시스템이긴 한데 이건 손봐야 할거같음... */
 
         let mut consume_prodt_info_by_installment: ConsumeProdtInfoByInstallment = self
             .process_service
@@ -312,10 +333,21 @@ impl<
             .process_service
             .get_consume_prodt_info_installment_process(&consume_prodt_info_by_installment)?;
 
-        for consume_prodt_info in consume_prodt_infos {
-            /* Index that object to Elasticsearch. */
-            es_conn
-                .post_query_struct(&consume_prodt_info, &CONSUME_DETAIL)
+        /* Transaction을 사용하여 MySQL에 insert (하나라도 실패하면 전체 rollback) */
+        self.mysql_query_service
+            .insert_consume_prodt_details_with_transaction(&consume_prodt_infos)
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "[MainController::command_consumption_auto] Failed to insert to MySQL: {:?}",
+                    e
+                )
+            })?;
+
+        /* MySQL insert가 모두 성공한 후에만 Elasticsearch에 insert */
+        for consume_prodt_info in &consume_prodt_infos {
+            self.elastic_query_service
+                .post_query_struct(consume_prodt_info, &CONSUME_DETAIL)
                 .await?;
         }
 
