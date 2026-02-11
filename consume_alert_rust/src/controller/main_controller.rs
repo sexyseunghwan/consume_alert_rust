@@ -4,7 +4,9 @@ use crate::services::elastic_query_service::*;
 use crate::services::graph_api_service::*;
 use crate::services::mysql_query_service::*;
 use crate::services::process_service::*;
+use crate::services::producer_service::*;
 use crate::services::telebot_service::*;
+use crate::services::redis_service::*;
 
 use crate::utils_modules::io_utils::*;
 use crate::utils_modules::time_utils::*;
@@ -17,10 +19,17 @@ use crate::models::consume_prodt_info_by_installment::*;
 use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
+use crate::models::spent_detail::*;
+use crate::models::spent_detail_by_installment::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
+use crate::models::consume_index_prodt_type::*;
+use crate::models::common_consume_keyword_type::*;
 
 use crate::enums::range_operator::*;
+
+use crate::config::AppConfig;
+use crate::views::spent_detail_view::SpentDetailView;
 
 pub struct MainController<
     G: GraphApiService,
@@ -28,12 +37,16 @@ pub struct MainController<
     M: MysqlQueryService,
     T: TelebotService,
     P: ProcessService,
+    KP: ProducerService,
+    R: RedisService
 > {
     graph_api_service: Arc<G>,
     elastic_query_service: Arc<E>,
     mysql_query_service: Arc<M>,
     tele_bot_service: T,
     process_service: Arc<P>,
+    producer_service: Arc<KP>,
+    redis_service: Arc<R>
 }
 
 impl<
@@ -42,7 +55,9 @@ impl<
         M: MysqlQueryService,
         T: TelebotService,
         P: ProcessService,
-    > MainController<G, E, M, T, P>
+        KP: ProducerService,
+        R: RedisService
+    > MainController<G, E, M, T, P, KP, R>
 {
     pub fn new(
         graph_api_service: Arc<G>,
@@ -50,6 +65,8 @@ impl<
         mysql_query_service: Arc<M>,
         tele_bot_service: T,
         process_service: Arc<P>,
+        producer_service: Arc<KP>,
+        redis_service: Arc<R>
     ) -> Self {
         Self {
             graph_api_service,
@@ -57,15 +74,63 @@ impl<
             mysql_query_service,
             tele_bot_service,
             process_service,
+            producer_service,
+            redis_service
         }
     }
 
     #[doc = "Function that processes the request when the request is received through telegram bot"]
     pub async fn main_call_function(&self) -> Result<(), anyhow::Error> {
+        let telegram_token: String = self.tele_bot_service.get_telegram_token();
+        let telegram_user_id: String = self.tele_bot_service.get_telegram_user_id();
+        
+        /* It verifies whether the Telegram token is registered for service purpose and gets user_seq. */
+        let app_config: &AppConfig = AppConfig::global();
+        let redis_user_key: String = format!("{}:{}:{}", app_config.redis_user_key(), &telegram_user_id, &telegram_token);
+        
+        // REDIS CHECK
+        let user_seq_option: Option<String> = self
+            .redis_service
+            .get_string(&redis_user_key)
+            .await
+            .context("[main_controller::main_call_function] Cannot find user_seq in REDIS ")?;
+                
+        let user_seq: i64 = match user_seq_option {
+            Some(cached) => cached.parse::<i64>()
+                .context("[main_controller::main_call_function] Failed to parse user_seq from Redis")?,
+            None => {                
+                
+                // DB
+                let user_seq_db_option: Option<i64> = self
+                    .mysql_query_service
+                    .exists_telegram_room_by_token_and_id(&telegram_token, &telegram_user_id)
+                    .await
+                    .context("[main_controller::main_call_function] user_seq_option: ")?;
+                
+                match user_seq_db_option {
+                    Some(seq) => {
+                        self.redis_service
+                            .set_string(&redis_user_key, &seq.to_string(), None)
+                            .await
+                            .context("[main_controller::main_call_function] Failed to set user_seq in Redis")?;
+                        seq
+                    }
+                    None => {
+                        self.tele_bot_service
+                            .send_message_confirm("The token is invalid or you are not an authorized user.\nPlease contact the administrator.")
+                            .await?;
+                        return Ok(());
+                    }
+                }
+            }
+        };
+
+        let produce_topic: &str = &app_config.produce_topic;
+
         let input_text: String = self.tele_bot_service.get_input_text();
 
         match input_text.split_whitespace().next().unwrap_or("") {
-            "c" => self.command_consumption().await?,
+            "c" => self.command_consumption(user_seq, produce_topic).await?,
             "cd" => self.command_delete_recent_cunsumption().await?,
             "cm" => self.command_consumption_per_mon().await?,
             "ctr" => self.command_consumption_per_term().await?,
@@ -77,9 +142,9 @@ impl<
             // "md" => self.command_delete_fasting_time().await?,
             "cy" => self.command_consumption_per_year().await?,
             // "list" => self.command_get_consume_type_list().await?,
-            _ => self.command_consumption_auto().await?, /* Basic Action */
+            _ => self.command_consumption_auto(user_seq, produce_topic).await?, /* Basic Action */
         }
-
+        
         Ok(())
     }
 
@@ -99,7 +164,7 @@ impl<
 
         split_args_vec
     }
-
+    
     #[doc = "Common Processing Controller Function -> Responsible for Python API calls."]
     /// # Arguments
     /// * `index_name` - Index name
@@ -217,7 +282,7 @@ impl<
     }
 
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch. -> c"]
-    async fn command_consumption(&self) -> Result<(), anyhow::Error> {
+    async fn command_consumption(&self, user_seq: i64, produce_topic: &str) -> Result<(), anyhow::Error> {
         let split_args_vec: Vec<String> = self.preprocess_string(":");
 
         if split_args_vec.len() != 2 {
@@ -225,13 +290,13 @@ impl<
                 .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) c snack:15000")
                 .await?;
 
-            return Err(anyhow!(format!("[MainController::command_consumption] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text())));
+            return Err(anyhow!(format!("[MainController::command_consumption] Invalid format of 'text' variable entered as parameter. : {:#}", self.tele_bot_service.get_input_text())));
         }
 
-        let (consume_name, consume_cash) = (&split_args_vec[0], &split_args_vec[1]);
+        let consume_name: &str = &split_args_vec[0];
 
-        let consume_cash_i64: i64 = match get_parsed_value_from_vector(&split_args_vec, 1) {
-            Ok(consume_cash_i64) => consume_cash_i64,
+        let consume_cash: i64 = match get_parsed_value_from_vector(&split_args_vec, 1) {
+            Ok(cash) => cash,
             Err(e) => {
                 self.tele_bot_service
                     .send_message_confirm(
@@ -239,60 +304,71 @@ impl<
                     )
                     .await?;
 
-                return Err(anyhow!("[MainController::command_consumption] Non-numeric 'cash' parameter: {:?} : {:?}", consume_cash, e));
+                return Err(e)
+                    .context("[MainController::command_consumption] Non-numeric 'cash' parameter");
             }
         };
-
+        
         /* Set the product type here */
-        let prodt_type: String = self
+        let spent_type: ConsumingIndexProdtType = self
             .elastic_query_service
             .get_consume_type_judgement(consume_name)
-            .await?;
-
-        let cur_time: String = get_str_curdatetime();
-
-        let con_index_prod: ConsumeProdtInfo = ConsumeProdtInfo::new(
-            cur_time.clone(),
-            cur_time.clone(),
-            consume_name.to_string(),
-            consume_cash_i64,
-            prodt_type,
-        );
-
-        let document: Value = convert_json_from_struct(&con_index_prod)?;
-
-        /* If the database insert fails, simply trigger an error and terminate. */
-        match self
-            .mysql_query_service
-            .insert_consume_prodt_detail(&con_index_prod)
             .await
-        {
-            Ok(_) => (),
-            Err(e) => {
-                self.tele_bot_service
-                    .send_message_confirm(
-                        "The data insert has been rejected.\nPlease contact the administrator.",
-                    )
-                    .await
-                    .map_err(|e| anyhow!("[MainController::command_consumption] {:?}", e))?;
+            .context("[MainController::command_consumption] spent_type: ")?;
 
-                return Err(anyhow!("[MainController::command_consumption] {:?}", e));
-            }
-        }
+        let spent_type_nm: CommonConsumeKeywordType = self.mysql_query_service
+            .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
+            .await
+            .context("[MainController::command_consumption] Failed to load common_consumekeyword_type from the database. ")?;
 
-        self.elastic_query_service
-            .post_query(&document, &CONSUME_DETAIL)
-            .await?;
+        let cur_time: DateTime<Local> = Local::now();
 
+        let spent_detail: SpentDetail = SpentDetail::new(
+            consume_name.to_string(),
+            consume_cash,
+            cur_time,
+            1,
+            user_seq,
+            1,
+            spent_type.consume_keyword_type_id
+        ); 
+
+        let spent_detail_view: SpentDetailView = spent_detail
+            .convert_spent_detail_to_view(&spent_type_nm)
+            .context("[MainController::command_consumption] spent_detail_view: ")?;
+
+        /* Use a transaction to insert all records (roll back if any one fails) */
+        // TODO: Implement MySQL insertion for SpentDetail
+        self.mysql_query_service
+            .insert_prodt_detail_with_transaction(&spent_detail)
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "[MainController::command_consumption_auto] Failed to insert to MySQL: {:?}",
+                    e
+                )
+            })?;
+        
+        /* Produce incremental indexing data to Kafka */
+        self.producer_service
+            .produce_object_to_topic(
+                produce_topic,
+                &spent_detail,
+                None,
+            )
+            .await
+            .context("[MainController::command_consumption_auto] Failed to produce topic: ")?;
+        
         self.tele_bot_service
-            .send_message_struct_info(&con_index_prod)
-            .await?;
-
+            .send_message_struct_info(&spent_detail_view)
+            .await
+            .context("[MainController::command_consumption_auto] Failed to send a message via Telegram: ")?;
+        
         Ok(())
     }
-
+    
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch."]
-    pub async fn command_consumption_auto(&self) -> Result<(), anyhow::Error> {
+    pub async fn command_consumption_auto(&self, user_seq: i64, produce_topic: &str) -> Result<(), anyhow::Error> {
         let args: String = self.tele_bot_service.get_input_text();
 
         let re: Regex = Regex::new(r"\[.*?\]\n?")
@@ -305,37 +381,55 @@ impl<
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect(); /* It convert the string into an array */
-
-        /* 할부시스템이긴 한데 이건 손봐야 할거같음... */
-
-        let mut consume_prodt_info_by_installment: ConsumeProdtInfoByInstallment = self
+        
+        /* Process spent detail with installment information */
+        let spent_detail_by_installment: SpentDetailByInstallment = self
             .process_service
-            .process_by_consume_filter(&split_args_vec)?;
-
-        let mut filter_consume_info: ConsumeProdtInfo = consume_prodt_info_by_installment
-            .consume_prodt_info()
-            .clone();
-
-        /* It determines the type of consumption. */
-        let consume_type: String = self
-            .elastic_query_service
-            .get_consume_type_judgement(filter_consume_info.prodt_name())
-            .await?;
-
-        filter_consume_info.set_prodt_type(consume_type);
-        consume_prodt_info_by_installment.set_consume_prodt_info(filter_consume_info.clone());
-
+            .process_by_consume_filter(&split_args_vec, user_seq)
+            .context("[MainController::command_consumption_auto] spent_detail_by_installment: ")?;
+        
         /*
         It determines whether it is an installment payment or a lump sum payment.
         - It does different things when it's installment and when it's a lump sum payment.
         */
-        let consume_prodt_infos: Vec<ConsumeProdtInfo> = self
+        let mut spent_details: Vec<SpentDetail> = self
             .process_service
-            .get_consume_prodt_info_installment_process(&consume_prodt_info_by_installment)?;
+            .get_spent_detail_installment_process(&spent_detail_by_installment)?;
+        
+        let mut spent_detail_views: Vec<SpentDetailView> = Vec::new();
 
+        let spent_detail_primary: &SpentDetail = spent_details
+            .get(0)
+            .ok_or_else(|| anyhow!("[MainController::command_consumption_auto] Access to the 0th element of the vector `spent_details` is not perbitted."))?;
+
+        let spent_detail_primary_type_nm: &str = spent_detail_primary.spent_name().as_str();
+        
+        /* Set the product type here */
+        let spent_type: ConsumingIndexProdtType = self
+            .elastic_query_service
+            .get_consume_type_judgement(spent_detail_primary_type_nm)
+            .await
+            .context("[MainController::command_consumption_auto] spent_type: ")?;
+        
+        let spent_type_nm: CommonConsumeKeywordType = self.mysql_query_service
+            .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
+            .await
+            .context("[MainController::command_consumption_auto] Failed to load common_consumekeyword_type from the database. ")?;
+        
+        for details in &mut spent_details {
+            details.set_consume_keyword_id(*spent_type.consume_keyword_type_id());
+
+            let new_spent_detail_view: SpentDetailView = details
+                .convert_spent_detail_to_view(&spent_type_nm)
+                .context("[MainController::command_consumption_auto] new_spent_detail_view: ")?;
+            
+            spent_detail_views.push(new_spent_detail_view);
+        }
+        
         /* Use a transaction to insert all records (roll back if any one fails) */
+        // TODO: Implement MySQL insertion for SpentDetail
         self.mysql_query_service
-            .insert_consume_prodt_details_with_transaction(&consume_prodt_infos)
+            .insert_prodt_details_with_transaction(&spent_details)
             .await
             .map_err(|e| {
                 anyhow!(
@@ -343,21 +437,25 @@ impl<
                     e
                 )
             })?;
-
-        /* Only Insert into Elasticsearch after all MySQL inserts have succeeded. */
-        for consume_prodt_info in &consume_prodt_infos {
-            self.elastic_query_service
-                .post_query_struct(consume_prodt_info, &CONSUME_DETAIL)
-                .await?;
-        }
+        
+        /* Produce incremental indexing data to Kafka */
+        self.producer_service
+            .produce_objects_to_topic(
+                produce_topic,
+                &spent_details,
+                None::<fn(&SpentDetail) -> String>,
+            )
+            .await
+            .context("[MainController::command_consumption_auto] Failed to produce topic: ")?;
 
         self.tele_bot_service
-            .send_message_struct_info(&filter_consume_info)
-            .await?;
-
+            .send_message_struct_list(&spent_detail_views)
+            .await
+            .context("[MainController::command_consumption_auto] Failed to send a message via Telegram: ")?;
+            
         Ok(())
     }
-
+    
     #[doc = "command handler: Function to erase the most recent consumption history data -> cd"]
     pub async fn command_delete_recent_cunsumption(&self) -> Result<(), anyhow::Error> {
         let split_args_vec: Vec<String> = self.preprocess_string(" ");

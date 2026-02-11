@@ -16,9 +16,12 @@ pub use std::{
 
 pub use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 
-pub use tokio::{sync::OnceCell, task};
+pub use tokio::{
+    sync::OnceCell, 
+    task
+};
 
-pub use log::{error, info};
+pub use log::{error, info, warn};
 
 pub use flexi_logger::{Age, Cleanup, Criterion, FileSpec, Logger, Naming, Record};
 
@@ -63,13 +66,19 @@ pub use regex::Regex;
 
 pub use num_format::{Locale, ToFormattedString};
 
-pub use kafka::producer::{Producer, Record as KafkaRecord, RequiredAcks};
+pub use rdkafka::{
+    producer::{FutureProducer, FutureRecord},
+    ClientConfig,
+};
 
 pub use async_trait::async_trait;
 
 pub use crate::utils_modules::logger_utils::*;
 
-pub use once_cell::sync::Lazy as once_lazy;
+pub use once_cell::sync::{
+    Lazy as once_lazy,
+    OnceCell as normalOnceCell
+};
 
 pub use strsim::levenshtein;
 
@@ -77,11 +86,17 @@ pub use rayon::prelude::*;
 
 pub use sea_orm::{
     ActiveModelBehavior, ActiveModelTrait, ActiveValue, ColumnTrait, Condition, Database,
-    DatabaseConnection, DatabaseTransaction, EntityTrait, FromQueryResult, InsertResult,
+    DatabaseConnection, DatabaseTransaction, EntityTrait, FromQueryResult, InsertResult, NotSet,
     QueryFilter, QueryOrder, QuerySelect, Select, Set, TransactionTrait,
 };
-/* Elasticsearch index name to use globally */
-// pub static CONSUME_DETAIL: &str = "consuming_index_prod_new_v10";
-// pub static CONSUME_DETAIL_REMOVE: &str = "consuming_index_prod_new_remove";
-// pub static CONSUME_TYPE: &str = "consuming_index_prod_type_v10";
-// pub static MEAL_CHECK: &str = "meal_check_index";
+
+
+//pub use redis::AsyncCommands;
+pub use redis::{
+    aio::MultiplexedConnection,
+    cluster::ClusterClient,
+    cluster_async::ClusterConnection,
+    Client as redisClient,
+    RedisError,
+    AsyncCommands
+};

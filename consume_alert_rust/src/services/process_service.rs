@@ -1,5 +1,3 @@
-use serde_json::to_string;
-
 use crate::common::*;
 
 use crate::models::consume_prodt_info;
@@ -11,44 +9,27 @@ use crate::models::consume_prodt_info_by_installment::*;
 use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
+use crate::models::spent_detail::*;
+use crate::models::spent_detail_by_installment::*;
 use crate::models::to_python_graph_circle::*;
 
 #[async_trait]
 pub trait ProcessService {
-    fn get_string_vector_by_replace(
-        &self,
-        intput_str: &str,
-        replacements: &Vec<&str>,
-    ) -> Result<Vec<String>, anyhow::Error>;
-    fn get_consume_prodt_money(
-        &self,
-        consume_price_vec: &Vec<String>,
-        idx: usize,
-    ) -> Result<i64, anyhow::Error>;
-    fn get_consume_time(
-        &self,
-        consume_time_name_vec: &Vec<String>,
-    ) -> Result<String, anyhow::Error>;
-    fn get_installment_payment_filtering(&self, payment_type: &str) -> Result<i64, anyhow::Error>;
     fn process_by_consume_filter(
         &self,
         split_args_vec: &Vec<String>,
-    ) -> Result<ConsumeProdtInfoByInstallment, anyhow::Error>;
-    fn get_consume_prodt_info_installment_process(
+        user_seq: i64,
+    ) -> Result<SpentDetailByInstallment, anyhow::Error>;
+    fn get_spent_detail_installment_process(
         &self,
-        consume_prodt_info_by_installment: &ConsumeProdtInfoByInstallment,
-    ) -> Result<Vec<ConsumeProdtInfo>, anyhow::Error>;
+        spent_detail_by_installment: &SpentDetailByInstallment,
+    ) -> Result<Vec<SpentDetail>, anyhow::Error>;
     fn get_nmonth_to_current_date(
         &self,
         date_start: NaiveDate,
         date_end: NaiveDate,
         nmonth: i32,
     ) -> Result<PerDatetime, anyhow::Error>;
-    fn get_calculate_pie_infos_from_category(
-        &self,
-        total_cost: f64,
-        type_map: &HashMap<String, i64>,
-    ) -> Result<Vec<ConsumeResultByType>, anyhow::Error>;
     fn convert_consume_result_by_type_to_python_graph_circle(
         &self,
         consume_result_by_types: &Vec<ConsumeResultByType>,
@@ -71,9 +52,8 @@ pub trait ProcessService {
 #[derive(Debug, Getters, Clone, new)]
 pub struct ProcessServicePub;
 
-#[async_trait]
-impl ProcessService for ProcessServicePub {
-    #[doc = "Functions that vectorize by spaces, excluding certain characters from a string"]
+impl ProcessServicePub {
+    #[doc = "Functions that vectorize by spaces, excluding certain characters from a string (internal helper)"]
     /// # Arguments
     /// * `intput_str`  - Applied String : ex) "289,545원 일시불"
     /// * `replacements`- Character vector to replace : ex) [",", "원"]
@@ -98,7 +78,7 @@ impl ProcessService for ProcessServicePub {
         Ok(consume_price_vec)
     }
 
-    #[doc = "Function that parses the money spent"]
+    #[doc = "Function that parses the money spent (internal helper)"]
     /// # Arguments
     /// * `consume_price_vec`  - Vector with money spent data
     /// * `idx`- Index of the vector to be accessed
@@ -118,7 +98,7 @@ impl ProcessService for ProcessServicePub {
         Ok(consume_price)
     }
 
-    #[doc = "Function that parses date data from consumption data"]
+    #[doc = "Function that parses date data from consumption data (internal helper)"]
     /// # Arguments
     /// * `consume_time_name_vec` - Vector with date, time data : ex) ["11/25", "10:02"]
     ///
@@ -147,7 +127,47 @@ impl ProcessService for ProcessServicePub {
         Ok(format_datetime.format("%Y-%m-%dT%H:%M:%SZ").to_string())
     }
 
-    #[doc = "Installment filtering function : string -> i64"]
+    #[doc = "Function that parses date data and returns DateTime<Local> (internal helper)"]
+    /// # Arguments
+    /// * `consume_time_name_vec` - Vector with date, time data : ex) ["11/25", "10:02"]
+    ///
+    /// # Returns
+    /// * Result<DateTime<Local>, anyhow::Error>
+    fn get_consume_datetime_local(
+        &self,
+        consume_time_name_vec: &Vec<String>,
+    ) -> Result<DateTime<Local>, anyhow::Error> {
+        /* "11/25" */
+        let parsed_date: &String = consume_time_name_vec
+            .get(0)
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_datetime_local()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed.", 0))?;
+
+        /* "10:02" */
+        let parsed_time: &String = consume_time_name_vec
+            .get(1)
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_datetime_local()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed.", 1))?;
+
+        let cur_year: i32 = get_current_kor_naivedate().year();
+        let formatted_date_str: String = format!("{}/{}", cur_year, parsed_date);
+        let format_date: NaiveDate = NaiveDate::parse_from_str(&formatted_date_str, "%Y/%m/%d")?;
+        let format_time: NaiveTime = NaiveTime::parse_from_str(&parsed_time, "%H:%M")?;
+        let format_naive_datetime: NaiveDateTime = NaiveDateTime::new(format_date, format_time);
+
+        // Convert NaiveDateTime to DateTime<Local> using Seoul timezone
+        let datetime_local: DateTime<Local> = Seoul
+            .from_local_datetime(&format_naive_datetime)
+            .single()
+            .ok_or_else(|| {
+                anyhow!(
+                    "[Error][get_consume_datetime_local()] Failed to convert to DateTime<Local>"
+                )
+            })?
+            .with_timezone(&Local);
+
+        Ok(datetime_local)
+    }
+
+    #[doc = "Installment filtering function : string -> i64 (internal helper)"]
     /// # Arguments
     /// * `payment_type` - Lump sum or installment payment type
     ///
@@ -166,218 +186,293 @@ impl ProcessService for ProcessServicePub {
         Ok(installment_payment)
     }
 
+    #[doc = "Function that calculates the money spent by category (internal helper)"]
+    /// # Arguments
+    /// * `total_cost` - total money spent
+    /// * `type_map` - <Consumption classification, money spent>
+    ///
+    /// # Returns
+    /// * Result<Vec<ConsumeResultByType>, anyhow::Error>
+    fn get_calculate_pie_infos_from_category(
+        &self,
+        total_cost: f64,
+        type_map: &HashMap<String, i64>,
+    ) -> Result<Vec<ConsumeResultByType>, anyhow::Error> {
+        let consume_result_by_types : Vec<ConsumeResultByType> = type_map
+            .iter()
+            .map(|(key, value)| {
+                let prodt_type: String = key.to_string();
+                let prodt_cost: i64 = *value;
+
+                let prodt_per: f64 = (prodt_cost as f64 / total_cost as f64) * 100.0;
+                let prodt_per_rounded: f64 = (prodt_per * 10.0).round() / 10.0; /* Round to the second decimal place */
+
+                ConsumeResultByType::new(prodt_type, prodt_cost, prodt_per_rounded)
+            })
+            .collect();
+
+        Ok(consume_result_by_types)
+    }
+
+    #[doc = "Process NH card payment data (internal helper function)"]
+    /// # Arguments
+    /// * `split_args_vec` - Payment information vector
+    /// * `user_seq` - User sequence number
+    ///
+    /// # Returns
+    /// * Result<SpentDetailByInstallment, anyhow::Error>
+    fn process_nh_card(
+        &self,
+        split_args_vec: &Vec<String>,
+        user_seq: i64,
+    ) -> Result<SpentDetailByInstallment, anyhow::Error> {
+        let split_val: Vec<&str> = vec![",", "원"];
+
+        // Extract price information
+        let price_str = split_args_vec
+            .get(2)
+            .ok_or_else(|| anyhow!("[NH Card] Price field (index 2) not found"))?;
+        let consume_price_vec: Vec<String> =
+            self.get_string_vector_by_replace(price_str, &split_val)?;
+        let consume_price: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
+
+        // Extract time information
+        let time_str = split_args_vec
+            .get(3)
+            .ok_or_else(|| anyhow!("[NH Card] Time field (index 3) not found"))?;
+        let consume_time_vec: Vec<String> =
+            time_str.split(" ").map(|s| s.trim().to_string()).collect();
+        let spent_at: DateTime<Local> = self.get_consume_datetime_local(&consume_time_vec)?;
+
+        // Extract product name
+        let consume_name: &String = split_args_vec
+            .get(4)
+            .ok_or_else(|| anyhow!("[NH Card] Product name field (index 4) not found"))?;
+
+        let spent_detail: SpentDetail = SpentDetail::new(
+            consume_name.clone(),
+            consume_price,
+            spent_at,
+            1, // should_index = 1 (true)
+            user_seq,
+            1, // spent_group_id
+            1
+        );
+
+        Ok(SpentDetailByInstallment::new(0, spent_detail))
+    }
+
+    #[doc = "Process Samsung card payment data (internal helper function)"]
+    /// # Arguments
+    /// * `split_args_vec` - Payment information vector
+    /// * `user_seq` - User sequence number
+    ///
+    /// # Returns
+    /// * Result<SpentDetailByInstallment, anyhow::Error>
+    fn process_samsung_card(
+        &self,
+        split_args_vec: &Vec<String>,
+        user_seq: i64,
+    ) -> Result<SpentDetailByInstallment, anyhow::Error> {
+        let split_val: Vec<&str> = vec![",", "원"];
+
+        // Extract price and payment type
+        let price_str = split_args_vec
+            .get(1)
+            .ok_or_else(|| anyhow!("[Samsung Card] Price field (index 1) not found"))?;
+        let consume_price_vec: Vec<String> =
+            self.get_string_vector_by_replace(price_str, &split_val)?;
+        let consume_price: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
+
+        let payment_type: &str = consume_price_vec
+            .get(1)
+            .ok_or_else(|| anyhow!("[Samsung Card] Payment type not found"))?
+            .trim();
+        let monthly_installment_plan: i64 = self.get_installment_payment_filtering(payment_type)?;
+
+        // Extract time and product name
+        let time_str = split_args_vec
+            .get(2)
+            .ok_or_else(|| anyhow!("[Samsung Card] Time field (index 2) not found"))?;
+        let consume_time_vec: Vec<String> = time_str.split(" ").map(|s| s.to_string()).collect();
+        let spent_at: DateTime<Local> = self.get_consume_datetime_local(&consume_time_vec)?;
+
+        let consume_name: &String = consume_time_vec
+            .get(2)
+            .ok_or_else(|| anyhow!("[Samsung Card] Product name not found in time field"))?;
+
+        let spent_detail: SpentDetail = SpentDetail::new(
+            consume_name.clone(),
+            consume_price,
+            spent_at,
+            1, // should_index = 1 (true)
+            user_seq,
+            1, // spent_group_id
+            1
+        );
+
+        Ok(SpentDetailByInstallment::new(
+            monthly_installment_plan,
+            spent_detail,
+        ))
+    }
+
+    #[doc = "Process Shinhan card payment data (internal helper function)"]
+    /// # Arguments
+    /// * `split_args_vec` - Payment information vector
+    /// * `user_seq` - User sequence number
+    ///
+    /// # Returns
+    /// * Result<SpentDetailByInstallment, anyhow::Error>
+    fn process_shinhan_card(
+        &self,
+        split_args_vec: &Vec<String>,
+        user_seq: i64,
+    ) -> Result<SpentDetailByInstallment, anyhow::Error> {
+        let split_val: Vec<&str> = vec![",", "원"];
+
+        // Extract and parse price information
+        let first_field = split_args_vec
+            .get(0)
+            .ok_or_else(|| anyhow!("[Shinhan Card] First field (index 0) not found"))?;
+        let consume_price_vec: Vec<String> =
+            self.get_string_vector_by_replace(first_field, &split_val)?;
+
+        let spent_detail: &String = consume_price_vec
+            .get(2)
+            .ok_or_else(|| anyhow!("[Shinhan Card] Price and date field not found"))?;
+
+        // Parse format: "123456(일시불)123"
+        let split_by_front: Vec<String> = spent_detail
+            .split("(")
+            .map(|s| s.trim().to_string())
+            .collect();
+        let split_by_back: Vec<String> = spent_detail
+            .split(")")
+            .map(|s| s.trim().to_string())
+            .collect();
+
+        let consume_price: i64 = split_by_front
+            .get(0)
+            .ok_or_else(|| anyhow!("[Shinhan Card] Price parsing failed"))?
+            .parse::<i64>()?;
+
+        let payment_type: String = split_by_front
+            .get(1)
+            .ok_or_else(|| anyhow!("[Shinhan Card] Payment type parsing failed"))?
+            .replace(")", "");
+
+        let monthly_installment_plan: i64 =
+            self.get_installment_payment_filtering(&payment_type)?;
+
+        // Extract date and time
+        let consume_date: String = split_by_back
+            .get(1)
+            .ok_or_else(|| anyhow!("[Shinhan Card] Date parsing failed"))?
+            .to_string();
+
+        let consume_time: String = consume_price_vec
+            .get(3)
+            .ok_or_else(|| anyhow!("[Shinhan Card] Time field not found"))?
+            .to_string();
+
+        let consume_time_vec: Vec<String> = vec![consume_date, consume_time];
+        let spent_at: DateTime<Local> = self.get_consume_datetime_local(&consume_time_vec)?;
+
+        // Extract product name
+        let consume_name = consume_price_vec
+            .get(4)
+            .ok_or_else(|| anyhow!("[Shinhan Card] Product name not found"))?;
+
+        let spent_detail: SpentDetail = SpentDetail::new(
+            consume_name.clone(),
+            consume_price,
+            spent_at,
+            1, // should_index = 1 (true)
+            user_seq,
+            1, // spent_group_id
+            1
+        );
+
+        Ok(SpentDetailByInstallment::new(
+            monthly_installment_plan,
+            spent_detail,
+        ))
+    }
+}
+
+#[async_trait]
+impl ProcessService for ProcessServicePub {
     #[doc = "Process processing function based on the type of payment"]
     /// # Arguments
     /// * `split_args_vec` - Array with strings as elements : Payment-related information vector:
     /// - ex) ["nh카드3*3*승인", "신*환", "5,500원 일시불", "11/25 10:02", "메가엠지씨커피 선릉", "총누적469,743원"]
+    /// * `user_seq` - User sequence number
     ///
     /// # Returns
-    /// * Result<(), anyhow::Error>
+    /// * Result<SpentDetailByInstallment, anyhow::Error>
     fn process_by_consume_filter(
         &self,
         split_args_vec: &Vec<String>,
-    ) -> Result<ConsumeProdtInfoByInstallment, anyhow::Error> {
+        user_seq: i64,
+    ) -> Result<SpentDetailByInstallment, anyhow::Error> {
         let consume_type: &String = split_args_vec
             .get(0)
-            .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_type()] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
-
-        let cur_timestamp: String = get_str_curdatetime();
-        let split_val: Vec<&str> = vec![",", "원"];
+            .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_filter] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
 
         if consume_type.contains("nh") {
-            let consume_price_vec: Vec<String> = self.get_string_vector_by_replace(split_args_vec
-                .get(2)
-                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 2, split_args_vec))?,
-                &split_val
-            )?;
-
-            let consume_price: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
-
-            let consume_time_vec: Vec<String> = split_args_vec
-                .get(3)
-                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 3))?
-                .split(" ")
-                .map(|s| s.trim().to_string())
-                .collect();
-
-            let consume_time: String = self.get_consume_time(&consume_time_vec)?;
-
-            let consume_name: &String = split_args_vec
-                .get(4)
-                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'split_args_vec' vector was accessed.", 4))?;
-
-            let res_struct: ConsumeProdtInfo = ConsumeProdtInfo::new(
-                consume_time,
-                cur_timestamp,
-                consume_name.clone(),
-                consume_price,
-                String::from("etc"),
-            );
-
-            let consume_prodt_info_by_installment: ConsumeProdtInfoByInstallment =
-                ConsumeProdtInfoByInstallment::new(0, res_struct);
-
-            Ok(consume_prodt_info_by_installment)
+            self.process_nh_card(split_args_vec, user_seq)
         } else if consume_type.contains("삼성") {
-            let consume_price_vec: Vec<String> = self.get_string_vector_by_replace(split_args_vec
-                .get(1)
-                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 1, split_args_vec))?,
-                &split_val
-            )?;
-
-            let consume_price: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
-
-            let payment_type: &str = consume_price_vec
-                .get(1)
-                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'split_args_vec' vector was accessed.", 1))?
-                .trim();
-
-            /* It determines whether it is an 'installment payment' or a 'lump sum payment.' */
-            let monthly_installment_plan: i64 =
-                self.get_installment_payment_filtering(payment_type)?;
-
-            let consume_time_vec: Vec<String> = split_args_vec
-                .get(2)
-                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 2))?
-                .split(" ")
-                .map(|s| s.to_string())
-                .collect();
-
-            let consume_time: String = self.get_consume_time(&consume_time_vec)?;
-
-            let consume_name: &String = consume_time_vec
-                .get(2)
-                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_time_vec' vector was accessed.", 2))?;
-
-            let res_struct: ConsumeProdtInfo = ConsumeProdtInfo::new(
-                consume_time,
-                cur_timestamp,
-                consume_name.clone(),
-                consume_price,
-                String::from("etc"),
-            );
-
-            let consume_prodt_info_by_installment: ConsumeProdtInfoByInstallment =
-                ConsumeProdtInfoByInstallment::new(monthly_installment_plan, res_struct);
-
-            Ok(consume_prodt_info_by_installment)
+            self.process_samsung_card(split_args_vec, user_seq)
         } else if consume_type.contains("신한카드") {
-            let consume_price_vec: Vec<String> = self.get_string_vector_by_replace(split_args_vec
-                .get(0)
-                .ok_or_else(|| anyhow!("[Index Out Of Range Error][process_by_consume_type()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed. : {:?}", 0, split_args_vec))?,
-                &split_val
-            )?;
-
-            let price_and_date: &String = consume_price_vec
-                .get(2)
-                .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 2th element of consume_price_vec cannot be accessed."))?;
-
-            let split_by_front: Vec<String> = price_and_date
-                .split("(")
-                .map(|s| s.trim().to_string())
-                .collect();
-
-            let split_by_back: Vec<String> = price_and_date
-                .split(")")
-                .map(|s| s.trim().to_string())
-                .collect();
-
-            let consume_price: i64 = split_by_front
-                .get(0)
-                .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 0th element of split_by_front cannot be accessed."))?
-                .parse::<i64>()?;
-
-            let payment_type: String = split_by_front
-                .get(1)
-                .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 1th element of split_by_front cannot be accessed."))?
-                .replace(")", "");
-
-            let consume_date: String = split_by_back
-                .get(1)
-                .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 1th element of split_by_front cannot be accessed."))?
-                .to_string();
-
-            let consume_time: String = consume_price_vec
-                .get(3)
-                .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 3th element of consume_price_vec cannot be accessed."))?
-                .to_string();
-
-            let consume_time_vec: Vec<String> = vec![consume_date, consume_time];
-
-            /* It determines whether it is an 'installment payment' or a 'lump sum payment.' */
-            let monthly_installment_plan: i64 =
-                self.get_installment_payment_filtering(&payment_type)?;
-
-            let consume_time: String = self.get_consume_time(&consume_time_vec)?;
-
-            let consume_name = consume_price_vec
-                .get(4)
-                .ok_or_else(|| anyhow!("[Error][ProcessService->process_by_consume_filter] The 4th element of consume_price_vec cannot be accessed."))?;
-
-            let res_struct: ConsumeProdtInfo = ConsumeProdtInfo::new(
-                consume_time,
-                cur_timestamp,
-                consume_name.clone(),
-                consume_price,
-                String::from("etc"),
-            );
-
-            let consume_prodt_info_by_installment: ConsumeProdtInfoByInstallment =
-                ConsumeProdtInfoByInstallment::new(monthly_installment_plan, res_struct);
-
-            Ok(consume_prodt_info_by_installment)
+            self.process_shinhan_card(split_args_vec, user_seq)
         } else {
-            return Err(anyhow!("[Error][process_by_consume_type()] Variable 'consume_type' contains an undefined string."));
+            Err(anyhow!("[Error][process_by_consume_filter] Variable 'consume_type' contains an undefined string: {}", consume_type))
         }
     }
 
     #[doc = "Functions that take into account installment payments"]
     /// # Arguments
-    /// * `consume_prodt_info` - Consumption information
+    /// * `spent_detail_by_installment` - Spent detail with installment information
     ///
     /// # Returns
-    /// * Result<Vec<ConsumeProdtInfo>, anyhow::Error>
-    fn get_consume_prodt_info_installment_process(
+    /// * Result<Vec<SpentDetail>, anyhow::Error>
+    fn get_spent_detail_installment_process(
         &self,
-        consume_prodt_info_by_installment: &ConsumeProdtInfoByInstallment,
-    ) -> Result<Vec<ConsumeProdtInfo>, anyhow::Error> {
-        let consume_prodt_info: &ConsumeProdtInfo =
-            consume_prodt_info_by_installment.consume_prodt_info();
-        let mut consume_prodt_info_vec: Vec<ConsumeProdtInfo> = Vec::new();
+        spent_detail_by_installment: &SpentDetailByInstallment,
+    ) -> Result<Vec<SpentDetail>, anyhow::Error> {
+        let spent_detail: &SpentDetail = spent_detail_by_installment.spent_detail();
+        let mut spent_detail_vec: Vec<SpentDetail> = Vec::new();
 
-        if *consume_prodt_info_by_installment.installment() > 0 {
-            let prodt_money: i64 = consume_prodt_info.prodt_money;
-            let prodt_money_ceil: i64 = (prodt_money as f64
-                / consume_prodt_info_by_installment.installment as f64)
+        if *spent_detail_by_installment.installment() > 0 {
+            let spent_money: i64 = *spent_detail.spent_money();
+            let spent_money_ceil: i64 = (spent_money as f64
+                / *spent_detail_by_installment.installment() as f64)
                 .ceil() as i64;
 
-            for idx in 0..consume_prodt_info_by_installment.installment {
-                let mut consume_prodt_info_clone: ConsumeProdtInfo = consume_prodt_info.clone();
+            for idx in 0..*spent_detail_by_installment.installment() {
+                let mut spent_detail_clone: SpentDetail = spent_detail.clone();
 
-                let timestamp: NaiveDateTime = get_naive_datetime_from_str(
-                    consume_prodt_info_clone.timestamp(),
-                    "%Y-%m-%dT%H:%M:%SZ",
-                )?;
+                let spent_at: DateTime<Local> = *spent_detail_clone.spent_at();
+                let calculate_spent_at: DateTime<Local> =
+                    spent_at + chrono::Duration::days(30 * (idx as i64));
 
-                let calculate_timestamp: NaiveDateTime =
-                    timestamp + chrono::Duration::days(30 * (idx as i64));
-
-                consume_prodt_info_clone.set_timestamp(calculate_timestamp.to_string());
-                consume_prodt_info_clone.set_prodt_money(prodt_money_ceil);
-                consume_prodt_info_clone.set_prodt_name(format!(
+                spent_detail_clone.set_spent_at(calculate_spent_at);
+                spent_detail_clone.set_spent_money(spent_money_ceil);
+                spent_detail_clone.set_spent_name(format!(
                     "{}-{}/{}",
-                    consume_prodt_info.prodt_name(),
+                    spent_detail.spent_name(),
                     idx + 1,
-                    consume_prodt_info_by_installment.installment
+                    spent_detail_by_installment.installment()
                 ));
 
-                consume_prodt_info_vec.push(consume_prodt_info_clone);
+                spent_detail_vec.push(spent_detail_clone);
             }
         } else {
-            consume_prodt_info_vec.push(consume_prodt_info.clone());
+            spent_detail_vec.push(spent_detail.clone());
         }
 
-        Ok(consume_prodt_info_vec)
+        Ok(spent_detail_vec)
     }
 
     #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` months"]
@@ -404,34 +499,6 @@ impl ProcessService for ProcessServicePub {
             PerDatetime::new(date_start, date_end, n_month_start, n_month_end);
 
         Ok(per_mon_datetim)
-    }
-
-    #[doc = "Function that calculates the money spent by category"]
-    /// # Arguments
-    /// * `total_mount` - total money spent
-    /// * `type_map` - <Consumption classification, money spent>
-    ///
-    /// # Returns
-    /// * Result<HashMap<String, i64>, anyhow::Error>
-    fn get_calculate_pie_infos_from_category(
-        &self,
-        total_cost: f64,
-        type_map: &HashMap<String, i64>,
-    ) -> Result<Vec<ConsumeResultByType>, anyhow::Error> {
-        let consume_result_by_types : Vec<ConsumeResultByType> = type_map
-            .iter()
-            .map(|(key, value)| {
-                let prodt_type: String = key.to_string();
-                let prodt_cost: i64 = *value;
-
-                let prodt_per: f64 = (prodt_cost as f64 / total_cost as f64) * 100.0;
-                let prodt_per_rounded: f64 = (prodt_per * 10.0).round() / 10.0; /* Round to the second decimal place */
-
-                ConsumeResultByType::new(prodt_type, prodt_cost, prodt_per_rounded)
-            })
-            .collect();
-
-        Ok(consume_result_by_types)
     }
 
     #[doc = "Function that converts consumption results by category into Python data"]

@@ -1,5 +1,7 @@
 use crate::common::*;
 
+use crate::AppConfig;
+
 use crate::models::consume_prodt_info::*;
 use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
@@ -7,9 +9,7 @@ use crate::models::to_python_graph_line::*;
 
 #[async_trait]
 pub trait TelebotService {
-    async fn tele_bot_send_msg(&self, msg: &str) -> Result<(), anyhow::Error>;
     async fn send_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error>;
-    async fn tele_bot_send_photo(&self, image_path: &str) -> Result<(), anyhow::Error>;
     async fn send_photo_confirm(&self, image_path_vec: &Vec<String>) -> Result<(), anyhow::Error>;
 
     async fn send_consumption_message<'life1, 'life2, 'msg, T>(
@@ -44,6 +44,14 @@ pub trait TelebotService {
         &self,
         obj_struct: &T,
     ) -> Result<(), anyhow::Error>;
+
+    async fn send_message_struct_list<T: Serialize + Sync>(
+        &self,
+        obj_list: &[T],
+    ) -> Result<(), anyhow::Error>;
+
+    fn get_telegram_token(&self) -> String;
+    fn get_telegram_user_id(&self) -> String;
 }
 
 #[derive(Debug, Getters)]
@@ -51,6 +59,7 @@ pub struct TelebotServicePub {
     pub bot: Arc<Bot>,
     pub chat_id: ChatId,
     pub input_text: String,
+    pub user_id: String,
 }
 
 impl TelebotServicePub {
@@ -62,10 +71,14 @@ impl TelebotServicePub {
     /// # Returns
     /// * Self
     pub fn new(bot: Arc<Bot>, message: Message) -> Self {
-        let input_text = match message.text() {
+        
+        let app_config: &AppConfig = AppConfig::global();
+        let user_id: &str = &app_config.user_id;
+
+        let input_text: String = match message.text() {
             Some(input_text) => input_text,
             None => {
-                error!("[Error][handle_commandhandle_command()] The entered value does not exist.");
+                error!("[TelebotServicePub::handle_commandhandle_command()] The entered value does not exist.");
                 ""
             }
         }
@@ -78,6 +91,7 @@ impl TelebotServicePub {
             bot,
             chat_id,
             input_text,
+            user_id: user_id.to_string(),
         }
     }
 
@@ -99,7 +113,7 @@ impl TelebotServicePub {
         F: Fn() -> Fut,
         Fut: std::future::Future<Output = Result<(), anyhow::Error>>,
     {
-        let mut attempts = 0;
+        let mut attempts: usize = 0;
 
         while attempts <= max_retries {
             match operation().await {
@@ -124,6 +138,82 @@ impl TelebotServicePub {
             max_retries
         ))
     }
+
+    #[doc = "Send message via Telegram Bot"]
+    async fn tele_bot_send_msg(&self, msg: &str) -> Result<(), anyhow::Error> {
+        self.bot
+            .send_message(self.chat_id, msg)
+            .await
+            .context("[Telebot Error][tele_bot_send_msg()] Failed to send command response.")?;
+
+        Ok(())
+    }
+
+    #[doc = "tele_bot_send_photo"]
+    async fn tele_bot_send_photo(&self, image_path: &str) -> Result<(), anyhow::Error> {
+        let photo: InputFile = InputFile::file(Path::new(image_path));
+        self.bot
+            .send_photo(self.chat_id, photo)
+            .await
+            .context("Telebot Error][tele_bot_send_photo()] Failed to send Photo.")?;
+
+        Ok(())
+    }
+
+    #[doc = "Convert a serializable object to formatted string"]
+    /// # Arguments
+    /// * `obj_struct` - Serializable object
+    /// * `header` - Optional header to prepend (e.g., "===== Object 1 =====")
+    ///
+    /// # Returns
+    /// * Result<String, anyhow::Error> - Formatted string representation
+    fn format_struct_to_string<T: Serialize>(
+        &self,
+        obj_struct: &T,
+        header: Option<&str>,
+    ) -> Result<String, anyhow::Error> {
+        let obj_val: Value = serde_json::to_value(obj_struct).context(
+            "[TelebotServicePub::format_struct_to_string] Failed to serialize struct to JSON",
+        )?;
+
+        if let Some(obj) = obj_val.as_object() {
+            let mut result_string: String = String::new();
+
+            // Add header if provided
+            if let Some(h) = header {
+                result_string.push_str(h);
+                result_string.push('\n');
+            }
+
+            for (key, value) in obj {
+                let value_str: String = match value {
+                    Value::Number(num) => {
+                        if let Some(n) = num.as_i64() {
+                            n.to_formatted_string(&Locale::ko)
+                        } else {
+                            value.to_string()
+                        }
+                    }
+                    _ => value.to_string(),
+                };
+
+                result_string.push_str(&format!("{}: {}, \n", key, value_str));
+            }
+
+            // Remove trailing ", \n"
+            if !result_string.is_empty() {
+                for _n in 0..3 {
+                    result_string.pop();
+                }
+            }
+
+            Ok(result_string)
+        } else {
+            Err(anyhow!(
+                "[TelebotServicePub::format_struct_to_string] Parsed JSON is not an object"
+            ))
+        }
+    }
 }
 
 #[async_trait]
@@ -138,53 +228,71 @@ impl TelebotService for TelebotServicePub {
         &self,
         obj_struct: &T,
     ) -> Result<(), anyhow::Error> {
-        let obj_val: Value = serde_json::to_value(obj_struct).map_err(|err| {
-            anyhow!(
-                "[Error][convert_json_from_struct()] Failed to serialize struct to JSON: {}",
-                err
-            )
-        })?;
-
-        if let Some(obj) = obj_val.as_object() {
-            let mut result_string = String::new();
-
-            for (key, value) in obj {
-                let mut value_str: String = String::from("");
-
-                match value {
-                    Value::Number(num) => {
-                        if let Some(n) = num.as_i64() {
-                            value_str = n.to_formatted_string(&Locale::ko);
-                        }
-                    }
-                    _ => {
-                        value_str = value.to_string();
-                    }
-                }
-
-                result_string.push_str(&format!("{}: {}, \n", key, value_str));
-            }
-
-            if !result_string.is_empty() {
-                for _n in 0..3 {
-                    result_string.pop();
-                }
-            }
-
-            self.send_message_confirm(&result_string).await?;
-        } else {
-            return Err(anyhow!("Parsed JSON is not an object"));
-        }
-
+        let formatted_string: String = self.format_struct_to_string(obj_struct, None)?;
+        self.send_message_confirm(&formatted_string).await?;
         Ok(())
     }
 
-    #[doc = "Send message via Telegram Bot"]
-    async fn tele_bot_send_msg(&self, msg: &str) -> Result<(), anyhow::Error> {
-        self.bot
-            .send_message(self.chat_id, msg)
-            .await
-            .context("[Telebot Error][tele_bot_send_msg()] Failed to send command response.")?;
+    #[doc = "Send multiple struct info messages in parallel"]
+    /// # Arguments
+    /// * obj_list - List of serializable objects
+    ///
+    /// # Returns
+    /// * Result<(), anyhow::Error>
+    async fn send_message_struct_list<T: Serialize + Sync>(
+        &self,
+        obj_list: &[T],
+    ) -> Result<(), anyhow::Error> {
+        if obj_list.is_empty() {
+            warn!("[TelebotServicePub::send_message_struct_list] Empty list provided");
+            return Ok(());
+        }
+
+        info!(
+            "[TelebotServicePub::send_message_struct_list] Processing {} objects",
+            obj_list.len()
+        );
+
+        // Process each object using the common formatting function
+        let mut formatted_messages: Vec<String> = Vec::new();
+
+        for (idx, obj_struct) in obj_list.iter().enumerate() {
+            let header: String = format!("===== Object {} =====", idx + 1);
+            let formatted_string: String =
+                self.format_struct_to_string(obj_struct, Some(&header))?;
+            formatted_messages.push(formatted_string);
+        }
+
+        // Send all messages using futures::join_all for parallel execution
+        use futures::future::join_all;
+        
+        let send_futures: Vec<_> = formatted_messages
+            .iter()
+            .map(|msg| self.send_message_confirm(msg))
+            .collect();
+
+        let results: Vec<std::result::Result<(), anyhow::Error>> = join_all(send_futures).await;
+
+        // Check if any failed
+        for (idx, result) in results.into_iter().enumerate() {
+            if let Err(e) = result {
+                error!(
+                    "[TelebotServicePub::send_message_struct_list] Failed to send message for object {}: {:?}",
+                    idx + 1,
+                    e
+                );
+                return Err(anyhow!(
+                    "Failed to send message for object {}: {}",
+                    idx + 1,
+                    e
+                ));
+            }
+        }
+
+        info!(
+            "[TelebotServicePub::send_message_struct_list] Successfully sent {} messages",
+            obj_list.len()
+        );
 
         Ok(())
     }
@@ -193,17 +301,6 @@ impl TelebotService for TelebotServicePub {
     async fn send_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error> {
         self.try_send_operation(|| self.tele_bot_send_msg(msg), 6, Duration::from_secs(40))
             .await
-    }
-
-    #[doc = "tele_bot_send_photo"]
-    async fn tele_bot_send_photo(&self, image_path: &str) -> Result<(), anyhow::Error> {
-        let photo: InputFile = InputFile::file(Path::new(image_path));
-        self.bot
-            .send_photo(self.chat_id, photo)
-            .await
-            .context("Telebot Error][tele_bot_send_photo()] Failed to send Photo.")?;
-
-        Ok(())
     }
 
     #[doc = "Function that transfers pictures"]
@@ -224,7 +321,7 @@ impl TelebotService for TelebotServicePub {
 
         Ok(())
     }
-
+    
     #[doc = "Functions that send messages related to consumption details"]
     async fn send_consumption_message<'life1, 'life2, 'msg, T>(
         &self,
@@ -342,5 +439,15 @@ impl TelebotService for TelebotServicePub {
     #[doc = "String entered through `Telegram`"]
     fn get_input_text(&self) -> String {
         self.input_text.to_string()
+    }
+
+    #[doc = "Function that returns a Telegram token."]
+    fn get_telegram_token(&self) -> String {
+        self.bot.token().to_string()
+    }
+
+    #[doc = "Function that returns a Telegram user id."]
+    fn get_telegram_user_id(&self) -> String {
+        self.user_id.to_string()
     }
 }

@@ -24,8 +24,8 @@ impl EsRepositoryPub {
             .map(|s| s.to_string())
             .collect();
 
-        let es_id = env::var("ES_ID").expect("[EsRepositoryPub::new] 'ES_ID' must be set");
-        let es_pw = env::var("ES_PW").expect("[EsRepositoryPub::new] 'ES_PW' must be set");
+        let es_id: String = env::var("ES_ID").expect("[EsRepositoryPub::new] 'ES_ID' must be set");
+        let es_pw: String = env::var("ES_PW").expect("[EsRepositoryPub::new] 'ES_PW' must be set");
 
         let cluster_urls: Vec<Url> = es_host
             .iter()
@@ -39,7 +39,7 @@ impl EsRepositoryPub {
         let mut builder: TransportBuilder =
             TransportBuilder::new(conn_pool).timeout(Duration::from_secs(30));
 
-        if es_id != "" && es_pw != "" {
+        if !es_id.is_empty() && !es_pw.is_empty() {
             builder = builder.auth(EsCredentials::Basic(es_id.to_string(), es_pw.to_string()));
         }
 

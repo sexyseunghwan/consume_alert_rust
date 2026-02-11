@@ -198,7 +198,9 @@ impl<G: GraphApiService, T: TelebotService, C: CommandService, M: MySqlQueryServ
         let prodt_type: String = self
             .command_service
             .get_consume_type_judgement(consume_name)
-            .await?;
+            .await?
+            .consume_keyword_type()
+            .to_string();
         let cur_time: String = get_str_curdatetime();
 
         let con_index_prod: ConsumeIndexProdNew = ConsumeIndexProdNew::new(

@@ -1,52 +1,100 @@
 use crate::common::*;
 
-#[doc = "Kafka connection object to be used in a single tone"]
-static KAFKA_PRODUCER: once_lazy<Arc<Mutex<KafkaRepositoryPub>>> =
-    once_lazy::new(|| initialize_kafka_clients());
-
-#[doc = "Function to initialize Kafka connection instances"]
-pub fn initialize_kafka_clients() -> Arc<Mutex<KafkaRepositoryPub>> {
-    let kafka_host: String = env::var("KAFKA_HOST")
-        .expect("[ENV file read Error][initialize_db_clients()] 'KAFKA_HOST' must be set");
-    let kafka_host_vec: Vec<String> = kafka_host.split(',').map(|s| s.to_string()).collect();
-
-    let produce_broker: Producer = match Producer::from_hosts(kafka_host_vec.to_owned())
-        .with_ack_timeout(Duration::from_secs(3)) /* Timeout settings for message transfer confirmation */ 
-        .with_required_acks(RequiredAcks::One)/* If the message transfer is delivered to at least one broker, it is considered a success */ 
-        .create() {
-            Ok(kafka_producer) => kafka_producer,
-            Err(e) => {
-                error!("{:?}", e);
-                panic!("{:?}", e)
-            }
-        };
-
-    let kafka_producer = KafkaRepositoryPub::new(produce_broker);
-    Arc::new(Mutex::new(kafka_producer))
-}
-
-#[doc = ""]
-pub fn get_kafka_producer() -> Arc<Mutex<KafkaRepositoryPub>> {
-    Arc::clone(&KAFKA_PRODUCER)
-}
-
 #[async_trait]
 pub trait KafkaRepository {
-    fn produce_message(&mut self, topic: &str, message: &str) -> Result<(), anyhow::Error>;
+    async fn send_message(
+        &self,
+        topic: &str,
+        key: Option<&str>,
+        payload: &Value,
+    ) -> Result<(), anyhow::Error>;
 }
 
-#[derive(new)]
-pub struct KafkaRepositoryPub {
-    produce_broker: Producer,
+#[derive(Getters, Clone)]
+pub struct KafkaRepositoryImpl {
+    producer: FutureProducer,
+}
+
+impl KafkaRepositoryImpl {
+    pub fn new() -> anyhow::Result<Self> {
+        let kafka_brokers: String = env::var("KAFKA_BROKERS")
+            .expect("[KafkaRepositoryImpl::new] 'KAFKA_BROKERS' must be set");
+
+        let security_protocol: String = env::var("KAFKA_SECURITY_PROTOCOL")
+            .unwrap_or_else(|_| "PLAINTEXT".to_string());
+
+        let mut config: ClientConfig = ClientConfig::new();
+        config
+            .set("bootstrap.servers", &kafka_brokers)
+            .set("message.timeout.ms", "30000")
+            .set("queue.buffering.max.messages", "100000")
+            .set("queue.buffering.max.kbytes", "1048576")
+            .set("batch.num.messages", "10000")
+            .set("security.protocol", &security_protocol);
+
+        if security_protocol.contains("SASL") {
+            let sasl_mechanism: String = env::var("KAFKA_SASL_MECHANISM")
+                .expect("[KafkaRepositoryImpl::new] 'KAFKA_SASL_MECHANISM' must be set when using SASL");
+            let sasl_username: String = env::var("KAFKA_SASL_USERNAME")
+                .expect("[KafkaRepositoryImpl::new] 'KAFKA_SASL_USERNAME' must be set when using SASL");
+            let sasl_password: String = env::var("KAFKA_SASL_PASSWORD")
+                .expect("[KafkaRepositoryImpl::new] 'KAFKA_SASL_PASSWORD' must be set when using SASL");
+
+            config
+                .set("sasl.mechanism", &sasl_mechanism)
+                .set("sasl.username", &sasl_username)
+                .set("sasl.password", &sasl_password);
+        }
+
+        let producer: FutureProducer = config.create().map_err(|e| {
+            anyhow!(
+                "[KafkaRepositoryImpl::new] Failed to create producer: {:?}",
+                e
+            )
+        })?;
+
+        Ok(KafkaRepositoryImpl { producer })
+    }
 }
 
 #[async_trait]
-impl KafkaRepository for KafkaRepositoryPub {
-    #[doc = "Function that send message to Kafka"]
-    fn produce_message(&mut self, topic: &str, message: &str) -> Result<(), anyhow::Error> {
-        let produce_broker = &mut self.produce_broker;
-        let _result = produce_broker.send(&KafkaRecord::from_value(topic, message))?;
+impl KafkaRepository for KafkaRepositoryImpl {
+    #[doc = "Function that sends JSON message to Kafka topic"]
+    async fn send_message(
+        &self,
+        topic: &str,
+        key: Option<&str>,
+        payload: &Value,
+    ) -> anyhow::Result<()> {
+        let payload_str: String = serde_json::to_string(payload).map_err(|e| {
+            anyhow!(
+                "[KafkaRepositoryImpl::send_message] Failed to serialize payload: {:?}",
+                e
+            )
+        })?;
 
-        Ok(())
+        let mut record: FutureRecord<'_, str, String> =
+            FutureRecord::to(topic).payload(&payload_str);
+
+        if let Some(k) = key {
+            record = record.key(k);
+        }
+
+        match self.producer.send(record, Duration::from_secs(30)).await {
+            Ok(delivery) => {
+                info!(
+                    "[KafkaRepositoryImpl::send_message] Message sent to topic: {}, partition: {}, offset: {}",
+                    topic, delivery.partition, delivery.offset
+                );
+                Ok(())
+            }
+            Err((e, _)) => {
+                let error_message: String = format!(
+                    "[KafkaRepositoryImpl::send_message] Failed to send message to topic {}: {:?}",
+                    topic, e
+                );
+                Err(anyhow!(error_message))
+            }
+        }
     }
 }

@@ -205,3 +205,17 @@ pub fn validate_date_format(date_str: &str, format: &str) -> Result<bool, anyhow
     let re = Regex::new(format)?;
     Ok(re.is_match(date_str))
 }
+
+#[doc = ""]
+pub fn convert_str_to_datetime<Tz>(time: &str, tz: Tz) -> anyhow::Result<DateTime<Tz>>
+where
+    Tz: TimeZone,
+    Tz::Offset: Display,
+{
+    let dt_datetime: DateTime<Tz> =
+        DateTime::parse_from_rfc3339(time)
+        .context("[time_utils.rs -> convert_str_to_datetime] An error occurred during the conversion of time information.")?
+        .with_timezone(&tz);
+
+    Ok(dt_datetime)
+}

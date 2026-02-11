@@ -3,12 +3,12 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "CONSUME_PRODT_KEYWORD_V1")]
+#[sea_orm(table_name = "COMMON_CONSUME_KEYWORD_TYPE")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false)]
+    #[sea_orm(primary_key)]
+    pub consume_keyword_type_id: i64,
+    #[sea_orm(unique)]
     pub consume_keyword_type: String,
-    #[sea_orm(primary_key, auto_increment = false)]
-    pub consume_keyword: String,
     pub created_at: DateTime,
     pub updated_at: Option<DateTime>,
     pub created_by: String,
@@ -16,6 +16,15 @@ pub struct Model {
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(has_many = "super::common_consume_prodt_keyword::Entity")]
+    CommonConsumeProdtKeyword,
+}
+
+impl Related<super::common_consume_prodt_keyword::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::CommonConsumeProdtKeyword.def()
+    }
+}
 
 impl ActiveModelBehavior for ActiveModel {}

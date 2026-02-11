@@ -8,7 +8,7 @@ pub struct ScoredData<T> {
 }
 
 /* Sort by Score */
-#[derive(Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 struct MinHeapItem(i64);
 
 impl Ord for MinHeapItem {
@@ -24,12 +24,13 @@ impl PartialOrd for MinHeapItem {
     }
 }
 
-pub struct ScoreManager<T> {
+#[derive(Debug)]
+pub struct ScoreManager<T: std::fmt::Debug> {
     heap: BinaryHeap<MinHeapItem>, /* Manage your score to a minimum heap */
     data_map: HashMap<i64, Vec<ScoredData<T>>>, /* Data Management by Score */
 }
 
-impl<T> ScoreManager<T> {
+impl<T: std::fmt::Debug> ScoreManager<T> {
     pub fn new() -> Self {
         Self {
             heap: BinaryHeap::new(),

@@ -62,24 +62,29 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2025-02-10 Seunghwan Shin       # [v.3.0.3] Changed the code to disable Kafka for a while.
               2025-06-07 Seunghwan Shin       # [v.3.1.0] Added Shinhan Card Payment Details
               2025-10-04 Seunghwan Shin       # [v.3.1.1] Prevented negative values from being displayed in the pie chart by hiding those sections.
-              2026-01-04 Seunghwan Shin       # [v.4.0.0]
+              2026-00-00 Seunghwan Shin       # [v.4.0.0]
 */
 mod common;
 use common::*;
 
+mod config;
+use config::AppConfig;
+
 mod repository;
-use repository::{es_repository::*, mysql_repository::*};
+use repository::{es_repository::*, kafka_repository::*, mysql_repository::*, redis_repository::*};
 
 mod utils_modules;
 
 mod schema;
 
 mod services;
-use services::elastic_query_service::*;
-use services::graph_api_service::*;
-use services::mysql_query_service::*;
-use services::process_service::*;
-use services::telebot_service::*;
+
+use services::{
+    elastic_query_service::*, graph_api_service::*,
+    mysql_query_service::*, process_service::*,
+    producer_service::*, telebot_service::*,
+    redis_service::*
+};
 
 mod controller;
 use controller::main_controller::*;
@@ -92,6 +97,8 @@ mod enums;
 
 mod entity;
 
+mod views;
+
 #[tokio::main]
 async fn main() {
     /* Select compilation environment */
@@ -99,7 +106,10 @@ async fn main() {
 
     /* Initiate Logger */
     set_global_logger();
-    infok("Consume Alert Program Start").await;
+    info!("Consume Alert Program Start");
+
+    /* Initialize global configuration */
+    AppConfig::init().expect("Failed to initialize AppConfig");
 
     /* Telegram Bot object data */
     let bot: Arc<Bot> = Arc::new(Bot::from_env());
@@ -107,49 +117,70 @@ async fn main() {
     let elastic_conn: EsRepositoryPub = match EsRepositoryPub::new() {
         Ok(elastic_conn) => elastic_conn,
         Err(e) => {
-            error!("[main] elastic_conn: {:?}", e);
-            panic!("[main] elastic_conn: {:?}", e)
+            error!("[main] elastic_conn: {:#}", e);
+            panic!("[main] elastic_conn: {:#}", e)
         }
     };
-
+    
     let mysql_conn: MysqlRepositoryImpl = match MysqlRepositoryImpl::new().await {
         Ok(mysql_conn) => mysql_conn,
         Err(e) => {
-            error!("[main] mysql_conn: {:?}", e);
-            panic!("[main] mysql_conn: {:?}", e)
+            error!("[main] mysql_conn: {:#}", e);
+            panic!("[main] mysql_conn: {:#}", e)
         }
     };
 
+    let kafka_conn: KafkaRepositoryImpl = match KafkaRepositoryImpl::new() {
+        Ok(kafka_conn) => kafka_conn,
+        Err(e) => {
+            error!("[main] kafka_conn: {:#}", e);
+            panic!("[main] kafka_conn: {:#}", e)
+        }
+    };
+
+    let redis_conn: RedisRepositoryImpl = match RedisRepositoryImpl::new().await {
+        Ok(redis_conn) => redis_conn,
+        Err(e) => {
+            error!("[main] redis_conn: {:#}", e);
+            panic!("[main] redis_conn: {:#}", e)
+        }
+    };
+
+    let redis_service: Arc<RedisServiceImpl<RedisRepositoryImpl>> = Arc::new(RedisServiceImpl::new(redis_conn));
     let graph_api_service: Arc<GraphApiServicePub> = Arc::new(GraphApiServicePub::new());
     let elastic_query_service: Arc<ElasticQueryServicePub<EsRepositoryPub>> =
         Arc::new(ElasticQueryServicePub::new(elastic_conn));
     let mysql_query_service: Arc<MysqlQueryServiceImpl<MysqlRepositoryImpl>> =
         Arc::new(MysqlQueryServiceImpl::new(mysql_conn));
     let process_service: Arc<ProcessServicePub> = Arc::new(ProcessServicePub::new());
+    let producer_service: Arc<ProducerServiceImpl<KafkaRepositoryImpl>> =
+        Arc::new(ProducerServiceImpl::new(kafka_conn));
 
     /* As soon as the event comes in, the code below continues to be executed. */
     teloxide::repl(Arc::clone(&bot), move |message: Message, bot: Arc<Bot>| {
-        let graph_api_service_clone: Arc<GraphApiServicePub> = Arc::clone(&graph_api_service);
+        let graph_api_service_clone: Arc<GraphApiServicePub> = 
+            Arc::clone(&graph_api_service);
         let elastic_query_service_clone: Arc<ElasticQueryServicePub<EsRepositoryPub>> =
             Arc::clone(&elastic_query_service);
         let mysql_query_service_clone: Arc<MysqlQueryServiceImpl<MysqlRepositoryImpl>> =
             Arc::clone(&mysql_query_service);
-        let process_service_clone: Arc<ProcessServicePub> = Arc::clone(&process_service);
+        let process_service_clone: Arc<ProcessServicePub> = 
+            Arc::clone(&process_service);
+        let producer_service_clone: Arc<ProducerServiceImpl<KafkaRepositoryImpl>> = 
+            Arc::clone(&producer_service);
+        let redis_service_clone: Arc<RedisServiceImpl<RedisRepositoryImpl>> =
+            Arc::clone(&redis_service);
 
         async move {
             let tele_bot_service: TelebotServicePub = TelebotServicePub::new(bot, message);
-            let main_controller: MainController<
-                GraphApiServicePub,
-                ElasticQueryServicePub<EsRepositoryPub>,
-                MysqlQueryServiceImpl<MysqlRepositoryImpl>,
-                TelebotServicePub,
-                ProcessServicePub,
-            > = MainController::new(
+            let main_controller= MainController::new(
                 graph_api_service_clone,
                 elastic_query_service_clone,
                 mysql_query_service_clone,
                 tele_bot_service,
                 process_service_clone,
+                producer_service_clone,
+                redis_service_clone
             );
 
             match main_controller.main_call_function().await {
