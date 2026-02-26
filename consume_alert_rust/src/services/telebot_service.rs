@@ -71,7 +71,6 @@ impl TelebotServicePub {
     /// # Returns
     /// * Self
     pub fn new(bot: Arc<Bot>, message: Message) -> Self {
-        
         let app_config: &AppConfig = AppConfig::global();
         let user_id: &str = &app_config.user_id;
 
@@ -265,7 +264,7 @@ impl TelebotService for TelebotServicePub {
 
         // Send all messages using futures::join_all for parallel execution
         use futures::future::join_all;
-        
+
         let send_futures: Vec<_> = formatted_messages
             .iter()
             .map(|msg| self.send_message_confirm(msg))
@@ -321,7 +320,7 @@ impl TelebotService for TelebotServicePub {
 
         Ok(())
     }
-    
+
     #[doc = "Functions that send messages related to consumption details"]
     async fn send_consumption_message<'life1, 'life2, 'msg, T>(
         &self,

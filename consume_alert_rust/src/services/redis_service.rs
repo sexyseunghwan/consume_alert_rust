@@ -31,7 +31,12 @@ pub trait RedisService {
     ///
     /// # Returns
     /// * `Result<(), anyhow::Error>` - Ok if set succeeds
-    async fn set_string(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> anyhow::Result<()>;
+    async fn set_string(
+        &self,
+        key: &str,
+        value: &str,
+        ttl_seconds: Option<u64>,
+    ) -> anyhow::Result<()>;
 
     /// Get a simple string value (non-JSON)
     ///
@@ -64,8 +69,12 @@ impl<R: RedisRepository> RedisServiceImpl<R> {
         value: &T,
         ttl_seconds: Option<u64>,
     ) -> anyhow::Result<()> {
-        let json_value: String = serde_json::to_string(value)
-            .map_err(|e| anyhow!("[RedisServiceImpl::cache_value] Failed to serialize value: {:?}", e))?;
+        let json_value: String = serde_json::to_string(value).map_err(|e| {
+            anyhow!(
+                "[RedisServiceImpl::cache_value] Failed to serialize value: {:?}",
+                e
+            )
+        })?;
 
         match ttl_seconds {
             Some(ttl) => self.redis_conn.set_ex(key, &json_value, ttl).await,
@@ -80,13 +89,20 @@ impl<R: RedisRepository> RedisServiceImpl<R> {
     ///
     /// # Returns
     /// * `Result<Option<T>, anyhow::Error>` - Cached value if exists
-    pub async fn get_cached_value<T: for<'de> Deserialize<'de>>(&self, key: &str) -> anyhow::Result<Option<T>> {
+    pub async fn get_cached_value<T: for<'de> Deserialize<'de>>(
+        &self,
+        key: &str,
+    ) -> anyhow::Result<Option<T>> {
         let value: Option<String> = self.redis_conn.get(key).await?;
 
         match value {
             Some(json_str) => {
-                let deserialized: T = serde_json::from_str(&json_str)
-                    .map_err(|e| anyhow!("[RedisServiceImpl::get_cached_value] Failed to deserialize value: {:?}", e))?;
+                let deserialized: T = serde_json::from_str(&json_str).map_err(|e| {
+                    anyhow!(
+                        "[RedisServiceImpl::get_cached_value] Failed to deserialize value: {:?}",
+                        e
+                    )
+                })?;
                 Ok(Some(deserialized))
             }
             None => Ok(None),
@@ -104,7 +120,12 @@ impl<R: RedisRepository + Send + Sync> RedisService for RedisServiceImpl<R> {
         self.redis_conn.exists(key).await
     }
 
-    async fn set_string(&self, key: &str, value: &str, ttl_seconds: Option<u64>) -> anyhow::Result<()> {
+    async fn set_string(
+        &self,
+        key: &str,
+        value: &str,
+        ttl_seconds: Option<u64>,
+    ) -> anyhow::Result<()> {
         match ttl_seconds {
             Some(ttl) => self.redis_conn.set_ex(key, value, ttl).await,
             None => self.redis_conn.set(key, value).await,

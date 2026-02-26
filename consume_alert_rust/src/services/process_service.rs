@@ -256,7 +256,7 @@ impl ProcessServicePub {
             1, // should_index = 1 (true)
             user_seq,
             1, // spent_group_id
-            1
+            1,
         );
 
         Ok(SpentDetailByInstallment::new(0, spent_detail))
@@ -308,7 +308,7 @@ impl ProcessServicePub {
             1, // should_index = 1 (true)
             user_seq,
             1, // spent_group_id
-            1
+            1,
         );
 
         Ok(SpentDetailByInstallment::new(
@@ -391,7 +391,7 @@ impl ProcessServicePub {
             1, // should_index = 1 (true)
             user_seq,
             1, // spent_group_id
-            1
+            1,
         );
 
         Ok(SpentDetailByInstallment::new(

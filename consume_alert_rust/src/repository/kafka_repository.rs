@@ -20,8 +20,8 @@ impl KafkaRepositoryImpl {
         let kafka_brokers: String = env::var("KAFKA_BROKERS")
             .expect("[KafkaRepositoryImpl::new] 'KAFKA_BROKERS' must be set");
 
-        let security_protocol: String = env::var("KAFKA_SECURITY_PROTOCOL")
-            .unwrap_or_else(|_| "PLAINTEXT".to_string());
+        let security_protocol: String =
+            env::var("KAFKA_SECURITY_PROTOCOL").unwrap_or_else(|_| "PLAINTEXT".to_string());
 
         let mut config: ClientConfig = ClientConfig::new();
         config
@@ -33,12 +33,15 @@ impl KafkaRepositoryImpl {
             .set("security.protocol", &security_protocol);
 
         if security_protocol.contains("SASL") {
-            let sasl_mechanism: String = env::var("KAFKA_SASL_MECHANISM")
-                .expect("[KafkaRepositoryImpl::new] 'KAFKA_SASL_MECHANISM' must be set when using SASL");
-            let sasl_username: String = env::var("KAFKA_SASL_USERNAME")
-                .expect("[KafkaRepositoryImpl::new] 'KAFKA_SASL_USERNAME' must be set when using SASL");
-            let sasl_password: String = env::var("KAFKA_SASL_PASSWORD")
-                .expect("[KafkaRepositoryImpl::new] 'KAFKA_SASL_PASSWORD' must be set when using SASL");
+            let sasl_mechanism: String = env::var("KAFKA_SASL_MECHANISM").expect(
+                "[KafkaRepositoryImpl::new] 'KAFKA_SASL_MECHANISM' must be set when using SASL",
+            );
+            let sasl_username: String = env::var("KAFKA_SASL_USERNAME").expect(
+                "[KafkaRepositoryImpl::new] 'KAFKA_SASL_USERNAME' must be set when using SASL",
+            );
+            let sasl_password: String = env::var("KAFKA_SASL_PASSWORD").expect(
+                "[KafkaRepositoryImpl::new] 'KAFKA_SASL_PASSWORD' must be set when using SASL",
+            );
 
             config
                 .set("sasl.mechanism", &sasl_mechanism)

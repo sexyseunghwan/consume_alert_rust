@@ -126,7 +126,7 @@ where
         info!("Producing message to default topic: {}", topic);
         self.kafka_conn.send_message(topic, key, payload).await
     }
-    
+
     #[doc = "Produce a single serializable object to a specific Kafka topic"]
     /// # Arguments
     /// * `topic` - Kafka topic name

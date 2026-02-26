@@ -20,7 +20,10 @@ pub trait ElasticQueryService {
         response_body: &Value,
     ) -> Result<Vec<DocumentWithId<T>>, anyhow::Error>;
 
-    async fn get_consume_type_judgement(&self, prodt_name: &str) -> Result<ConsumingIndexProdtType, anyhow::Error>;
+    async fn get_consume_type_judgement(
+        &self,
+        prodt_name: &str,
+    ) -> Result<ConsumingIndexProdtType, anyhow::Error>;
     async fn get_info_orderby_cnt<T: DeserializeOwned>(
         &self,
         index_name: &str,
@@ -116,7 +119,10 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
     ///
     /// # Returns
     /// * Result<ConsumingIndexProdtType, anyhow::Error>
-    async fn get_consume_type_judgement(&self, prodt_name: &str) -> Result<ConsumingIndexProdtType, anyhow::Error> {
+    async fn get_consume_type_judgement(
+        &self,
+        prodt_name: &str,
+    ) -> Result<ConsumingIndexProdtType, anyhow::Error> {
         let es_query: Value = json!({
             "query": {
                 "match": {
@@ -156,13 +162,13 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
         } else {
             let mut manager: ScoreManager<ConsumingIndexProdtType> =
                 ScoreManager::<ConsumingIndexProdtType>::new();
-            
+
             for consume_type in results {
                 let keyword_weight: f64 = *consume_type.source().keyword_weight() as f64;
                 let score: f64 = *consume_type.score() * -1.0 * keyword_weight;
                 let score_i64: i64 = score as i64;
-                let keyword: &str = consume_type.source.consume_keyword();  
-                
+                let keyword: &str = consume_type.source.consume_keyword();
+
                 /* Use the 'levenshtein' algorithm to determine word match */
                 let word_dist: usize = levenshtein(keyword, &prodt_name);
                 let word_dist_i64: i64 = word_dist.try_into()?;
@@ -176,11 +182,11 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                     return Err(anyhow!("[ElasticQueryServicePub::get_consume_type_judgement] The mapped data for variable 'score_data_keyword' does not exist."));
                 }
             };
-            
+
             return Ok(score_data_keyword.data);
         }
     }
-    
+
     #[doc = "Function that returns data by applying an order in a particular index"]
     /// # Arguments
     /// * `order_by_field` - Fields to sort

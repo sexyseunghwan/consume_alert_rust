@@ -5,8 +5,8 @@ use crate::services::graph_api_service::*;
 use crate::services::mysql_query_service::*;
 use crate::services::process_service::*;
 use crate::services::producer_service::*;
-use crate::services::telebot_service::*;
 use crate::services::redis_service::*;
+use crate::services::telebot_service::*;
 
 use crate::utils_modules::io_utils::*;
 use crate::utils_modules::time_utils::*;
@@ -14,6 +14,8 @@ use crate::utils_modules::time_utils::*;
 use crate::configuration::elasitc_index_name::*;
 
 use crate::models::agg_result_set::*;
+use crate::models::common_consume_keyword_type::*;
+use crate::models::consume_index_prodt_type::*;
 use crate::models::consume_prodt_info::*;
 use crate::models::consume_prodt_info_by_installment::*;
 use crate::models::consume_result_by_type::*;
@@ -21,10 +23,9 @@ use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 use crate::models::spent_detail::*;
 use crate::models::spent_detail_by_installment::*;
+use crate::models::spent_detail_by_produce::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
-use crate::models::consume_index_prodt_type::*;
-use crate::models::common_consume_keyword_type::*;
 
 use crate::enums::range_operator::*;
 
@@ -38,7 +39,7 @@ pub struct MainController<
     T: TelebotService,
     P: ProcessService,
     KP: ProducerService,
-    R: RedisService
+    R: RedisService,
 > {
     graph_api_service: Arc<G>,
     elastic_query_service: Arc<E>,
@@ -46,7 +47,7 @@ pub struct MainController<
     tele_bot_service: T,
     process_service: Arc<P>,
     producer_service: Arc<KP>,
-    redis_service: Arc<R>
+    redis_service: Arc<R>,
 }
 
 impl<
@@ -56,7 +57,7 @@ impl<
         T: TelebotService,
         P: ProcessService,
         KP: ProducerService,
-        R: RedisService
+        R: RedisService,
     > MainController<G, E, M, T, P, KP, R>
 {
     pub fn new(
@@ -66,7 +67,7 @@ impl<
         tele_bot_service: T,
         process_service: Arc<P>,
         producer_service: Arc<KP>,
-        redis_service: Arc<R>
+        redis_service: Arc<R>,
     ) -> Self {
         Self {
             graph_api_service,
@@ -75,58 +76,136 @@ impl<
             tele_bot_service,
             process_service,
             producer_service,
-            redis_service
+            redis_service,
         }
+    }
+
+    /// Resolves `user_seq` via Redis cache, falling back to MySQL on a miss.
+    ///
+    /// # Returns
+    /// * `Ok(Some(seq))` - authorized user found (and cached if it was a DB hit)
+    /// * `Ok(None)`      - token / user_id not registered; caller should reject the request
+    /// * `Err`           - Redis or MySQL I/O error
+    async fn resolve_user_seq(
+        &self,
+        redis_key: &str,
+        telegram_token: &str,
+        telegram_user_id: &str,
+    ) -> anyhow::Result<Option<i64>> {
+        if let Some(cached) = self
+            .redis_service
+            .get_string(redis_key)
+            .await
+            .context("[main_controller::resolve_user_seq] Redis read failed")?
+        {
+            let seq = cached
+                .parse::<i64>()
+                .context("[main_controller::resolve_user_seq] Failed to parse cached user_seq")?;
+            return Ok(Some(seq));
+        }
+
+        let seq_opt = self
+            .mysql_query_service
+            .exists_telegram_room_by_token_and_id(telegram_token, telegram_user_id)
+            .await
+            .context("[main_controller::resolve_user_seq] MySQL query failed")?;
+
+        if let Some(seq) = seq_opt {
+            self.redis_service
+                .set_string(redis_key, &seq.to_string(), None)
+                .await
+                .context("[main_controller::resolve_user_seq] Redis write failed")?;
+        }
+
+        Ok(seq_opt)
+    }
+
+    /// Resolves `room_seq` via Redis cache, falling back to MySQL on a miss.
+    ///
+    /// # Returns
+    /// * `Ok(Some(seq))` - room found (and cached if it was a DB hit)
+    /// * `Ok(None)`      - no room row for this token + user; caller should reject the request
+    /// * `Err`           - Redis or MySQL I/O error
+    async fn resolve_room_seq(
+        &self,
+        redis_key: &str,
+        telegram_token: &str,
+        user_seq: i64,
+    ) -> anyhow::Result<Option<i64>> {
+        if let Some(cached) = self
+            .redis_service
+            .get_string(redis_key)
+            .await
+            .context("[main_controller::resolve_room_seq] Redis read failed")?
+        {
+            let seq = cached
+                .parse::<i64>()
+                .context("[main_controller::resolve_room_seq] Failed to parse cached room_seq")?;
+            return Ok(Some(seq));
+        }
+
+        let seq_opt = self
+            .mysql_query_service
+            .get_telegram_room_seq_by_token_and_userseq(telegram_token, user_seq)
+            .await
+            .context("[main_controller::resolve_room_seq] MySQL query failed")?;
+
+        if let Some(seq) = seq_opt {
+            self.redis_service
+                .set_string(redis_key, &seq.to_string(), None)
+                .await
+                .context("[main_controller::resolve_room_seq] Redis write failed")?;
+        }
+
+        Ok(seq_opt)
     }
 
     #[doc = "Function that processes the request when the request is received through telegram bot"]
     pub async fn main_call_function(&self) -> Result<(), anyhow::Error> {
         let telegram_token: String = self.tele_bot_service.get_telegram_token();
         let telegram_user_id: String = self.tele_bot_service.get_telegram_user_id();
-        
-        /* It verifies whether the Telegram token is registered for service purpose and gets user_seq. */
         let app_config: &AppConfig = AppConfig::global();
-        let redis_user_key: String = format!("{}:{}:{}", app_config.redis_user_key(), &telegram_user_id, &telegram_token);
-        
-        // REDIS CHECK
-        let user_seq_option: Option<String> = self
-            .redis_service
-            .get_string(&redis_user_key)
-            .await
-            .context("[main_controller::main_call_function] Cannot find user_seq in REDIS ")?;
-                
-        let user_seq: i64 = match user_seq_option {
-            Some(cached) => cached.parse::<i64>()
-                .context("[main_controller::main_call_function] Failed to parse user_seq from Redis")?,
-            None => {                
-                
-                // DB
-                let user_seq_db_option: Option<i64> = self
-                    .mysql_query_service
-                    .exists_telegram_room_by_token_and_id(&telegram_token, &telegram_user_id)
-                    .await
-                    .context("[main_controller::main_call_function] user_seq_option: ")?;
-                
-                match user_seq_db_option {
-                    Some(seq) => {
-                        self.redis_service
-                            .set_string(&redis_user_key, &seq.to_string(), None)
-                            .await
-                            .context("[main_controller::main_call_function] Failed to set user_seq in Redis")?;
-                        seq
-                    }
-                    None => {
-                        self.tele_bot_service
-                            .send_message_confirm("The token is invalid or you are not an authorized user.\nPlease contact the administrator.")
-                            .await?;
-                        return Ok(());
-                    }
-                }
+
+        let redis_user_key: String = format!(
+            "{}:{}:{}",
+            app_config.redis_user_key(),
+            &telegram_user_id,
+            &telegram_token
+        );
+        let redis_room_key: String = format!(
+            "{}:{}:{}",
+            app_config.redis_room_key(),
+            &telegram_user_id,
+            &telegram_token
+        );
+
+        let user_seq: i64 = match self
+            .resolve_user_seq(&redis_user_key, &telegram_token, &telegram_user_id)
+            .await?
+        {
+            Some(seq) => seq,
+            None => {
+                self.tele_bot_service
+                    .send_message_confirm("The token is invalid or you are not an authorized user.\nPlease contact the administrator.")
+                    .await?;
+                return Ok(());
+            }
+        };
+
+        let room_seq: i64 = match self
+            .resolve_room_seq(&redis_room_key, &telegram_token, user_seq)
+            .await?
+        {
+            Some(seq) => seq,
+            None => {
+                self.tele_bot_service
+                    .send_message_confirm("The token is invalid or you are not an authorized user.\nPlease contact the administrator.")
+                    .await?;
+                return Ok(());
             }
         };
 
         let produce_topic: &str = &app_config.produce_topic;
-
         let input_text: String = self.tele_bot_service.get_input_text();
 
         match input_text.split_whitespace().next().unwrap_or("") {
@@ -137,14 +216,13 @@ impl<
             "ct" => self.command_consumption_per_day().await?,
             "cs" => self.command_consumption_per_salary().await?,
             "cw" => self.command_consumption_per_week().await?,
-            // "mc" => self.command_record_fasting_time().await?,
-            // "mt" => self.command_check_fasting_time().await?,
-            // "md" => self.command_delete_fasting_time().await?,
             "cy" => self.command_consumption_per_year().await?,
-            // "list" => self.command_get_consume_type_list().await?,
-            _ => self.command_consumption_auto(user_seq, produce_topic).await?, /* Basic Action */
+            _ => {
+                self.command_consumption_auto(user_seq, produce_topic, room_seq)
+                    .await?
+            }
         }
-        
+
         Ok(())
     }
 
@@ -164,7 +242,7 @@ impl<
 
         split_args_vec
     }
-    
+
     #[doc = "Common Processing Controller Function -> Responsible for Python API calls."]
     /// # Arguments
     /// * `index_name` - Index name
@@ -282,7 +360,11 @@ impl<
     }
 
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch. -> c"]
-    async fn command_consumption(&self, user_seq: i64, produce_topic: &str) -> Result<(), anyhow::Error> {
+    async fn command_consumption(
+        &self,
+        user_seq: i64,
+        produce_topic: &str,
+    ) -> Result<(), anyhow::Error> {
         let split_args_vec: Vec<String> = self.preprocess_string(":");
 
         if split_args_vec.len() != 2 {
@@ -308,7 +390,7 @@ impl<
                     .context("[MainController::command_consumption] Non-numeric 'cash' parameter");
             }
         };
-        
+
         /* Set the product type here */
         let spent_type: ConsumingIndexProdtType = self
             .elastic_query_service
@@ -330,8 +412,8 @@ impl<
             1,
             user_seq,
             1,
-            spent_type.consume_keyword_type_id
-        ); 
+            spent_type.consume_keyword_type_id,
+        );
 
         let spent_detail_view: SpentDetailView = spent_detail
             .convert_spent_detail_to_view(&spent_type_nm)
@@ -344,31 +426,34 @@ impl<
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[MainController::command_consumption_auto] Failed to insert to MySQL: {:?}",
+                    "[MainController::command_consumption] Failed to insert to MySQL: {:?}",
                     e
                 )
             })?;
-        
+
         /* Produce incremental indexing data to Kafka */
         self.producer_service
-            .produce_object_to_topic(
-                produce_topic,
-                &spent_detail,
-                None,
-            )
+            .produce_object_to_topic(produce_topic, &spent_detail, None)
             .await
-            .context("[MainController::command_consumption_auto] Failed to produce topic: ")?;
-        
+            .context("[MainController::command_consumption] Failed to produce topic: ")?;
+
         self.tele_bot_service
             .send_message_struct_info(&spent_detail_view)
             .await
-            .context("[MainController::command_consumption_auto] Failed to send a message via Telegram: ")?;
-        
+            .context(
+                "[MainController::command_consumption] Failed to send a message via Telegram: ",
+            )?;
+
         Ok(())
     }
-    
+
     #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch."]
-    pub async fn command_consumption_auto(&self, user_seq: i64, produce_topic: &str) -> Result<(), anyhow::Error> {
+    pub async fn command_consumption_auto(
+        &self,
+        user_seq: i64,
+        produce_topic: &str,
+        room_seq: i64,
+    ) -> Result<(), anyhow::Error> {
         let args: String = self.tele_bot_service.get_input_text();
 
         let re: Regex = Regex::new(r"\[.*?\]\n?")
@@ -381,13 +466,19 @@ impl<
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect(); /* It convert the string into an array */
-        
+
+        /* If there is no meaningful content after stripping bracket annotations,
+         * the message is not a card-payment notification — silently ignore it. */
+        if split_args_vec.is_empty() {
+            return Ok(());
+        }
+
         /* Process spent detail with installment information */
         let spent_detail_by_installment: SpentDetailByInstallment = self
             .process_service
             .process_by_consume_filter(&split_args_vec, user_seq)
             .context("[MainController::command_consumption_auto] spent_detail_by_installment: ")?;
-        
+
         /*
         It determines whether it is an installment payment or a lump sum payment.
         - It does different things when it's installment and when it's a lump sum payment.
@@ -395,7 +486,7 @@ impl<
         let mut spent_details: Vec<SpentDetail> = self
             .process_service
             .get_spent_detail_installment_process(&spent_detail_by_installment)?;
-        
+
         let mut spent_detail_views: Vec<SpentDetailView> = Vec::new();
 
         let spent_detail_primary: &SpentDetail = spent_details
@@ -403,32 +494,33 @@ impl<
             .ok_or_else(|| anyhow!("[MainController::command_consumption_auto] Access to the 0th element of the vector `spent_details` is not perbitted."))?;
 
         let spent_detail_primary_type_nm: &str = spent_detail_primary.spent_name().as_str();
-        
+
         /* Set the product type here */
         let spent_type: ConsumingIndexProdtType = self
             .elastic_query_service
             .get_consume_type_judgement(spent_detail_primary_type_nm)
             .await
             .context("[MainController::command_consumption_auto] spent_type: ")?;
-        
+
         let spent_type_nm: CommonConsumeKeywordType = self.mysql_query_service
             .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
             .await
             .context("[MainController::command_consumption_auto] Failed to load common_consumekeyword_type from the database. ")?;
-        
+
         for details in &mut spent_details {
-            details.set_consume_keyword_id(*spent_type.consume_keyword_type_id());
+            details.set_consume_keyword_type_id(*spent_type.consume_keyword_type_id());
 
             let new_spent_detail_view: SpentDetailView = details
                 .convert_spent_detail_to_view(&spent_type_nm)
                 .context("[MainController::command_consumption_auto] new_spent_detail_view: ")?;
-            
+
             spent_detail_views.push(new_spent_detail_view);
         }
-        
-        /* Use a transaction to insert all records (roll back if any one fails) */
-        // TODO: Implement MySQL insertion for SpentDetail
-        self.mysql_query_service
+
+        /* Use a transaction to insert all records (roll back if any one fails).
+         * Returns one `spent_idx` per record, in the same order as `spent_details`. */
+        let inserted_idxs: Vec<i64> = self
+            .mysql_query_service
             .insert_prodt_details_with_transaction(&spent_details)
             .await
             .map_err(|e| {
@@ -437,25 +529,47 @@ impl<
                     e
                 )
             })?;
+
+        // Build (spent_idx, &SpentDetail) pairs by aligning on position.
+        // Safety: `insert_prodt_details_with_transaction` guarantees `inserted_idxs.len() == spent_details.len()`
+        // and that `inserted_idxs[i]` is the DB-assigned primary key for `spent_details[i]`.
+        let spent_details_with_idx: Vec<(i64, &SpentDetail)> = inserted_idxs
+            .iter()
+            .copied()
+            .zip(spent_details.iter())
+            .collect();
+
+        // Convert each (spent_idx, &SpentDetail) pair into SpentDetailByProduce for Kafka.
+        // All records share the same `consume_keyword_type` string resolved above.
+        let produce_payloads: Vec<SpentDetailByProduce> = spent_details_with_idx
+            .iter()
+            .map(|(spent_idx, detail)| {
+                detail.convert_to_spent_detail_by_produce(
+                    *spent_idx,
+                    spent_type_nm.consume_keyword_type(),
+                    room_seq,
+                )
+            })
+            .collect();
         
         /* Produce incremental indexing data to Kafka */
         self.producer_service
             .produce_objects_to_topic(
                 produce_topic,
-                &spent_details,
-                None::<fn(&SpentDetail) -> String>,
+                &produce_payloads,
+                None::<fn(&SpentDetailByProduce) -> String>,
             )
             .await
             .context("[MainController::command_consumption_auto] Failed to produce topic: ")?;
-
+        
         self.tele_bot_service
             .send_message_struct_list(&spent_detail_views)
             .await
             .context("[MainController::command_consumption_auto] Failed to send a message via Telegram: ")?;
-            
+
         Ok(())
     }
-    
+
     #[doc = "command handler: Function to erase the most recent consumption history data -> cd"]
     pub async fn command_delete_recent_cunsumption(&self) -> Result<(), anyhow::Error> {
         let split_args_vec: Vec<String> = self.preprocess_string(" ");

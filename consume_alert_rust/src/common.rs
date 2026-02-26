@@ -16,10 +16,7 @@ pub use std::{
 
 pub use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 
-pub use tokio::{
-    sync::OnceCell, 
-    task
-};
+pub use tokio::{sync::OnceCell, task};
 
 pub use log::{error, info, warn};
 
@@ -75,10 +72,7 @@ pub use async_trait::async_trait;
 
 pub use crate::utils_modules::logger_utils::*;
 
-pub use once_cell::sync::{
-    Lazy as once_lazy,
-    OnceCell as normalOnceCell
-};
+pub use once_cell::sync::{Lazy as once_lazy, OnceCell as normalOnceCell};
 
 pub use strsim::levenshtein;
 
@@ -86,17 +80,12 @@ pub use rayon::prelude::*;
 
 pub use sea_orm::{
     ActiveModelBehavior, ActiveModelTrait, ActiveValue, ColumnTrait, Condition, Database,
-    DatabaseConnection, DatabaseTransaction, EntityTrait, FromQueryResult, InsertResult, NotSet,
-    QueryFilter, QueryOrder, QuerySelect, Select, Set, TransactionTrait,
+    DatabaseConnection, DatabaseTransaction, DbErr, EntityTrait, FromQueryResult, InsertResult,
+    NotSet, QueryFilter, QueryOrder, QueryResult, QuerySelect, Select, Set, TransactionTrait,
 };
-
 
 //pub use redis::AsyncCommands;
 pub use redis::{
-    aio::MultiplexedConnection,
-    cluster::ClusterClient,
-    cluster_async::ClusterConnection,
-    Client as redisClient,
-    RedisError,
-    AsyncCommands
+    aio::MultiplexedConnection, cluster::ClusterClient, cluster_async::ClusterConnection,
+    AsyncCommands, Client as redisClient, RedisError,
 };

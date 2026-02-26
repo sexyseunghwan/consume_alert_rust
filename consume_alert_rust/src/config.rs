@@ -8,9 +8,9 @@ use crate::common::*;
 #[derive(Debug, Clone, Getters)]
 #[getset(get = "pub")]
 pub struct AppConfig {
-    
-    /// Telegram bot token information.
-    pub teloxide_token: String,
+    /// Telegram bot token list (parsed from comma-separated BOT_TOKENS env var).
+    /// The application spawns one independent polling loop per token.
+    pub bot_tokens: Vec<String>,
     /// User ID
     pub user_id: String,
     /// Kafka topic name for producing messages
@@ -27,9 +27,10 @@ pub struct AppConfig {
     pub es_id: String,
     /// Elasticsearch password
     pub es_pw: String,
-    
-    pub redis_user_key: String
 
+    pub redis_user_key: String,
+
+    pub redis_room_key: String,
 }
 
 /// Global static instance of AppConfig
@@ -57,8 +58,12 @@ impl AppConfig {
         dotenv::dotenv().ok();
 
         let config: AppConfig = AppConfig {
-            teloxide_token: env::var("TELOXIDE_TOKEN")
-                .map_err(|_|  "TELOXIDE_TOKEN not found in environment".to_string())?,
+            bot_tokens: env::var("BOT_TOKENS")
+                .map_err(|_| "BOT_TOKENS not found in environment".to_string())?
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
             user_id: env::var("USER_ID")
                 .map_err(|_| "USER_ID not found in environment".to_string())?,
             produce_topic: env::var("PRODUCE_TOPIC")
@@ -72,7 +77,10 @@ impl AppConfig {
                 .map_err(|_| "ES_DB_URL not found in environment".to_string())?,
             es_id: env::var("ES_ID").map_err(|_| "ES_ID not found in environment".to_string())?,
             es_pw: env::var("ES_PW").map_err(|_| "ES_PW not found in environment".to_string())?,
-            redis_user_key: env::var("REDIS_USER_KEY").map_err(|_| "ES_PW not found in environment".to_string())?
+            redis_user_key: env::var("REDIS_USER_KEY")
+                .map_err(|_| "REDIS_USER_KEY not found in environment".to_string())?,
+            redis_room_key: env::var("REDIS_ROOM_KEY")
+                .map_err(|_| "REDIS_ROOM_KEY not found in environment".to_string())?,
         };
 
         APP_CONFIG

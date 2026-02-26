@@ -3,14 +3,94 @@ use linux_db_dev;
 use alba_test_karina_dev;
 
 
+insert into SPENT_DETAIL
+(
+	spent_name,
+    spent_money,
+    spent_at,
+    should_index,
+    created_at,
+    updated_at,
+    created_by,
+    updated_by,
+    user_seq,
+    spent_group_id,
+    consume_keyword_type_id
+) 
+select
+	prodt_name,
+    prodt_money,
+    DATE_SUB(timestamp, INTERVAL 9 HOUR),
+    true,
+    DATE_SUB(reg_dt, INTERVAL 9 HOUR),
+    now(),
+    'seunghwan_dev',
+    'seunghwan_dev',
+    1,
+    1,
+    1
+from CONSUME_PRODT_DETAIL;
 
+
+select * from COMMON_CONSUME_KEYWORD_TYPE;
+select * from SPENT_DETAIL order by created_at desc;
+
+update SPENT_DETAIL
+set consume_keyword_type_id = 0
+where spent_idx > 0;
+
+CREATE TABLE SPENT_DETAIL
+(
+  spent_idx               BIGINT  auto_increment     NOT NULL COMMENT '지출 고유 번호',
+  spent_name              VARCHAR(200) NOT NULL COMMENT '지출 이름',
+  spent_money             INT          NOT NULL COMMENT '지출금',
+  spent_at                DATETIME     NOT NULL COMMENT '지출 시각',
+  should_index            BOOLEAN      NOT NULL COMMENT '색인 대상 여부',
+  created_at              DATETIME     NOT NULL COMMENT '생성 시각',
+  updated_at              DATETIME     NULL     COMMENT '수정 시각',
+  created_by              VARCHAR(100) NOT NULL COMMENT '생성자',
+  updated_by              VARCHAR(100) NULL     COMMENT '수정자',
+  user_seq                BIGINT       NOT NULL COMMENT '유저 식별번호',
+  spent_group_id          BIGINT       NOT NULL COMMENT '지출 그룹 고유번호',
+  consume_keyword_type_id BIGINT       NOT NULL COMMENT '대표 키워드 타입 아이디',
+  PRIMARY KEY (spent_idx)
+) ENGINE=InnoDB COMMENT '지출 내역 테이블';
+
+create index idx_spent_detail_user_seq on SPENT_DETAIL (user_seq);
+create index idx_spent_detail_spent_group_id on SPENT_DETAIL (spent_group_id);
+create index idx_spent_detail_consume_keyword_type_id on SPENT_DETAIL (consume_keyword_type_id);
+
+CREATE TABLE SPENT_DETAIL
+(
+  spent_idx      BIGINT   auto_increment    NOT NULL COMMENT '지출 고유 번호',
+  spent_name     VARCHAR(200) NOT NULL COMMENT '지출 이름',
+  spent_money    INT          NOT NULL COMMENT '지출금',
+  spent_at       DATETIME     NOT NULL COMMENT '지출 시각',
+  should_index   BOOLEAN      NOT NULL COMMENT '색인 대상 여부',
+  created_at     DATETIME     NOT NULL COMMENT '생성 시각',
+  updated_at     DATETIME     NULL     COMMENT '수정 시각',
+  created_by     VARCHAR(100) NOT NULL COMMENT '생성자',
+  updated_by     VARCHAR(100) NULL     COMMENT '수정자',
+  user_seq       BIGINT       NOT NULL COMMENT '유저 식별번호',
+  spent_group_id BIGINT       NOT NULL COMMENT '지출 그룹 고유번호',
+  PRIMARY KEY (spent_idx)
+) ENGINE=InnoDB COMMENT '지출 내역 테이블';
+
+create index idx_spent_detail_user_seq on SPENT_DETAIL (user_seq);
+create index idx_spent_detail_spent_group_id on SPENT_DETAIL (spent_group_id);
+
+desc SPENT_DETAIL;
+
+
+
+select * from COMMON_CONSUME_KEYWORD_TYPE;
+
+select * from COMMON_CONSUME_PRODT_KEYWORD;
 
 select 
 	consume_keyword_type
 from COMMON_CONSUME_KEYWORD_TYPE
 where consume_keyword_type_id = 1;
-
-
 
 select count(*) from COMMON_CONSUME_PRODT_KEYWORD;
 
@@ -26,7 +106,7 @@ inner join COMMON_CONSUME_KEYWORD_TYPE ct on cp.consume_keyword_type_id = ct.con
 
 select
 *
-from SPENT_DETAIL sd;
+from SPENT_DETAIL order by created_at desc;
 
 select
 	sd.spent_idx,
@@ -35,24 +115,32 @@ select
     sd.spent_at,
     sd.created_at,
     sd.user_seq,
-    cp.consume_keyword_id,
-    cp.consume_keyword,
     ct.consume_keyword_type_id,
     ct.consume_keyword_type,
     t.room_seq
 from SPENT_DETAIL sd
-inner join COMMON_CONSUME_PRODT_KEYWORD cp on sd.consume_keyword_id = cp.consume_keyword_id
-inner join COMMON_CONSUME_KEYWORD_TYPE ct on cp.consume_keyword_type_id = ct.consume_keyword_type_id
+inner join COMMON_CONSUME_KEYWORD_TYPE ct on ct.consume_keyword_type_id = sd.consume_keyword_type_id
 inner join USERS u on u.user_seq = sd.user_seq
 left join TELEGRAM_ROOM t on u.user_seq = t.user_seq 
 where sd.should_index = 1
-and t.is_room_approved = true;
+and t.is_room_approved = true
+order by sd.created_at desc;
 
-
-select * from COMMON_CONSUME_PRODT_KEYWORD;
 
 select * from COMMON_CONSUME_KEYWORD_TYPE;
 
+select * from SPENT_DETAIL order by created_at desc; 
+-- 15
+
+select * from COMMON_CONSUME_PRODT_KEYWORD;
+select * from COMMON_CONSUME_KEYWORD_TYPE;
+
+
+
+
+
+select * from COMMON_CONSUME_PRODT_KEYWORD;
+select * from COMMON_CONSUME_KEYWORD_TYPE;
 
 desc COMMON_CONSUME_PRODT_KEYWORD;
 
@@ -180,31 +268,7 @@ select * from SPENT_DETAIL order by created_at desc;
 
 desc SPENT_DETAIL;
 
-insert into SPENT_DETAIL
-(
-	spent_name,
-    spent_money,
-    spent_at,
-    should_index,
-    created_at,
-    updated_at,
-    created_by,
-    updated_by,
-    user_seq,
-    spent_group_id
-) 
-select
-	prodt_name,
-    prodt_money,
-    DATE_SUB(timestamp, INTERVAL 9 HOUR),
-    true,
-    DATE_SUB(reg_dt, INTERVAL 9 HOUR),
-    now(),
-    'seunghwan_dev',
-    'seunghwan_dev',
-    1,
-    1
-from CONSUME_PRODT_DETAIL;
+
 
 SELECT CURRENT_USER();
 
@@ -431,26 +495,7 @@ create index idx_common_consume_prodt_keyword_consume_keyword_type_id on COMMON_
 desc COMMON_CONSUME_PRODT_KEYWORD;
 
 
-CREATE TABLE SPENT_DETAIL
-(
-  spent_idx      BIGINT   auto_increment    NOT NULL COMMENT '지출 고유 번호',
-  spent_name     VARCHAR(200) NOT NULL COMMENT '지출 이름',
-  spent_money    INT          NOT NULL COMMENT '지출금',
-  spent_at       DATETIME     NOT NULL COMMENT '지출 시각',
-  should_index   BOOLEAN      NOT NULL COMMENT '색인 대상 여부',
-  created_at     DATETIME     NOT NULL COMMENT '생성 시각',
-  updated_at     DATETIME     NULL     COMMENT '수정 시각',
-  created_by     VARCHAR(100) NOT NULL COMMENT '생성자',
-  updated_by     VARCHAR(100) NULL     COMMENT '수정자',
-  user_seq       BIGINT       NOT NULL COMMENT '유저 식별번호',
-  spent_group_id BIGINT       NOT NULL COMMENT '지출 그룹 고유번호',
-  PRIMARY KEY (spent_idx)
-) ENGINE=InnoDB COMMENT '지출 내역 테이블';
 
-create index idx_spent_detail_user_seq on SPENT_DETAIL (user_seq);
-create index idx_spent_detail_spent_group_id on SPENT_DETAIL (spent_group_id);
-
-desc SPENT_DETAIL;
 
 
 CREATE TABLE SPENT_GROUP_INFO

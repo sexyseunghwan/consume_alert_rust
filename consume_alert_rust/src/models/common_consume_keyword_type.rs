@@ -14,7 +14,9 @@ impl CommonConsumeKeywordType {
     #[doc = "Convert CommonConsumeKeywordType to SeaORM ActiveModel"]
     /// # Returns
     /// * `anyhow::Result<ActiveModel>` - ActiveModel for database insertion
-    pub fn convert_to_active_model(&self) -> anyhow::Result<common_consume_keyword_type::ActiveModel> {
+    pub fn convert_to_active_model(
+        &self,
+    ) -> anyhow::Result<common_consume_keyword_type::ActiveModel> {
         let now: NaiveDateTime = Utc::now().naive_utc();
 
         Ok(ActiveModel {

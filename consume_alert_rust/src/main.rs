@@ -80,10 +80,8 @@ mod schema;
 mod services;
 
 use services::{
-    elastic_query_service::*, graph_api_service::*,
-    mysql_query_service::*, process_service::*,
-    producer_service::*, telebot_service::*,
-    redis_service::*
+    elastic_query_service::*, graph_api_service::*, mysql_query_service::*, process_service::*,
+    producer_service::*, redis_service::*, telebot_service::*,
 };
 
 mod controller;
@@ -99,6 +97,13 @@ mod entity;
 
 mod views;
 
+/* ─── Concrete service types used throughout main ─────────────────────────── */
+type AppRedisService = RedisServiceImpl<RedisRepositoryImpl>;
+type AppElasticService = ElasticQueryServicePub<EsRepositoryPub>;
+type AppMysqlService = MysqlQueryServiceImpl<MysqlRepositoryImpl>;
+type AppProducerService = ProducerServiceImpl<KafkaRepositoryImpl>;
+/* ─────────────────────────────────────────────────────────────────────────── */
+
 #[tokio::main]
 async fn main() {
     /* Select compilation environment */
@@ -111,9 +116,6 @@ async fn main() {
     /* Initialize global configuration */
     AppConfig::init().expect("Failed to initialize AppConfig");
 
-    /* Telegram Bot object data */
-    let bot: Arc<Bot> = Arc::new(Bot::from_env());
-
     let elastic_conn: EsRepositoryPub = match EsRepositoryPub::new() {
         Ok(elastic_conn) => elastic_conn,
         Err(e) => {
@@ -121,7 +123,7 @@ async fn main() {
             panic!("[main] elastic_conn: {:#}", e)
         }
     };
-    
+
     let mysql_conn: MysqlRepositoryImpl = match MysqlRepositoryImpl::new().await {
         Ok(mysql_conn) => mysql_conn,
         Err(e) => {
@@ -146,54 +148,103 @@ async fn main() {
         }
     };
 
-    let redis_service: Arc<RedisServiceImpl<RedisRepositoryImpl>> = Arc::new(RedisServiceImpl::new(redis_conn));
+    /* Shared services — wrapped in Arc so each bot task can clone cheaply. */
+    let redis_service: Arc<AppRedisService> = Arc::new(AppRedisService::new(redis_conn));
     let graph_api_service: Arc<GraphApiServicePub> = Arc::new(GraphApiServicePub::new());
-    let elastic_query_service: Arc<ElasticQueryServicePub<EsRepositoryPub>> =
-        Arc::new(ElasticQueryServicePub::new(elastic_conn));
-    let mysql_query_service: Arc<MysqlQueryServiceImpl<MysqlRepositoryImpl>> =
-        Arc::new(MysqlQueryServiceImpl::new(mysql_conn));
+    let elastic_query_service: Arc<AppElasticService> =
+        Arc::new(AppElasticService::new(elastic_conn));
+    let mysql_query_service: Arc<AppMysqlService> = Arc::new(AppMysqlService::new(mysql_conn));
     let process_service: Arc<ProcessServicePub> = Arc::new(ProcessServicePub::new());
-    let producer_service: Arc<ProducerServiceImpl<KafkaRepositoryImpl>> =
-        Arc::new(ProducerServiceImpl::new(kafka_conn));
+    let producer_service: Arc<AppProducerService> = Arc::new(AppProducerService::new(kafka_conn));
 
-    /* As soon as the event comes in, the code below continues to be executed. */
-    teloxide::repl(Arc::clone(&bot), move |message: Message, bot: Arc<Bot>| {
-        let graph_api_service_clone: Arc<GraphApiServicePub> = 
-            Arc::clone(&graph_api_service);
-        let elastic_query_service_clone: Arc<ElasticQueryServicePub<EsRepositoryPub>> =
-            Arc::clone(&elastic_query_service);
-        let mysql_query_service_clone: Arc<MysqlQueryServiceImpl<MysqlRepositoryImpl>> =
-            Arc::clone(&mysql_query_service);
-        let process_service_clone: Arc<ProcessServicePub> = 
-            Arc::clone(&process_service);
-        let producer_service_clone: Arc<ProducerServiceImpl<KafkaRepositoryImpl>> = 
-            Arc::clone(&producer_service);
-        let redis_service_clone: Arc<RedisServiceImpl<RedisRepositoryImpl>> =
-            Arc::clone(&redis_service);
+    /* Build one Bot per token listed in BOT_TOKENS.
+     * Each bot runs its own independent teloxide::repl loop in a separate
+     * tokio task, but all bots share the same service instances via Arc. */
+    let app_config: &AppConfig = AppConfig::global();
+    let bots: Vec<Arc<Bot>> = app_config
+        .bot_tokens()
+        .iter()
+        .map(|token| Arc::new(Bot::new(token)))
+        .collect();
 
-        async move {
-            let tele_bot_service: TelebotServicePub = TelebotServicePub::new(bot, message);
-            let main_controller= MainController::new(
-                graph_api_service_clone,
-                elastic_query_service_clone,
-                mysql_query_service_clone,
-                tele_bot_service,
-                process_service_clone,
-                producer_service_clone,
-                redis_service_clone
-            );
+    info!("[main] Starting {} bot(s)", bots.len());
 
-            match main_controller.main_call_function().await {
-                Ok(_) => {
-                    info!("respond success.");
-                }
-                Err(e) => {
-                    errork(e).await;
-                }
-            };
+    let mut handles: Vec<task::JoinHandle<()>> = Vec::new();
 
-            respond(())
+    for bot in bots {
+        let handle = tokio::spawn({
+            /* Clone Arc pointers — cheap, no data is copied. */
+            let graph_api_service: Arc<GraphApiServicePub> = Arc::clone(&graph_api_service);
+            let elastic_query_service: Arc<AppElasticService> = Arc::clone(&elastic_query_service);
+            let mysql_query_service: Arc<AppMysqlService> = Arc::clone(&mysql_query_service);
+            let process_service: Arc<ProcessServicePub> = Arc::clone(&process_service);
+            let producer_service: Arc<AppProducerService> = Arc::clone(&producer_service);
+            let redis_service: Arc<AppRedisService> = Arc::clone(&redis_service);
+
+            async move {
+                info!(
+                    "[main] Bot polling started (token prefix: {}...)",
+                    &bot.token()[..8]
+                );
+
+                /* Each bot runs its own repl loop.
+                 * teloxide::repl polls the Telegram API and dispatches messages
+                 * to the handler closure one at a time (per bot). */
+                teloxide::repl(bot, move |message: Message, bot: Arc<Bot>| {
+                    let graph_api_service: Arc<GraphApiServicePub> = Arc::clone(&graph_api_service);
+                    let elastic_query_service: Arc<AppElasticService> =
+                        Arc::clone(&elastic_query_service);
+                    let mysql_query_service: Arc<AppMysqlService> =
+                        Arc::clone(&mysql_query_service);
+                    let process_service: Arc<ProcessServicePub> = Arc::clone(&process_service);
+                    let producer_service: Arc<AppProducerService> = Arc::clone(&producer_service);
+                    let redis_service: Arc<AppRedisService> = Arc::clone(&redis_service);
+
+                    async move {
+                        let tele_bot_service: TelebotServicePub =
+                            TelebotServicePub::new(bot, message);
+                        let main_controller: MainController<
+                            GraphApiServicePub,
+                            ElasticQueryServicePub<EsRepositoryPub>,
+                            MysqlQueryServiceImpl<MysqlRepositoryImpl>,
+                            TelebotServicePub,
+                            ProcessServicePub,
+                            ProducerServiceImpl<KafkaRepositoryImpl>,
+                            RedisServiceImpl<RedisRepositoryImpl>,
+                        > = MainController::new(
+                            graph_api_service,
+                            elastic_query_service,
+                            mysql_query_service,
+                            tele_bot_service,
+                            process_service,
+                            producer_service,
+                            redis_service,
+                        );
+
+                        match main_controller.main_call_function().await {
+                            Ok(_) => {
+                                info!("respond success.");
+                            }
+                            Err(e) => {
+                                errork(e).await;
+                            }
+                        };
+
+                        respond(())
+                    }
+                })
+                .await
+            }
+        });
+
+        handles.push(handle);
+    }
+
+    /* Wait for all bot tasks.  In normal operation they run forever;
+     * if one task panics the error is logged but the others keep running. */
+    for handle in handles {
+        if let Err(e) = handle.await {
+            error!("[main] Bot task ended unexpectedly: {:?}", e);
         }
-    })
-    .await;
+    }
 }

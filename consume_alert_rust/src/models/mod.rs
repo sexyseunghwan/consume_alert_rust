@@ -10,5 +10,6 @@ pub mod per_datetime;
 pub mod score_manager;
 pub mod spent_detail;
 pub mod spent_detail_by_installment;
+pub mod spent_detail_by_produce;
 pub mod to_python_graph_circle;
 pub mod to_python_graph_line;
