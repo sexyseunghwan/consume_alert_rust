@@ -62,7 +62,7 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2025-02-10 Seunghwan Shin       # [v.3.0.3] Changed the code to disable Kafka for a while.
               2025-06-07 Seunghwan Shin       # [v.3.1.0] Added Shinhan Card Payment Details
               2025-10-04 Seunghwan Shin       # [v.3.1.1] Prevented negative values from being displayed in the pie chart by hiding those sections.
-              2026-00-00 Seunghwan Shin       # [v.4.0.0]
+              2026-03-03 Seunghwan Shin       # [v.4.0.0] Code Refactorubg and Feature Enhancement.
 */
 mod common;
 use common::*;
