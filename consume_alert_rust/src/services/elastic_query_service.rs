@@ -154,7 +154,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
 
         if results.len() == 0 {
             return Ok(ConsumingIndexProdtType::new(
-                20,
+                21,
                 String::from("etc"),
                 prodt_name.to_string(),
                 0,

@@ -169,19 +169,26 @@ impl<
             .elastic_query_service
             .get_consume_type_judgement(spend_name)
             .await
-            .context("[resolve_spend_type] Elasticsearch query failed")?;
+            .context("[MainController::resolve_spend_type] Elasticsearch query failed")?;
 
         // When Elasticsearch returns consume_keyword_type_id = 0 (no match found),
         // return a default "etc" type without querying MySQL
-        let spent_type_nm: CommonConsumeKeywordType = if spent_type.consume_keyword_type_id == 0 {
-            CommonConsumeKeywordType::new(0, "etc".to_string())
-        } else {
-            self
-                .mysql_query_service
-                .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
-                .await
-                .context("[resolve_spend_type] MySQL query failed")?
-        };
+        // let spent_type_nm: CommonConsumeKeywordType = if spent_type.consume_keyword_type_id == 0 {
+        //     CommonConsumeKeywordType::new(0, "etc".to_string())
+        // } else {
+        //     self
+        //         .mysql_query_service
+        //         .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
+        //         .await
+        //         .context("[resolve_spend_type] MySQL query failed")?
+        // };
+        
+        let spent_type_nm: CommonConsumeKeywordType = self
+            .mysql_query_service
+            .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
+            .await
+            .context("[MainController::resolve_spend_type] MySQL query failed")?;
+
 
         Ok((spent_type, spent_type_nm))
     }
