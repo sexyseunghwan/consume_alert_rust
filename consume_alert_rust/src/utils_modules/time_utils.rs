@@ -1,6 +1,13 @@
 use crate::common::*;
 
 /*
+    Function that converts the date data 'DateTime<Utc>' format to the string format "%Y-%m-%d"
+*/
+pub fn get_str_from_utc_datetime(dt: DateTime<Utc>) -> String {
+    dt.format("%Y-%m-%d").to_string()
+}
+
+/*
     Function that converts the date data 'naivedate' format to the string format
 */
 pub fn get_str_from_naivedate(naive_date: NaiveDate) -> String {
@@ -41,6 +48,16 @@ pub fn get_naive_date_from_str(date: &str, format: &str) -> Result<NaiveDate, an
         .map_err(|e| anyhow!("[Datetime Parsing Error][get_naive_date_from_str()] Failed to parse date string: {:?} : {:?}", date, e))
 }
 
+/// Parses a date string into a `DateTime<Utc>` (midnight UTC on the parsed date).
+pub fn parse_date_as_utc_datetime(
+    date: &str,
+    format: &str,
+) -> Result<DateTime<Utc>, anyhow::Error> {
+    NaiveDate::parse_from_str(date, format)
+        .map_err(|e| anyhow!("[Datetime Parsing Error][parse_date_as_utc_datetime()] Failed to parse date string: {:?} : {:?}", date, e))
+        .map(|d| d.and_time(NaiveTime::MIN).and_utc())
+}
+
 /*
     Functions that make the current date (Korean time) a 'NaiveDateTime' data type
 */
@@ -51,52 +68,79 @@ pub fn get_current_kor_naive_datetime() -> NaiveDateTime {
     kst_time.naive_local()
 }
 
-/*
-    Functions that make the current date (Korean time) a 'NaiveDate' data type
-*/
-pub fn get_current_kor_naivedate() -> NaiveDate {
+/// Returns the current Korean date as `DateTime<Utc>` (midnight UTC on the KST date).
+pub fn get_current_kor_naivedate() -> DateTime<Utc> {
     let utc_now: DateTime<Utc> = Utc::now();
     let kst_time: DateTime<chrono_tz::Tz> = utc_now.with_timezone(&Seoul);
 
-    kst_time.date_naive()
+    kst_time.date_naive().and_time(NaiveTime::MIN).and_utc()
 }
 
-/*
-    Functions that return the first day in 'NaiveDate' format based on the current Korean date
-*/
-pub fn get_current_kor_naivedate_first_date() -> Result<NaiveDate, anyhow::Error> {
+/// Returns the first day of the current Korean month as `DateTime<Utc>` (midnight UTC).
+pub fn get_current_kor_naivedate_first_date() -> Result<DateTime<Utc>, anyhow::Error> {
     let utc_now: DateTime<Utc> = Utc::now();
     let kst_time: DateTime<chrono_tz::Tz> = utc_now.with_timezone(&Seoul);
-
-    //anyhow!("[Datetime Parsing Error] Failed to parse date string: {} - get_naive_date_from_str() // {:?}", date, e)
 
     NaiveDate::from_ymd_opt(kst_time.year(), kst_time.month(), 1)
-        .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_current_kor_naivedate_first_date()] Invalid date => year: {}, month: {}, day: 1", 
-            kst_time.year(), 
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_current_kor_naivedate_first_date()] Invalid date => year: {}, month: {}, day: 1",
+            kst_time.year(),
             kst_time.month()))
+        .map(|d| d.and_time(NaiveTime::MIN).and_utc())
 }
 
-#[doc = "Function that obtains the last date of the current month and returns it to 'NaiveDate'"]
-pub fn get_lastday_naivedate(naive_date: NaiveDate) -> Result<NaiveDate, anyhow::Error> {
-    let next_month = if naive_date.month() == 12 {
+/// Returns the last day of the month that `dt` falls in, as `DateTime<Utc>` (midnight UTC).
+pub fn get_lastday_naivedate(dt: DateTime<Utc>) -> Result<DateTime<Utc>, anyhow::Error> {
+    let naive_date: NaiveDate = dt.date_naive();
+
+    let next_month: NaiveDate = if naive_date.month() == 12 {
         NaiveDate::from_ymd_opt(naive_date.year() + 1, 1, 1)
     } else {
         NaiveDate::from_ymd_opt(naive_date.year(), naive_date.month() + 1, 1)
     }
     .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_lastday_naivedate()] Invalid date when calculating the first day of the next month."))?;
 
-    let last_day_of_month = next_month.pred_opt()
+    let last_day_of_month: NaiveDate = next_month.pred_opt()
         .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_lastday_naivedate()] Unable to import the previous date for that date."))?;
 
-    Ok(last_day_of_month)
+    Ok(last_day_of_month.and_time(NaiveTime::MIN).and_utc())
 }
 
-#[doc = "Functions that return NaiveDate data with 'year, month, day' as parameters"]
-pub fn get_naivedate(year: i32, month: u32, date: u32) -> Result<NaiveDate, anyhow::Error> {
-    let date = NaiveDate::from_ymd_opt(year, month, date)
-        .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_naivedate()] Invalid date => year: {}, month: {}, day: {}", year, month, date))?;
+/// Returns the first day of the month that `dt` falls in, as `DateTime<Utc>` at 00:00:00 UTC.
+pub fn get_first_day_of_month_start(dt: DateTime<Utc>) -> Result<DateTime<Utc>, anyhow::Error> {
+    let naive_date: NaiveDate = dt.date_naive();
+    NaiveDate::from_ymd_opt(naive_date.year(), naive_date.month(), 1)
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_first_day_of_month_start()] Invalid date => year: {}, month: {}, day: 1",
+            naive_date.year(),
+            naive_date.month()))
+        .map(|d| d.and_time(NaiveTime::MIN).and_utc())
+}
 
-    Ok(date)
+/// Returns the last day of the month that `dt` falls in, as `DateTime<Utc>` at 23:59:59 UTC.
+pub fn get_last_day_of_month_end(dt: DateTime<Utc>) -> Result<DateTime<Utc>, anyhow::Error> {
+    let naive_date: NaiveDate = dt.date_naive();
+    let next_month: NaiveDate = if naive_date.month() == 12 {
+        NaiveDate::from_ymd_opt(naive_date.year() + 1, 1, 1)
+    } else {
+        NaiveDate::from_ymd_opt(naive_date.year(), naive_date.month() + 1, 1)
+    }
+    .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_last_day_of_month_end()] Invalid date when calculating the first day of the next month."))?;
+
+    let last_day: NaiveDate = next_month
+        .pred_opt()
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_last_day_of_month_end()] Unable to get the previous date."))?;
+
+    let end_time: NaiveTime = NaiveTime::from_hms_opt(23, 59, 59).ok_or_else(|| {
+        anyhow!("[Datetime Parsing Error][get_last_day_of_month_end()] Invalid time 23:59:59.")
+    })?;
+
+    Ok(last_day.and_time(end_time).and_utc())
+}
+
+/// Returns a `DateTime<Utc>` for midnight UTC on the given year/month/day.
+pub fn get_naivedate(year: i32, month: u32, date: u32) -> Result<DateTime<Utc>, anyhow::Error> {
+    NaiveDate::from_ymd_opt(year, month, date)
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_naivedate()] Invalid date => year: {}, month: {}, day: {}", year, month, date))
+        .map(|d| d.and_time(NaiveTime::MIN).and_utc())
 }
 
 #[doc = "Functions that return NaiveTime data with 'hour, min, sec' as parameters"]
@@ -118,10 +162,11 @@ pub fn get_naivedatetime(
     min: u32,
     sec: u32,
 ) -> Result<NaiveDateTime, anyhow::Error> {
-    let date = get_naivedate(year, month, date)?;
+    let naive_date = NaiveDate::from_ymd_opt(year, month, date)
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_naivedate()] Invalid date => year: {}, month: {}, day: {}", year, month, date))?;
     let time = get_naivetime(hour, min, sec)?;
 
-    let datetime = NaiveDateTime::new(date, time);
+    let datetime = NaiveDateTime::new(naive_date, time);
 
     Ok(datetime)
 }
@@ -143,11 +188,12 @@ pub fn get_this_year_naivedatetime(
     Ok(datetime)
 }
 
-#[doc = "Function that returns date data a few months before and after a particular date"]
+/// Returns a `DateTime<Utc>` that is `add_month` months after/before `dt`.
 pub fn get_add_month_from_naivedate(
-    naive_date: NaiveDate,
+    dt: DateTime<Utc>,
     add_month: i32,
-) -> Result<NaiveDate, anyhow::Error> {
+) -> Result<DateTime<Utc>, anyhow::Error> {
+    let naive_date = dt.date_naive();
     let mut new_year: i32 = naive_date.year() + (naive_date.month() as i32 + add_month - 1) / 12;
     let mut new_month: i32 = (naive_date.month() as i32 + add_month - 1) % 12 + 1;
 
@@ -163,14 +209,15 @@ pub fn get_add_month_from_naivedate(
     */
     let mut input_day: u32 = naive_date.day();
 
-    let new_date: NaiveDate = get_naivedate(new_year, new_month as u32, 1)?;
+    let new_date: NaiveDate = NaiveDate::from_ymd_opt(new_year, new_month as u32, 1)
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_add_month_from_naivedate()] Invalid date => year: {}, month: {}, day: 1", new_year, new_month))?;
     let next_month = if new_date.month() == 12 {
         NaiveDate::from_ymd_opt(new_date.year() + 1, 1, 1)
     } else {
         NaiveDate::from_ymd_opt(new_date.year(), new_date.month() + 1, 1)
     };
 
-    let last_day = next_month
+    let last_day: u32 = next_month
         .ok_or_else(|| anyhow!("[Error][get_add_month_from_naivedate()] Problem with variable 'last_day'"))?
         .pred_opt()
         .ok_or_else(|| anyhow!("[Error][get_add_month_from_naivedate()] Problem while converting variable 'last_day'"))?
@@ -181,23 +228,25 @@ pub fn get_add_month_from_naivedate(
     }
 
     NaiveDate::from_ymd_opt(new_year, new_month as u32, input_day)
-        .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_add_month_from_naivedate()] Invalid date. => new_year: {:?}, new_month: {:?}, day: {:?}", 
-            new_year, 
-            new_month, 
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error][get_add_month_from_naivedate()] Invalid date. => new_year: {:?}, new_month: {:?}, day: {:?}",
+            new_year,
+            new_month,
             input_day))
+        .map(|d| d.and_time(NaiveTime::MIN).and_utc())
 }
 
-#[doc = "Function that returns date data a few days before and after a particular date"]
+/// Returns a `DateTime<Utc>` that is `add_day` days after/before `dt`.
 pub fn get_add_date_from_naivedate(
-    naive_date: NaiveDate,
+    dt: DateTime<Utc>,
     add_day: i32,
-) -> Result<NaiveDate, anyhow::Error> {
+) -> Result<DateTime<Utc>, anyhow::Error> {
+    let naive_date = dt.date_naive();
     let duration = chrono::Duration::days(add_day.into());
     let result_date = naive_date.checked_add_signed(duration).ok_or_else(|| {
         anyhow!("[Error][get_add_date_from_naivedate()] Invalid date calculation")
     })?;
 
-    Ok(result_date)
+    Ok(result_date.and_time(NaiveTime::MIN).and_utc())
 }
 
 #[doc = "Function that checks if the entered string satisfies the reference string format."]

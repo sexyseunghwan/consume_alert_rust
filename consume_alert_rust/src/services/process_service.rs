@@ -12,6 +12,7 @@ use crate::models::per_datetime::*;
 use crate::models::spent_detail::*;
 use crate::models::spent_detail_by_installment::*;
 use crate::models::to_python_graph_circle::*;
+use crate::models::spent_detail_by_es::*;
 
 #[async_trait]
 pub trait ProcessService {
@@ -26,25 +27,25 @@ pub trait ProcessService {
     ) -> Result<Vec<SpentDetail>, anyhow::Error>;
     fn get_nmonth_to_current_date(
         &self,
-        date_start: NaiveDate,
-        date_end: NaiveDate,
+        date_start: DateTime<Utc>,
+        date_end: DateTime<Utc>,
         nmonth: i32,
     ) -> Result<PerDatetime, anyhow::Error>;
     fn convert_consume_result_by_type_to_python_graph_circle(
         &self,
         consume_result_by_types: &Vec<ConsumeResultByType>,
         total_cost: f64,
-        start_dt: NaiveDate,
-        end_dt: NaiveDate,
+        start_dt: DateTime<Utc>,
+        end_dt: DateTime<Utc>,
     ) -> Result<ToPythonGraphCircle, anyhow::Error>;
     fn get_consumption_result_by_category(
         &self,
-        consume_details: &AggResultSet<ConsumeProdtInfo>,
+        spent_details: &AggResultSet<SpentDetailByEs>,
     ) -> Result<Vec<ConsumeResultByType>, anyhow::Error>;
     fn get_nday_to_current_date(
         &self,
-        date_start: NaiveDate,
-        date_end: NaiveDate,
+        date_start: DateTime<Utc>,
+        date_end: DateTime<Utc>,
         nday: i32,
     ) -> Result<PerDatetime, anyhow::Error>;
 }
@@ -485,19 +486,19 @@ impl ProcessService for ProcessServicePub {
     /// * Result<PermonDatetime, anyhow::Error>  
     fn get_nmonth_to_current_date(
         &self,
-        date_start: NaiveDate,
-        date_end: NaiveDate,
+        date_start: DateTime<Utc>,
+        date_end: DateTime<Utc>,
         nmonth: i32,
     ) -> Result<PerDatetime, anyhow::Error> {
-        let n_month_start: NaiveDate = get_add_month_from_naivedate(date_start, nmonth)
-            .map_err(|e| anyhow!("{:?} -> in get_nmonth_to_current_date().n_month_start", e))?;
+        let n_month_start: DateTime<Utc> = get_add_month_from_naivedate(date_start, nmonth)
+            .map_err(|e| anyhow!("[ProcessServicePub::get_nmonth_to_current_date] {:?} -> in get_nmonth_to_current_date().n_month_start", e))?;
 
-        let n_month_end: NaiveDate = get_add_month_from_naivedate(date_end, nmonth)
-            .map_err(|e| anyhow!("{:?} -> in get_nmonth_to_current_date().n_month_end", e))?;
+        let n_month_end: DateTime<Utc> = get_add_month_from_naivedate(date_end, nmonth)
+            .map_err(|e| anyhow!("[ProcessServicePub::get_nmonth_to_current_date] {:?} -> in get_nmonth_to_current_date().n_month_end", e))?;
 
         let per_mon_datetim: PerDatetime =
             PerDatetime::new(date_start, date_end, n_month_start, n_month_end);
-
+        
         Ok(per_mon_datetim)
     }
 
@@ -509,20 +510,20 @@ impl ProcessService for ProcessServicePub {
     /// * Result<Vec<ConsumeResultByType>, anyhow::Error>
     fn get_consumption_result_by_category(
         &self,
-        consume_details: &AggResultSet<ConsumeProdtInfo>,
+        spent_details: &AggResultSet<SpentDetailByEs>,
     ) -> Result<Vec<ConsumeResultByType>, anyhow::Error> {
-        let consume_inner_details: &Vec<DocumentWithId<ConsumeProdtInfo>> =
-            consume_details.source_list();
-        let total_cost: f64 = *consume_details.agg_result();
-
+        let spent_inner_details: &Vec<DocumentWithId<SpentDetailByEs>> =
+            spent_details.source_list();
+        let total_cost: f64 = *spent_details.agg_result();
+        
         let mut cost_map: HashMap<String, i64> =
-            consume_inner_details
+            spent_inner_details
                 .iter()
-                .fold(HashMap::new(), |mut acc, consume_detail| {
-                    let detail: &ConsumeProdtInfo = consume_detail.source();
-                    let prodt_type: String = detail.prodt_type().to_string();
-                    let prodt_money: i64 = *detail.prodt_money();
-
+                .fold(HashMap::new(), |mut acc, spent_detail| {
+                    let detail: &SpentDetailByEs = spent_detail.source();
+                    let prodt_type: String = detail.consume_keyword_type().to_string();
+                    let prodt_money: i64 = detail.spent_money as i64;
+                    
                     acc.entry(prodt_type)
                         .and_modify(|value| *value += prodt_money)
                         .or_insert(prodt_money);
@@ -553,8 +554,8 @@ impl ProcessService for ProcessServicePub {
         &self,
         consume_result_by_types: &Vec<ConsumeResultByType>,
         total_cost: f64,
-        start_dt: NaiveDate,
-        end_dt: NaiveDate,
+        start_dt: DateTime<Utc>,
+        end_dt: DateTime<Utc>,
     ) -> Result<ToPythonGraphCircle, anyhow::Error> {
         let (prodt_type_vec, prodt_type_cost_per_vec): (Vec<String>, Vec<f64>) =
             consume_result_by_types
@@ -570,8 +571,8 @@ impl ProcessService for ProcessServicePub {
         let to_python_graph_circle: ToPythonGraphCircle = ToPythonGraphCircle::new(
             prodt_type_vec,
             prodt_type_cost_per_vec,
-            start_dt.to_string(),
-            end_dt.to_string(),
+            start_dt.format("%Y-%m-%d").to_string(),
+            end_dt.format("%Y-%m-%d").to_string(),
             total_cost,
         );
 
@@ -588,12 +589,12 @@ impl ProcessService for ProcessServicePub {
     /// * Result<PermonDatetime, anyhow::Error>
     fn get_nday_to_current_date(
         &self,
-        date_start: NaiveDate,
-        date_end: NaiveDate,
+        date_start: DateTime<Utc>,
+        date_end: DateTime<Utc>,
         nday: i32,
     ) -> Result<PerDatetime, anyhow::Error> {
-        let n_day_start: NaiveDate = get_add_date_from_naivedate(date_start, nday)?;
-        let n_day_end: NaiveDate = get_add_date_from_naivedate(date_end, nday)?;
+        let n_day_start: DateTime<Utc> = get_add_date_from_naivedate(date_start, nday)?;
+        let n_day_end: DateTime<Utc> = get_add_date_from_naivedate(date_end, nday)?;
 
         let per_day_datetim: PerDatetime =
             PerDatetime::new(date_start, date_end, n_day_start, n_day_end);

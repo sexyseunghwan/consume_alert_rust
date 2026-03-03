@@ -7,8 +7,9 @@ use crate::common::*;
 
 use crate::enums::indexing_type::*;
 
-#[derive(Debug, Clone, Serialize, Deserialize, new)]
-pub struct SpentDetailByProduce {
+#[derive(Debug, Clone, Serialize, Deserialize, Getters, new)]
+#[getset(get = "pub")]
+pub struct SpentDetailByEs {
     /// Primary key of the spent detail
     pub spent_idx: i64,
 
@@ -35,8 +36,7 @@ pub struct SpentDetailByProduce {
 
     /// Telegram room identifier
     pub room_seq: i64,
-
-    pub indexing_type: IndexingType,
+    
     /// Record indexing timestamp   
     pub produced_at: DateTime<Utc>,
 }

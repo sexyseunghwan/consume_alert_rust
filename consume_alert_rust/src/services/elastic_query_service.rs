@@ -35,8 +35,8 @@ pub trait ElasticQueryService {
         &self,
         index_name: &str,
         range_field: &str,
-        start_date: NaiveDate,
-        end_date: NaiveDate,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
         start_op: RangeOperator,
         end_op: RangeOperator,
         order_by_field: &str,
@@ -238,8 +238,8 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
         &self,
         index_name: &str,
         range_field: &str,
-        start_date: NaiveDate,
-        end_date: NaiveDate,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
         start_op: RangeOperator,
         end_op: RangeOperator,
         order_by_field: &str,
@@ -253,8 +253,8 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
             "query": {
                 "range": {
                     range_field: {
-                        start_op.as_str() : get_str_from_naivedate(start_date),
-                        end_op.as_str() : get_str_from_naivedate(end_date)
+                        start_op.as_str() : start_date.format("%Y-%m-%d").to_string(),
+                        end_op.as_str() : end_date.format("%Y-%m-%d").to_string()
                     }
                 }
             },

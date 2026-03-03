@@ -7,8 +7,9 @@ use crate::views::spent_detail_view::*;
 use crate::entity::spent_detail;
 use crate::entity::spent_detail::ActiveModel;
 
-use crate::models::common_consume_keyword_type::*;
-use crate::models::spent_detail_by_produce::*;
+use crate::models::{common_consume_keyword_type::*, spent_detail_by_produce::*};
+
+use crate::enums::indexing_type::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Getters, Setters, new)]
 #[getset(get = "pub", set = "pub")]
@@ -49,7 +50,8 @@ impl SpentDetail {
         &self,
         spent_idx: i64,
         consume_keyword_type: &str,
-        room_seq: i64
+        room_seq: i64,
+        indexing_type: IndexingType,
     ) -> SpentDetailByProduce {
         let now: DateTime<Utc> = Utc::now();
 
@@ -63,10 +65,11 @@ impl SpentDetail {
             self.consume_keyword_type_id,
             consume_keyword_type.to_string(),
             room_seq,
+            indexing_type,
             now,
         )
     }
-    
+
     pub fn convert_spent_detail_to_view(
         &self,
         consume_keyword_type: &CommonConsumeKeywordType,

@@ -12,10 +12,17 @@ pub trait MysqlQueryService {
         &self,
         consume_info: &ConsumeProdtInfo,
     ) -> anyhow::Result<()>;
+    /// Converts a [`SpentDetail`] to a SeaORM `ActiveModel` and inserts it within a
+    /// transaction, returning the auto-incremented `spent_idx` assigned by the database.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(i64)` - The `spent_idx` assigned to the inserted row.
+    /// * `Err`     - Conversion or database failure; the transaction is rolled back.
     async fn insert_prodt_detail_with_transaction(
         &self,
-        spent_details: &SpentDetail,
-    ) -> anyhow::Result<()>;
+        spent_detail: &SpentDetail,
+    ) -> anyhow::Result<i64>;
     /// Converts each [`SpentDetail`] to a SeaORM `ActiveModel`, then delegates to
     /// the repository to insert them all within a single database transaction.
     ///
@@ -85,16 +92,14 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
     async fn insert_prodt_detail_with_transaction(
         &self,
         spent_detail: &SpentDetail,
-    ) -> anyhow::Result<()> {
-        let active_model: spent_detail::ActiveModel = spent_detail
-                .convert_spent_detail_to_active_model()
-                .map_err(|e| anyhow!(
-                    "[MysqlQueryServiceImpl::insert_prodt_detail_with_transaction] Failed to convert to active model: {:?}",
-                    e
-                ))?;
+    ) -> anyhow::Result<i64> {
+        let active_model = spent_detail
+            .convert_spent_detail_to_active_model()
+            .context("[insert_prodt_detail_with_transaction] Failed to convert to ActiveModel")?;
 
-        /* Use a transaction to insert all recored (roll back if any one fails.) */
-        self.db_conn.insert_with_transaction(active_model).await
+        self.db_conn
+            .insert_spent_detail_with_transaction(active_model)
+            .await
     }
 
     async fn insert_prodt_details_with_transaction(

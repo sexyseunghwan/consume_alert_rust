@@ -17,7 +17,6 @@ use crate::models::agg_result_set::*;
 use crate::models::common_consume_keyword_type::*;
 use crate::models::consume_index_prodt_type::*;
 use crate::models::consume_prodt_info::*;
-use crate::models::consume_prodt_info_by_installment::*;
 use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
@@ -26,8 +25,9 @@ use crate::models::spent_detail_by_installment::*;
 use crate::models::spent_detail_by_produce::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
+use crate::models::spent_detail_by_es::*;
 
-use crate::enums::range_operator::*;
+use crate::enums::{indexing_type::*, range_operator::*};
 
 use crate::config::AppConfig;
 use crate::views::spent_detail_view::SpentDetailView;
@@ -80,12 +80,11 @@ impl<
         }
     }
 
+    // ── Cache-backed lookup helpers ──────────────────────────────────────────
+
     /// Resolves `user_seq` via Redis cache, falling back to MySQL on a miss.
     ///
-    /// # Returns
-    /// * `Ok(Some(seq))` - authorized user found (and cached if it was a DB hit)
-    /// * `Ok(None)`      - token / user_id not registered; caller should reject the request
-    /// * `Err`           - Redis or MySQL I/O error
+    /// Returns `Ok(None)` when the token / user_id pair is not registered.
     async fn resolve_user_seq(
         &self,
         redis_key: &str,
@@ -96,25 +95,26 @@ impl<
             .redis_service
             .get_string(redis_key)
             .await
-            .context("[main_controller::resolve_user_seq] Redis read failed")?
+            .context("[resolve_user_seq] Redis read failed")?
         {
-            let seq = cached
-                .parse::<i64>()
-                .context("[main_controller::resolve_user_seq] Failed to parse cached user_seq")?;
-            return Ok(Some(seq));
+            return Ok(Some(
+                cached
+                    .parse::<i64>()
+                    .context("[resolve_user_seq] Failed to parse cached user_seq")?,
+            ));
         }
 
-        let seq_opt = self
+        let seq_opt: Option<i64> = self
             .mysql_query_service
             .exists_telegram_room_by_token_and_id(telegram_token, telegram_user_id)
             .await
-            .context("[main_controller::resolve_user_seq] MySQL query failed")?;
+            .context("[resolve_user_seq] MySQL query failed")?;
 
         if let Some(seq) = seq_opt {
             self.redis_service
                 .set_string(redis_key, &seq.to_string(), None)
                 .await
-                .context("[main_controller::resolve_user_seq] Redis write failed")?;
+                .context("[resolve_user_seq] Redis write failed")?;
         }
 
         Ok(seq_opt)
@@ -122,10 +122,7 @@ impl<
 
     /// Resolves `room_seq` via Redis cache, falling back to MySQL on a miss.
     ///
-    /// # Returns
-    /// * `Ok(Some(seq))` - room found (and cached if it was a DB hit)
-    /// * `Ok(None)`      - no room row for this token + user; caller should reject the request
-    /// * `Err`           - Redis or MySQL I/O error
+    /// Returns `Ok(None)` when no room row exists for the given token + user.
     async fn resolve_room_seq(
         &self,
         redis_key: &str,
@@ -136,32 +133,57 @@ impl<
             .redis_service
             .get_string(redis_key)
             .await
-            .context("[main_controller::resolve_room_seq] Redis read failed")?
+            .context("[resolve_room_seq] Redis read failed")?
         {
-            let seq = cached
-                .parse::<i64>()
-                .context("[main_controller::resolve_room_seq] Failed to parse cached room_seq")?;
-            return Ok(Some(seq));
+            return Ok(Some(
+                cached
+                    .parse::<i64>()
+                    .context("[resolve_room_seq] Failed to parse cached room_seq")?,
+            ));
         }
 
         let seq_opt = self
             .mysql_query_service
             .get_telegram_room_seq_by_token_and_userseq(telegram_token, user_seq)
             .await
-            .context("[main_controller::resolve_room_seq] MySQL query failed")?;
+            .context("[resolve_room_seq] MySQL query failed")?;
 
         if let Some(seq) = seq_opt {
             self.redis_service
                 .set_string(redis_key, &seq.to_string(), None)
                 .await
-                .context("[main_controller::resolve_room_seq] Redis write failed")?;
+                .context("[resolve_room_seq] Redis write failed")?;
         }
 
         Ok(seq_opt)
     }
 
-    #[doc = "Function that processes the request when the request is received through telegram bot"]
-    pub async fn main_call_function(&self) -> Result<(), anyhow::Error> {
+    /// Resolves the spend type via Elasticsearch and loads its display name from MySQL.
+    ///
+    /// Returns `(ConsumingIndexProdtType, CommonConsumeKeywordType)`.
+    async fn resolve_spend_type(
+        &self,
+        spend_name: &str,
+    ) -> anyhow::Result<(ConsumingIndexProdtType, CommonConsumeKeywordType)> {
+        let spent_type = self
+            .elastic_query_service
+            .get_consume_type_judgement(spend_name)
+            .await
+            .context("[resolve_spend_type] Elasticsearch query failed")?;
+
+        let spent_type_nm = self
+            .mysql_query_service
+            .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
+            .await
+            .context("[resolve_spend_type] MySQL query failed")?;
+
+        Ok((spent_type, spent_type_nm))
+    }
+
+    // ── Entry point ──────────────────────────────────────────────────────────
+
+    /// Dispatches each incoming Telegram message to the matching command handler.
+    pub async fn main_call_function(&self) -> anyhow::Result<()> {
         let telegram_token: String = self.tele_bot_service.get_telegram_token();
         let telegram_user_id: String = self.tele_bot_service.get_telegram_user_id();
         let app_config: &AppConfig = AppConfig::global();
@@ -169,14 +191,14 @@ impl<
         let redis_user_key: String = format!(
             "{}:{}:{}",
             app_config.redis_user_key(),
-            &telegram_user_id,
-            &telegram_token
+            telegram_user_id,
+            telegram_token
         );
         let redis_room_key: String = format!(
             "{}:{}:{}",
             app_config.redis_room_key(),
-            &telegram_user_id,
-            &telegram_token
+            telegram_user_id,
+            telegram_token
         );
 
         let user_seq: i64 = match self
@@ -186,7 +208,9 @@ impl<
             Some(seq) => seq,
             None => {
                 self.tele_bot_service
-                    .send_message_confirm("The token is invalid or you are not an authorized user.\nPlease contact the administrator.")
+                    .send_message_confirm(
+                        "The token is invalid or you are not an authorized user.\nPlease contact the administrator.",
+                    )
                     .await?;
                 return Ok(());
             }
@@ -199,7 +223,9 @@ impl<
             Some(seq) => seq,
             None => {
                 self.tele_bot_service
-                    .send_message_confirm("The token is invalid or you are not an authorized user.\nPlease contact the administrator.")
+                    .send_message_confirm(
+                        "The token is invalid or you are not an authorized user.\nPlease contact the administrator.",
+                    )
                     .await?;
                 return Ok(());
             }
@@ -209,8 +235,11 @@ impl<
         let input_text: String = self.tele_bot_service.get_input_text();
 
         match input_text.split_whitespace().next().unwrap_or("") {
-            "c" => self.command_consumption(user_seq, produce_topic).await?,
-            "cd" => self.command_delete_recent_cunsumption().await?,
+            "c" => {
+                self.command_consumption(user_seq, produce_topic, room_seq)
+                    .await?
+            }
+            "cd" => self.command_delete_recent_consumption().await?, // 일단 보류...
             "cm" => self.command_consumption_per_mon().await?,
             "ctr" => self.command_consumption_per_term().await?,
             "ct" => self.command_consumption_per_day().await?,
@@ -226,189 +255,161 @@ impl<
         Ok(())
     }
 
-    #[doc = "Function that preprocesses the text entered by telegram"]
-    /// # Arguments
-    /// * split_gubun - Distinguishing characters
-    ///
-    /// # Returns
-    /// * Vec<String> - Distinguishing String vector
-    fn preprocess_string(&self, split_gubun: &str) -> Vec<String> {
-        let args: String = self.tele_bot_service.get_input_text();
-        let args_aplit: &str = &args[2..];
-        let split_args_vec: Vec<String> = args_aplit
-            .split(split_gubun)
-            .map(|s| s.trim().to_string())
-            .collect();
+    // ── Shared helpers ───────────────────────────────────────────────────────
 
-        split_args_vec
+    /// Splits the raw command text (skipping the 2-char command prefix) by `delimiter`.
+    fn preprocess_string(&self, delimiter: &str) -> Vec<String> {
+        let args: String = self.tele_bot_service.get_input_text();
+        args[2..]
+            .split(delimiter)
+            .map(|s| s.trim().to_string())
+            .collect()
     }
 
-    #[doc = "Common Processing Controller Function -> Responsible for Python API calls."]
-    /// # Arguments
-    /// * `index_name` - Index name
-    /// * `permon_datetime` - Structures with date data to compare with date
-    /// * `start_op` - Start date included
-    /// * `end_op` - End date included
-    ///
-    /// # Returns
-    /// * Result<(), anyhow::Error>
+    /// Fetches consumption data for the given period from Elasticsearch, renders graphs
+    /// via the Python API, and sends all results to the Telegram chat room.
     async fn common_process_python_double(
         &self,
         index_name: &str,
         permon_datetime: PerDatetime,
         start_op: RangeOperator,
         end_op: RangeOperator,
-    ) -> Result<(), anyhow::Error> {
-        let consume_detail_info: AggResultSet<ConsumeProdtInfo> = self
+    ) -> anyhow::Result<()> {
+        
+        let spent_detail_info: AggResultSet<SpentDetailByEs> = self
             .elastic_query_service
             .get_info_orderby_aggs_range(
                 index_name,
-                "@timestamp",
+                "spent_at",
                 permon_datetime.date_start,
                 permon_datetime.date_end,
                 start_op,
                 end_op,
-                "@timestamp",
+                "spent_at",
                 true,
-                "prodt_money",
+                "spent_money",
             )
             .await?;
-
-        let versus_consume_detail_info: AggResultSet<ConsumeProdtInfo> = self
+        
+        let versus_spent_detail_info: AggResultSet<SpentDetailByEs> = self
             .elastic_query_service
             .get_info_orderby_aggs_range(
                 index_name,
-                "@timestamp",
+                "spent_at",
                 permon_datetime.n_date_start,
                 permon_datetime.n_date_end,
                 start_op,
                 end_op,
-                "@timestamp",
+                "spent_at",
                 true,
-                "prodt_money",
+                "spent_money",
             )
             .await?;
-
+            
         let cur_python_graph: ToPythonGraphLine = ToPythonGraphLine::new(
             "cur",
             permon_datetime.date_start,
             permon_datetime.date_end,
-            &consume_detail_info,
+            &spent_detail_info,
         )?;
 
         let versus_python_graph: ToPythonGraphLine = ToPythonGraphLine::new(
             "versus",
             permon_datetime.n_date_start,
             permon_datetime.n_date_end,
-            &versus_consume_detail_info,
+            &versus_spent_detail_info,
         )?;
 
-        /* The consumption details are sent through the Telegram bot. */
         self.tele_bot_service
-            .send_message_consume_split(&cur_python_graph, &consume_detail_info.source_list())
+            .send_message_consume_split(&cur_python_graph, &spent_detail_info.source_list())
             .await?;
 
-        /* Using Python API */
-        let mut img_files: Vec<String> = Vec::new();
-
-        /* ======== Graph of consumption details - image path ======== */
-        let cnosume_detail_img_file_path: String = self
+        let consume_detail_img_path = self
             .graph_api_service
             .call_python_matplot_consume_detail_double(&cur_python_graph, &versus_python_graph)
             .await?;
 
-        img_files.push(cnosume_detail_img_file_path);
-
-        /* ======== Graph of consumption type - image path ======== */
         let consume_result_by_type: Vec<ConsumeResultByType> = self
             .process_service
-            .get_consumption_result_by_category(&consume_detail_info)?;
+            .get_consumption_result_by_category(&spent_detail_info)?;
 
-        let to_python_circle_graph: ToPythonGraphCircle = self
+        let circle_graph: ToPythonGraphCircle = self
             .process_service
             .convert_consume_result_by_type_to_python_graph_circle(
                 &consume_result_by_type,
-                *consume_detail_info.agg_result(),
+                *spent_detail_info.agg_result(),
                 permon_datetime.date_start,
                 permon_datetime.date_end,
             )?;
 
-        let python_circle_graph_path: String = self
+        let circle_graph_path: String = self
             .graph_api_service
-            .call_python_matplot_consume_type(&to_python_circle_graph)
+            .call_python_matplot_consume_type(&circle_graph)
             .await?;
 
-        img_files.push(python_circle_graph_path);
+        let img_files: Vec<String> = vec![consume_detail_img_path, circle_graph_path];
 
-        /* Send consumption details graph photo */
         self.tele_bot_service.send_photo_confirm(&img_files).await?;
 
-        /* The consumption details are summarized and shown by category. */
         self.tele_bot_service
             .send_message_consume_info_by_typelist(
                 &consume_result_by_type,
                 permon_datetime.date_start,
                 permon_datetime.date_end,
-                *consume_detail_info.agg_result(),
+                *spent_detail_info.agg_result(),
             )
             .await?;
 
-        /* Delete Image file */
         delete_file(img_files)?;
 
         Ok(())
     }
 
-    #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch. -> c"]
+    // ── Command handlers ─────────────────────────────────────────────────────
+
+    /// `c <name>:<amount>` — Records a single consumption entry manually.
     async fn command_consumption(
         &self,
         user_seq: i64,
         produce_topic: &str,
-    ) -> Result<(), anyhow::Error> {
-        let split_args_vec: Vec<String> = self.preprocess_string(":");
+        room_seq: i64,
+    ) -> anyhow::Result<()> {
+        let args: Vec<String> = self.preprocess_string(":");
 
-        if split_args_vec.len() != 2 {
+        if args.len() != 2 {
             self.tele_bot_service
-                .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) c snack:15000")
+                .send_message_confirm(
+                    "There is a problem with the parameter you entered. Please check again.\nEX) c snack:15000",
+                )
                 .await?;
-
-            return Err(anyhow!(format!("[MainController::command_consumption] Invalid format of 'text' variable entered as parameter. : {:#}", self.tele_bot_service.get_input_text())));
+            return Err(anyhow!(
+                "[command_consumption] Invalid parameter format: {}",
+                self.tele_bot_service.get_input_text()
+            ));
         }
 
-        let consume_name: &str = &split_args_vec[0];
-
-        let consume_cash: i64 = match get_parsed_value_from_vector(&split_args_vec, 1) {
+        let consume_name: &str = &args[0];
+        let consume_cash: i64 = match get_parsed_value_from_vector(&args, 1) {
             Ok(cash) => cash,
             Err(e) => {
                 self.tele_bot_service
                     .send_message_confirm(
-                        "The second parameter must be numeric. \nEX) c snack:15000",
+                        "The second parameter must be numeric.\nEX) c snack:15000",
                     )
                     .await?;
-
-                return Err(e)
-                    .context("[MainController::command_consumption] Non-numeric 'cash' parameter");
+                return Err(e).context("[command_consumption] Non-numeric cash parameter");
             }
         };
 
-        /* Set the product type here */
-        let spent_type: ConsumingIndexProdtType = self
-            .elastic_query_service
-            .get_consume_type_judgement(consume_name)
+        let (spent_type, spent_type_nm) = self
+            .resolve_spend_type(consume_name)
             .await
-            .context("[MainController::command_consumption] spent_type: ")?;
-
-        let spent_type_nm: CommonConsumeKeywordType = self.mysql_query_service
-            .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
-            .await
-            .context("[MainController::command_consumption] Failed to load common_consumekeyword_type from the database. ")?;
-
-        let cur_time: DateTime<Local> = Local::now();
+            .context("[command_consumption] Failed to resolve spend type")?;
 
         let spent_detail: SpentDetail = SpentDetail::new(
             consume_name.to_string(),
             consume_cash,
-            cur_time,
+            Local::now(),
             1,
             user_seq,
             1,
@@ -417,142 +418,111 @@ impl<
 
         let spent_detail_view: SpentDetailView = spent_detail
             .convert_spent_detail_to_view(&spent_type_nm)
-            .context("[MainController::command_consumption] spent_detail_view: ")?;
+            .context("[command_consumption] Failed to build view")?;
 
-        /* Use a transaction to insert all records (roll back if any one fails) */
-        // TODO: Implement MySQL insertion for SpentDetail
-        self.mysql_query_service
+        let spent_idx: i64 = self
+            .mysql_query_service
             .insert_prodt_detail_with_transaction(&spent_detail)
             .await
-            .map_err(|e| {
-                anyhow!(
-                    "[MainController::command_consumption] Failed to insert to MySQL: {:?}",
-                    e
-                )
-            })?;
+            .context("[command_consumption] Failed to insert to MySQL")?;
 
-        /* Produce incremental indexing data to Kafka */
+        let produce_payload: SpentDetailByProduce = spent_detail
+            .convert_to_spent_detail_by_produce(
+                spent_idx,
+                spent_type_nm.consume_keyword_type(),
+                room_seq,
+                IndexingType::Insert,
+            );
+
         self.producer_service
-            .produce_object_to_topic(produce_topic, &spent_detail, None)
+            .produce_object_to_topic(produce_topic, &produce_payload, None)
             .await
-            .context("[MainController::command_consumption] Failed to produce topic: ")?;
+            .context("[command_consumption] Failed to produce Kafka message")?;
 
         self.tele_bot_service
             .send_message_struct_info(&spent_detail_view)
             .await
-            .context(
-                "[MainController::command_consumption] Failed to send a message via Telegram: ",
-            )?;
+            .context("[command_consumption] Failed to send Telegram message")?;
 
         Ok(())
     }
 
-    #[doc = "command handler: Writes the expenditure details to the index in ElasticSearch."]
+    /// Auto-detects and records a consumption entry from a card-payment notification message.
     pub async fn command_consumption_auto(
         &self,
         user_seq: i64,
         produce_topic: &str,
         room_seq: i64,
-    ) -> Result<(), anyhow::Error> {
+    ) -> anyhow::Result<()> {
         let args: String = self.tele_bot_service.get_input_text();
 
-        let re: Regex = Regex::new(r"\[.*?\]\n?")
-            .map_err(|e| anyhow!("[MainController::command_consumption_auto] {:?}", e))?;
+        let bracket_re: Regex = Regex::new(r"\[.*?\]\n?")
+            .map_err(|e| anyhow!("[command_consumption_auto] Bad regex: {:?}", e))?;
 
-        let replace_string: String = re.replace_all(&args, "").to_string(); /* Remove the '[~]' string. */
-
-        let split_args_vec: Vec<String> = replace_string
+        let lines: Vec<String> = bracket_re
+            .replace_all(&args, "")
             .split('\n')
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
-            .collect(); /* It convert the string into an array */
+            .collect();
 
-        /* If there is no meaningful content after stripping bracket annotations,
-         * the message is not a card-payment notification — silently ignore it. */
-        if split_args_vec.is_empty() {
+        // Not a card-payment notification — silently ignore.
+        if lines.is_empty() {
             return Ok(());
         }
 
-        /* Process spent detail with installment information */
         let spent_detail_by_installment: SpentDetailByInstallment = self
             .process_service
-            .process_by_consume_filter(&split_args_vec, user_seq)
-            .context("[MainController::command_consumption_auto] spent_detail_by_installment: ")?;
+            .process_by_consume_filter(&lines, user_seq)
+            .context("[command_consumption_auto] Failed to parse card notification")?;
 
-        /*
-        It determines whether it is an installment payment or a lump sum payment.
-        - It does different things when it's installment and when it's a lump sum payment.
-        */
         let mut spent_details: Vec<SpentDetail> = self
             .process_service
             .get_spent_detail_installment_process(&spent_detail_by_installment)?;
 
-        let mut spent_detail_views: Vec<SpentDetailView> = Vec::new();
+        // Clone the primary name to release the immutable borrow before iter_mut below.
+        let primary_name: String = spent_details
+            .first()
+            .ok_or_else(|| anyhow!("[command_consumption_auto] spent_details is empty"))?
+            .spent_name()
+            .clone();
 
-        let spent_detail_primary: &SpentDetail = spent_details
-            .get(0)
-            .ok_or_else(|| anyhow!("[MainController::command_consumption_auto] Access to the 0th element of the vector `spent_details` is not perbitted."))?;
-
-        let spent_detail_primary_type_nm: &str = spent_detail_primary.spent_name().as_str();
-
-        /* Set the product type here */
-        let spent_type: ConsumingIndexProdtType = self
-            .elastic_query_service
-            .get_consume_type_judgement(spent_detail_primary_type_nm)
+        let (spent_type, spent_type_nm) = self
+            .resolve_spend_type(&primary_name)
             .await
-            .context("[MainController::command_consumption_auto] spent_type: ")?;
+            .context("[command_consumption_auto] Failed to resolve spend type")?;
 
-        let spent_type_nm: CommonConsumeKeywordType = self.mysql_query_service
-            .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
-            .await
-            .context("[MainController::command_consumption_auto] Failed to load common_consumekeyword_type from the database. ")?;
+        let spent_detail_views: Vec<SpentDetailView> = spent_details
+            .iter_mut()
+            .map(|detail| {
+                detail.set_consume_keyword_type_id(*spent_type.consume_keyword_type_id());
+                detail
+                    .convert_spent_detail_to_view(&spent_type_nm)
+                    .context("[command_consumption_auto] Failed to build view")
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
 
-        for details in &mut spent_details {
-            details.set_consume_keyword_type_id(*spent_type.consume_keyword_type_id());
-
-            let new_spent_detail_view: SpentDetailView = details
-                .convert_spent_detail_to_view(&spent_type_nm)
-                .context("[MainController::command_consumption_auto] new_spent_detail_view: ")?;
-
-            spent_detail_views.push(new_spent_detail_view);
-        }
-
-        /* Use a transaction to insert all records (roll back if any one fails).
-         * Returns one `spent_idx` per record, in the same order as `spent_details`. */
         let inserted_idxs: Vec<i64> = self
             .mysql_query_service
             .insert_prodt_details_with_transaction(&spent_details)
             .await
-            .map_err(|e| {
-                anyhow!(
-                    "[MainController::command_consumption_auto] Failed to insert to MySQL: {:?}",
-                    e
-                )
-            })?;
+            .context("[command_consumption_auto] Failed to insert to MySQL")?;
 
-        // Build (spent_idx, &SpentDetail) pairs by aligning on position.
-        // Safety: `insert_prodt_details_with_transaction` guarantees `inserted_idxs.len() == spent_details.len()`
-        // and that `inserted_idxs[i]` is the DB-assigned primary key for `spent_details[i]`.
-        let spent_details_with_idx: Vec<(i64, &SpentDetail)> = inserted_idxs
+        // `inserted_idxs[i]` is the DB-assigned primary key for `spent_details[i]`.
+        let produce_payloads: Vec<SpentDetailByProduce> = inserted_idxs
             .iter()
             .copied()
             .zip(spent_details.iter())
-            .collect();
-
-        // Convert each (spent_idx, &SpentDetail) pair into SpentDetailByProduce for Kafka.
-        // All records share the same `consume_keyword_type` string resolved above.
-        let produce_payloads: Vec<SpentDetailByProduce> = spent_details_with_idx
-            .iter()
             .map(|(spent_idx, detail)| {
                 detail.convert_to_spent_detail_by_produce(
-                    *spent_idx,
+                    spent_idx,
                     spent_type_nm.consume_keyword_type(),
                     room_seq,
+                    IndexingType::Insert,
                 )
             })
             .collect();
-        
-        /* Produce incremental indexing data to Kafka */
+
         self.producer_service
             .produce_objects_to_topic(
                 produce_topic,
@@ -560,82 +530,76 @@ impl<
                 None::<fn(&SpentDetailByProduce) -> String>,
             )
             .await
-            .context("[MainController::command_consumption_auto] Failed to produce topic: ")?;
-        
+            .context("[command_consumption_auto] Failed to produce Kafka messages")?;
+
         self.tele_bot_service
             .send_message_struct_list(&spent_detail_views)
             .await
-            .context("[MainController::command_consumption_auto] Failed to send a message via Telegram: ")?;
+            .context("[command_consumption_auto] Failed to send Telegram message")?;
 
         Ok(())
     }
 
-    #[doc = "command handler: Function to erase the most recent consumption history data -> cd"]
-    pub async fn command_delete_recent_cunsumption(&self) -> Result<(), anyhow::Error> {
-        let split_args_vec: Vec<String> = self.preprocess_string(" ");
+    /// `cd` — Deletes the most recently recorded consumption entry.
+    async fn command_delete_recent_consumption(&self) -> anyhow::Result<()> {
+        let args = self.preprocess_string(" ");
 
-        match split_args_vec.len() {
-            1 => {
-                let recent_consume_info: Vec<DocumentWithId<ConsumeProdtInfo>> = self
-                    .elastic_query_service
-                    .get_info_orderby_cnt(&CONSUME_DETAIL, "cur_timestamp", 1, false)
-                    .await?;
-
-                let top_consume_data: &DocumentWithId<ConsumeProdtInfo> = recent_consume_info
-                    .get(0)
-                    .ok_or_else(|| anyhow!("[Error][command_delete_recent_cunsumption()] Data 'top_consume_data' does not exist."))?;
-
-                /* Delete Index */
-                self.elastic_query_service
-                    .delete_es_doc(&CONSUME_DETAIL, top_consume_data)
-                    .await?;
-
-                let consume_info: &ConsumeProdtInfo = top_consume_data.source();
-
-                /* To confirm the deleted document. */
-                self.tele_bot_service
-                    .send_message_struct_info(consume_info)
-                    .await?;
-            }
-            _ => {
-                self.tele_bot_service
-                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) cd")
-                    .await?;
-            }
+        if args.len() != 1 {
+            self.tele_bot_service
+                .send_message_confirm(
+                    "There is a problem with the parameter you entered. Please check again.\nEX) cd",
+                )
+                .await?;
+            return Ok(());
         }
 
+        let recent: Vec<DocumentWithId<ConsumeProdtInfo>> = self
+            .elastic_query_service
+            .get_info_orderby_cnt(&CONSUME_DETAIL, "cur_timestamp", 1, false)
+            .await?;
+
+        let top = recent.first().ok_or_else(|| {
+            anyhow!("[command_delete_recent_consumption] No consumption records found")
+        })?;
+
+        self.elastic_query_service
+            .delete_es_doc(&CONSUME_DETAIL, top)
+            .await?;
+
+        self.tele_bot_service
+            .send_message_struct_info(top.source())
+            .await?;
+
         Ok(())
     }
 
-    #[doc = "command handler: Checks how much you have consumed during a month -> cm"]
-    pub async fn command_consumption_per_mon(&self) -> Result<(), anyhow::Error> {
-        let split_args_vec: Vec<String> = self.preprocess_string(" ");
+    /// `cm [YYYY.MM]` — Shows monthly consumption summary (current month if no arg).
+    pub async fn command_consumption_per_mon(&self) -> anyhow::Result<()> {       
+        let args: Vec<String> = self.preprocess_string(" ");
 
-        let permon_datetime: PerDatetime = match split_args_vec.len() {
+        let permon_datetime: PerDatetime = match args.len() {
             1 => {
-                let date_start: NaiveDate = get_current_kor_naivedate_first_date()?;
-                let date_end: NaiveDate = get_lastday_naivedate(date_start)?;
+                let date_start: DateTime<Utc> = get_current_kor_naivedate_first_date()?;
+                let date_end: DateTime<Utc> = get_lastday_naivedate(date_start)?;
 
                 self.process_service
                     .get_nmonth_to_current_date(date_start, date_end, -1)?
             }
-            2 if split_args_vec.get(1).map_or(false, |d| {
+            2 if args.get(1).map_or(false, |d| {
                 validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)
             }) =>
             {
-                let dates: Vec<&str> = split_args_vec[1].split('.').collect::<Vec<&str>>();
-
-                let year: i32 = dates.get(0)
-                    .ok_or_else(|| anyhow!("[Error][command_consumption_per_mon()] 'year' variable has not been initialized."))?
+                let parts: Vec<&str> = args[1].split('.').collect();
+                let year: i32 = parts
+                    .first()
+                    .ok_or_else(|| anyhow!("[command_consumption_per_mon] Missing year"))?
                     .parse()?;
-
-                let month: u32 = dates.get(1)
-                    .ok_or_else(|| anyhow!("[Error][command_consumption_per_mon()] 'month' variable has not been initialized."))?
+                let month: u32 = parts
+                    .get(1)
+                    .ok_or_else(|| anyhow!("[command_consumption_per_mon] Missing month"))?
                     .parse()?;
-
-                let date_start: NaiveDate = get_naivedate(year, month, 1)?;
-                let date_end: NaiveDate = get_lastday_naivedate(date_start)?;
-
+                let date_start: DateTime<Utc> = get_naivedate(year, month, 1)?;
+                let date_end: DateTime<Utc> = get_lastday_naivedate(date_start)?;
                 self.process_service
                     .get_nmonth_to_current_date(date_start, date_end, -1)?
             }
@@ -645,8 +609,10 @@ impl<
                         "Invalid date format. Please use format YYYY.MM like cm 2023.07",
                     )
                     .await?;
-
-                return Err(anyhow!("[Parameter Error][command_consumption_per_mon()] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text()));
+                return Err(anyhow!(
+                    "[command_consumption_per_mon] Invalid parameter: {:?}",
+                    self.tele_bot_service.get_input_text()
+                ));
             }
         };
 
@@ -656,38 +622,37 @@ impl<
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
-    #[doc = "command handler: Checks how much you have consumed during a specific periods -> ctr"]
-    async fn command_consumption_per_term(&self) -> Result<(), anyhow::Error> {
-        let split_args_vec: Vec<String> = self.preprocess_string(" ");
+    /// `ctr YYYY.MM.DD-YYYY.MM.DD` — Shows consumption summary for a custom date range.
+    async fn command_consumption_per_term(&self) -> anyhow::Result<()> {
+        let args = self.preprocess_string(" ");
 
-        let permon_datetime: PerDatetime = match split_args_vec.len() {
-            2 if split_args_vec.get(1).map_or(false, |d| {
+        let permon_datetime = match args.len() {
+            2 if args.get(1).map_or(false, |d| {
                 validate_date_format(d, r"^\d{4}\.\d{2}\.\d{2}-\d{4}\.\d{2}\.\d{2}$")
                     .unwrap_or(false)
             }) =>
             {
-                let dates = split_args_vec[1].split('-').collect::<Vec<&str>>();
-
-                let start_date = NaiveDate::parse_from_str(dates[0], "%Y.%m.%d")
-                        .map_err(|e| anyhow!("[Error][command_consumption_per_term()] This does not fit the date format : {:?}", e))?;
-
-                let end_date = NaiveDate::parse_from_str(dates[1], "%Y.%m.%d")
-                        .map_err(|e| anyhow!("[Error][command_consumption_per_term()] This does not fit the date format : {:?}", e))?;
-
+                let parts: Vec<&str> = args[1].split('-').collect();
+                let start_date: DateTime<Utc> = parse_date_as_utc_datetime(parts[0], "%Y.%m.%d")
+                    .context("[command_consumption_per_term] Invalid start date format")?;
+                let end_date: DateTime<Utc> = parse_date_as_utc_datetime(parts[1], "%Y.%m.%d")
+                    .context("[command_consumption_per_term] Invalid end date format")?;
                 self.process_service
                     .get_nmonth_to_current_date(start_date, end_date, -1)?
             }
             _ => {
                 self.tele_bot_service
-                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) ctr 2023.07.07-2023.08.01")
+                    .send_message_confirm(
+                        "There is a problem with the parameter you entered. Please check again.\nEX) ctr 2023.07.07-2023.08.01",
+                    )
                     .await?;
-
-                return Err(anyhow!("[Parameter Error][command_consumption_per_term()] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text()));
+                return Err(anyhow!(
+                    "[command_consumption_per_term] Invalid parameter: {:?}",
+                    self.tele_bot_service.get_input_text()
+                ));
             }
         };
 
@@ -697,38 +662,38 @@ impl<
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
-    #[doc = "command handler: Checks how much you have consumed during a day -> ct"]
-    async fn command_consumption_per_day(&self) -> Result<(), anyhow::Error> {
-        let split_args_vec: Vec<String> = self.preprocess_string(" ");
+    /// `ct [YYYY.MM.DD]` — Shows daily consumption summary (today if no arg).
+    async fn command_consumption_per_day(&self) -> anyhow::Result<()> {
+        let args: Vec<String> = self.preprocess_string(" ");
 
-        let permon_datetime: PerDatetime = match split_args_vec.len() {
+        let permon_datetime: PerDatetime = match args.len() {
             1 => {
-                let start_dt: NaiveDate = get_current_kor_naivedate();
-                let end_dt: NaiveDate = get_current_kor_naivedate();
-
+                let today: DateTime<Utc> = get_current_kor_naivedate();
                 self.process_service
-                    .get_nday_to_current_date(start_dt, end_dt, -1)?
+                    .get_nday_to_current_date(today, today, -1)?
             }
-            2 if split_args_vec.get(1).map_or(false, |d| {
+            2 if args.get(1).map_or(false, |d| {
                 validate_date_format(d, r"^\d{4}\.\d{2}\.\d{2}$").unwrap_or(false)
             }) =>
             {
-                let cur_date = NaiveDate::parse_from_str(&split_args_vec[1], "%Y.%m.%d")
-                        .map_err(|e| anyhow!("[Error][command_consumption_per_day()] This does not fit the date format : {:?}", e))?;
-
+                let date: DateTime<Utc> = parse_date_as_utc_datetime(&args[1], "%Y.%m.%d")
+                    .context("[command_consumption_per_day] Invalid date format")?;
                 self.process_service
-                    .get_nday_to_current_date(cur_date, cur_date, -1)?
+                    .get_nday_to_current_date(date, date, -1)?
             }
             _ => {
                 self.tele_bot_service
-                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) ct or ct 2023.11.11").await?;
-
-                return Err(anyhow!("[Parameter Error][command_consumption_per_day()] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text()));
+                    .send_message_confirm(
+                        "There is a problem with the parameter you entered. Please check again.\nEX) ct or ct 2023.11.11",
+                    )
+                    .await?;
+                return Err(anyhow!(
+                    "[command_consumption_per_day] Invalid parameter: {:?}",
+                    self.tele_bot_service.get_input_text()
+                ));
             }
         };
 
@@ -738,36 +703,33 @@ impl<
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
-    #[doc = "command handler: Checks how much you have consumed during a week -> cw"]
-    async fn command_consumption_per_week(&self) -> Result<(), anyhow::Error> {
-        let split_args_vec: Vec<String> = self.preprocess_string(" ");
+    /// `cw` — Shows consumption summary for the current week (Mon–Sun).
+    async fn command_consumption_per_week(&self) -> anyhow::Result<()> {
+        let args: Vec<String> = self.preprocess_string(" ");
 
-        let permon_datetime: PerDatetime = match split_args_vec.len() {
+        let permon_datetime: PerDatetime = match args.len() {
             1 => {
-                let now: NaiveDateTime = get_current_kor_naive_datetime();
-                let today: NaiveDate = now.date();
-                let weekday: Weekday = today.weekday();
-
-                let days_until_monday = Weekday::Mon.num_days_from_monday() as i64
-                    - weekday.num_days_from_monday() as i64;
-                let monday: NaiveDate = today + chrono::Duration::days(days_until_monday);
-
-                let date_start: NaiveDate = monday + chrono::Duration::days(0);
-                let date_end: NaiveDate = monday + chrono::Duration::days(6);
-
+                let today: DateTime<Utc> = get_current_kor_naivedate();
+                let days_to_monday: i64 = Weekday::Mon.num_days_from_monday() as i64
+                    - today.weekday().num_days_from_monday() as i64;
+                let monday: DateTime<Utc> = today + chrono::Duration::days(days_to_monday);
+                let date_end: DateTime<Utc> = monday + chrono::Duration::days(6);
                 self.process_service
-                    .get_nday_to_current_date(date_start, date_end, -7)?
+                    .get_nday_to_current_date(monday, date_end, -7)?
             }
             _ => {
                 self.tele_bot_service
-                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) cw").await?;
-
-                return Err(anyhow!("[Parameter Error][command_consumption_per_week()] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text()));
+                    .send_message_confirm(
+                        "There is a problem with the parameter you entered. Please check again.\nEX) cw",
+                    )
+                    .await?;
+                return Err(anyhow!(
+                    "[command_consumption_per_week] Invalid parameter: {:?}",
+                    self.tele_bot_service.get_input_text()
+                ));
             }
         };
 
@@ -777,40 +739,41 @@ impl<
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
-    #[doc = "command handler: Checks how much you have consumed during one year -> cy"]
-    async fn command_consumption_per_year(&self) -> Result<(), anyhow::Error> {
-        let split_args_vec: Vec<String> = self.preprocess_string(" ");
+    /// `cy [YYYY]` — Shows yearly consumption summary (current year if no arg).
+    async fn command_consumption_per_year(&self) -> anyhow::Result<()> {
+        let args: Vec<String> = self.preprocess_string(" ");
 
-        let permon_datetime: PerDatetime = match split_args_vec.len() {
+        let permon_datetime: PerDatetime = match args.len() {
             1 => {
-                let cur_year: i32 = get_current_kor_naivedate().year();
-                let start_date: NaiveDate = get_naivedate(cur_year, 1, 1)?;
-                let end_date: NaiveDate = get_naivedate(cur_year, 12, 31)?;
-
+                let cur_year = get_current_kor_naivedate().year();
+                let start_date: DateTime<Utc> = get_naivedate(cur_year, 1, 1)?;
+                let end_date: DateTime<Utc> = get_naivedate(cur_year, 12, 31)?;
                 self.process_service
                     .get_nmonth_to_current_date(start_date, end_date, -12)?
             }
-            2 if split_args_vec.get(1).map_or(false, |d| {
+            2 if args.get(1).map_or(false, |d| {
                 validate_date_format(d, r"^\d{4}$").unwrap_or(false)
             }) =>
             {
-                let year: i32 = split_args_vec[1].parse::<i32>()?;
-                let start_date: NaiveDate = get_naivedate(year, 1, 1)?;
-                let end_date: NaiveDate = get_naivedate(year, 12, 31)?;
-
+                let year: i32 = args[1].parse()?;
+                let start_date: DateTime<Utc> = get_naivedate(year, 1, 1)?;
+                let end_date: DateTime<Utc> = get_naivedate(year, 12, 31)?;
                 self.process_service
                     .get_nmonth_to_current_date(start_date, end_date, -12)?
             }
             _ => {
                 self.tele_bot_service
-                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX01) cy\nEX02) cy 2023").await?;
-
-                return Err(anyhow!("[Parameter Error][command_consumption_per_year()] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text()));
+                    .send_message_confirm(
+                        "There is a problem with the parameter you entered. Please check again.\nEX01) cy\nEX02) cy 2023",
+                    )
+                    .await?;
+                return Err(anyhow!(
+                    "[command_consumption_per_year] Invalid parameter: {:?}",
+                    self.tele_bot_service.get_input_text()
+                ));
             }
         };
 
@@ -820,58 +783,53 @@ impl<
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 
-    #[doc = "command handler: Check the consumption details from the date of payment to the next payment. -> cs"]
-    pub async fn command_consumption_per_salary(&self) -> Result<(), anyhow::Error> {
-        let split_args_vec: Vec<String> = self.preprocess_string(" ");
+    /// `cs [YYYY.MM]` — Shows consumption from the last payday (25th) to the next.
+    pub async fn command_consumption_per_salary(&self) -> anyhow::Result<()> {
+        let args: Vec<String> = self.preprocess_string(" ");
 
-        let permon_datetime: PerDatetime = match split_args_vec.len() {
+        let permon_datetime: PerDatetime = match args.len() {
             1 => {
-                let cur_day: NaiveDate = get_current_kor_naivedate();
-                let cur_year: i32 = cur_day.year();
-                let cur_month: u32 = cur_day.month();
-                let cur_date: u32 = cur_day.day();
-
-                let cur_date_start: NaiveDate = if cur_date < 25 {
-                    let date: NaiveDate = get_naivedate(cur_year, cur_month, 25)?;
-                    get_add_month_from_naivedate(date, -1)?
+                let today: DateTime<Utc> = get_current_kor_naivedate();
+                let (year, month, day) = (today.year(), today.month(), today.day());
+                let cur_date_start: DateTime<Utc> = if day < 25 {
+                    get_add_month_from_naivedate(get_naivedate(year, month, 25)?, -1)?
                 } else {
-                    get_naivedate(cur_year, cur_month, 25)?
+                    get_naivedate(year, month, 25)?
                 };
-
-                let cur_date_end: NaiveDate = if cur_date < 25 {
-                    get_naivedate(cur_year, cur_month, 25)?
+                let cur_date_end: DateTime<Utc> = if day < 25 {
+                    get_naivedate(year, month, 25)?
                 } else {
-                    let date: NaiveDate = get_naivedate(cur_year, cur_month, 25)?;
-                    get_add_month_from_naivedate(date, 1)?
+                    get_add_month_from_naivedate(get_naivedate(year, month, 25)?, 1)?
                 };
-
                 self.process_service
                     .get_nmonth_to_current_date(cur_date_start, cur_date_end, -1)?
             }
-            2 if split_args_vec.get(1).map_or(false, |d| {
+            2 if args.get(1).map_or(false, |d| {
                 validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)
             }) =>
             {
-                let curdate_str: String = format!("{}.01", &split_args_vec[1]);
-                let cur_date: NaiveDate = NaiveDate::parse_from_str(&curdate_str, "%Y.%m.%d")
-                        .map_err(|e| anyhow!("[Error][command_consumption_per_salary()] This does not fit the date format : {:?}", e))?;
-
-                let cur_date_end: NaiveDate = get_naivedate(cur_date.year(), cur_date.month(), 25)?;
-                let cur_date_start: NaiveDate = get_add_month_from_naivedate(cur_date_end, -1)?;
-
+                let ref_date: DateTime<Utc> =
+                    parse_date_as_utc_datetime(&format!("{}.01", args[1]), "%Y.%m.%d")
+                        .context("[command_consumption_per_salary] Invalid date format")?;
+                let cur_date_end: DateTime<Utc> =
+                    get_naivedate(ref_date.year(), ref_date.month(), 25)?;
+                let cur_date_start: DateTime<Utc> = get_add_month_from_naivedate(cur_date_end, -1)?;
                 self.process_service
                     .get_nmonth_to_current_date(cur_date_start, cur_date_end, -1)?
             }
             _ => {
                 self.tele_bot_service
-                    .send_message_confirm("There is a problem with the parameter you entered. Please check again. \nEX) cs or cs 2023.11").await?;
-
-                return Err(anyhow!("[Parameter Error][command_consumption_per_day()] Invalid format of 'text' variable entered as parameter. : {:?}", self.tele_bot_service.get_input_text()));
+                    .send_message_confirm(
+                        "There is a problem with the parameter you entered. Please check again.\nEX) cs or cs 2023.11",
+                    )
+                    .await?;
+                return Err(anyhow!(
+                    "[command_consumption_per_salary] Invalid parameter: {:?}",
+                    self.tele_bot_service.get_input_text()
+                ));
             }
         };
 
@@ -881,8 +839,6 @@ impl<
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThan,
         )
-        .await?;
-
-        Ok(())
+        .await
     }
 }

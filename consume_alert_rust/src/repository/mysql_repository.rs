@@ -52,6 +52,22 @@ pub trait MysqlRepository {
         A: ActiveModelTrait + ActiveModelBehavior + Send + 'static,
         <A::Entity as EntityTrait>::Model: Sync + IntoActiveModel<A>;
 
+    /// Inserts a single [`spent_detail::ActiveModel`] within a transaction and returns
+    /// the auto-incremented `spent_idx` assigned by the database.
+    ///
+    /// # Arguments
+    ///
+    /// * `active_model` - The record to insert.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(i64)` - The `spent_idx` assigned to the inserted row.
+    /// * `Err`     - The transaction is rolled back and the error is propagated.
+    async fn insert_spent_detail_with_transaction(
+        &self,
+        active_model: spent_detail::ActiveModel,
+    ) -> anyhow::Result<i64>;
+
     /// Inserts multiple [`spent_detail::ActiveModel`] records one by one within a single
     /// transaction and returns the auto-incremented `spent_idx` assigned by the database
     /// for each record.
@@ -217,6 +233,32 @@ impl MysqlRepository for MysqlRepositoryImpl {
             .map_err(|e| anyhow!("[MysqlRepositoryImpl::insert_many_with_transaction] Failed to commit transaction: {:?}", e))?;
 
         Ok(())
+    }
+
+    async fn insert_spent_detail_with_transaction(
+        &self,
+        active_model: spent_detail::ActiveModel,
+    ) -> anyhow::Result<i64> {
+        let txn: DatabaseTransaction = self
+            .db_conn
+            .begin()
+            .await
+            .context("[MysqlRepositoryImpl::insert_spent_detail_with_transaction] Failed to begin transaction")?;
+
+        let insert_result: InsertResult<spent_detail::ActiveModel> = spent_detail::Entity::insert(
+            active_model,
+        )
+        .exec(&txn)
+        .await
+        .context(
+            "[MysqlRepositoryImpl::insert_spent_detail_with_transaction] Failed to insert record",
+        )?;
+
+        txn.commit()
+            .await
+            .context("[MysqlRepositoryImpl::insert_spent_detail_with_transaction] Failed to commit transaction")?;
+
+        Ok(insert_result.last_insert_id)
     }
 
     async fn insert_spent_details_with_transaction(

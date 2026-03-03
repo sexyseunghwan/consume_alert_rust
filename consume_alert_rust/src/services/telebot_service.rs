@@ -6,6 +6,7 @@ use crate::models::consume_prodt_info::*;
 use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
 use crate::models::to_python_graph_line::*;
+use crate::models::spent_detail_by_es::*;
 
 #[async_trait]
 pub trait TelebotService {
@@ -27,14 +28,14 @@ pub trait TelebotService {
     async fn send_message_consume_split(
         &self,
         to_python_graph_line: &ToPythonGraphLine,
-        consume_detail_list: &Vec<DocumentWithId<ConsumeProdtInfo>>,
+        spent_detail_list: &Vec<DocumentWithId<SpentDetailByEs>>,
     ) -> Result<(), anyhow::Error>;
 
     async fn send_message_consume_info_by_typelist(
         &self,
         type_consume_info: &Vec<ConsumeResultByType>,
-        start_dt: NaiveDate,
-        end_dt: NaiveDate,
+        start_dt: DateTime<Utc>,
+        end_dt: DateTime<Utc>,
         total_cost: f64,
     ) -> Result<(), anyhow::Error>;
 
@@ -371,31 +372,48 @@ impl TelebotService for TelebotServicePub {
     async fn send_message_consume_split(
         &self,
         to_python_graph_line: &ToPythonGraphLine,
-        consume_detail_list: &Vec<DocumentWithId<ConsumeProdtInfo>>,
+        spent_detail_list: &Vec<DocumentWithId<SpentDetailByEs>>,
     ) -> Result<(), anyhow::Error> {
         let start_dt: &String = to_python_graph_line.start_dt();
         let end_dt: &String = to_python_graph_line.end_dt();
         let total_cost: f64 = *to_python_graph_line.total_cost();
         let total_cost_i64: i64 = total_cost as i64;
 
-        let empty_flag = if consume_detail_list.is_empty() {
+        let empty_flag: bool = if spent_detail_list.is_empty() {
             true
         } else {
             false
         };
-
-        self.send_consumption_message(consume_detail_list, |item| {
-            format!(
-                "name : {}\ndate : {}\ncost : {}\ntype: {}\n",
-                item.source.prodt_name(),
-                item.source.timestamp(),
-                item.source.prodt_money().to_formatted_string(&Locale::ko),
-                item.source.prodt_type()
-            )},
-            empty_flag,
+        
+        self
+            .send_consumption_message(
+                spent_detail_list,
+                |item| {
+                    format!(
+                        "name : {}\ndate : {}\ncost : {}\ntype: {}\n",
+                        item.source.spent_name,
+                        item.source.spent_at,
+                        item.source.spent_money,
+                        item.source.consume_keyword_type
+                    )
+                }, 
+                empty_flag, 
             &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i64.to_formatted_string(&Locale::ko)),
             &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i64.to_formatted_string(&Locale::ko)) 
-        ).await
+            ).await
+
+        // self.send_consumption_message(spent_detail_list, |item| {
+        //     format!(
+        //         "name : {}\ndate : {}\ncost : {}\ntype: {}\n",
+        //         item.source.prodt_name(),
+        //         item.source.timestamp(),
+        //         item.source.prodt_money().to_formatted_string(&Locale::ko),
+        //         item.source.prodt_type()
+        //     )},
+        //     empty_flag,
+        //     &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i64.to_formatted_string(&Locale::ko)),
+        //     &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i64.to_formatted_string(&Locale::ko)) 
+        // ).await
     }
 
     #[doc = "Functions that return consumption aggregate information by category over a specific period of time"]
@@ -409,8 +427,8 @@ impl TelebotService for TelebotServicePub {
     async fn send_message_consume_info_by_typelist(
         &self,
         type_consume_info: &Vec<ConsumeResultByType>,
-        start_dt: NaiveDate,
-        end_dt: NaiveDate,
+        start_dt: DateTime<Utc>,
+        end_dt: DateTime<Utc>,
         total_cost: f64,
     ) -> Result<(), anyhow::Error> {
         let total_cost_i64: i64 = total_cost as i64;
@@ -419,6 +437,8 @@ impl TelebotService for TelebotServicePub {
         } else {
             false
         };
+        let start_str = start_dt.format("%Y-%m-%d");
+        let end_str = end_dt.format("%Y-%m-%d");
 
         self.send_consumption_message(type_consume_info, |item| {
             format!(
@@ -428,8 +448,8 @@ impl TelebotService for TelebotServicePub {
                 item.consume_prodt_per()
             )},
             empty_flag,
-            &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i64.to_formatted_string(&Locale::ko)),
-            &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i64.to_formatted_string(&Locale::ko))
+            &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_str, end_str, total_cost_i64.to_formatted_string(&Locale::ko)),
+            &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_str, end_str, total_cost_i64.to_formatted_string(&Locale::ko))
         ).await?;
 
         Ok(())

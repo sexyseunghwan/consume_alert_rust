@@ -13,3 +13,4 @@ pub mod spent_detail_by_installment;
 pub mod spent_detail_by_produce;
 pub mod to_python_graph_circle;
 pub mod to_python_graph_line;
+pub mod spent_detail_by_es;
