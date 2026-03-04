@@ -31,6 +31,8 @@ pub struct AppConfig {
     pub redis_user_key: String,
 
     pub redis_room_key: String,
+
+    pub redis_user_id_key: String
 }
 
 /// Global static instance of AppConfig
@@ -81,6 +83,8 @@ impl AppConfig {
                 .map_err(|_| "REDIS_USER_KEY not found in environment".to_string())?,
             redis_room_key: env::var("REDIS_ROOM_KEY")
                 .map_err(|_| "REDIS_ROOM_KEY not found in environment".to_string())?,
+            redis_user_id_key: env::var("REDIS_USER_ID_KEY")
+                .map_err(|_| "REDIS_USER_ID_KEY not found in environment".to_string())?,
         };
 
         APP_CONFIG

@@ -37,6 +37,10 @@ pub struct SpentDetailByProduce {
     pub room_seq: i64,
 
     pub indexing_type: IndexingType,
+
     /// Record indexing timestamp   
     pub produced_at: DateTime<Utc>,
+
+    /// User id
+    pub user_id: String,
 }

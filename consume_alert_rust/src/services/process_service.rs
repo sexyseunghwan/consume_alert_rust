@@ -20,6 +20,7 @@ pub trait ProcessService {
         &self,
         split_args_vec: &Vec<String>,
         user_seq: i64,
+        room_seq: i64
     ) -> Result<SpentDetailByInstallment, anyhow::Error>;
     fn get_spent_detail_installment_process(
         &self,
@@ -226,6 +227,7 @@ impl ProcessServicePub {
         &self,
         split_args_vec: &Vec<String>,
         user_seq: i64,
+        room_seq: i64
     ) -> Result<SpentDetailByInstallment, anyhow::Error> {
         let split_val: Vec<&str> = vec![",", "원"];
 
@@ -258,6 +260,7 @@ impl ProcessServicePub {
             user_seq,
             1, // spent_group_id
             1,
+            room_seq
         );
 
         Ok(SpentDetailByInstallment::new(0, spent_detail))
@@ -274,6 +277,7 @@ impl ProcessServicePub {
         &self,
         split_args_vec: &Vec<String>,
         user_seq: i64,
+        room_seq: i64
     ) -> Result<SpentDetailByInstallment, anyhow::Error> {
         let split_val: Vec<&str> = vec![",", "원"];
 
@@ -310,6 +314,7 @@ impl ProcessServicePub {
             user_seq,
             1, // spent_group_id
             1,
+            room_seq
         );
 
         Ok(SpentDetailByInstallment::new(
@@ -329,6 +334,7 @@ impl ProcessServicePub {
         &self,
         split_args_vec: &Vec<String>,
         user_seq: i64,
+        room_seq: i64
     ) -> Result<SpentDetailByInstallment, anyhow::Error> {
         let split_val: Vec<&str> = vec![",", "원"];
 
@@ -393,6 +399,7 @@ impl ProcessServicePub {
             user_seq,
             1, // spent_group_id
             1,
+            room_seq
         );
 
         Ok(SpentDetailByInstallment::new(
@@ -416,22 +423,23 @@ impl ProcessService for ProcessServicePub {
         &self,
         split_args_vec: &Vec<String>,
         user_seq: i64,
+        room_seq: i64
     ) -> Result<SpentDetailByInstallment, anyhow::Error> {
         let consume_type: &String = split_args_vec
             .get(0)
             .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_filter] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
 
         if consume_type.contains("nh") {
-            self.process_nh_card(split_args_vec, user_seq)
+            self.process_nh_card(split_args_vec, user_seq, room_seq)
         } else if consume_type.contains("삼성") {
-            self.process_samsung_card(split_args_vec, user_seq)
+            self.process_samsung_card(split_args_vec, user_seq, room_seq)
         } else if consume_type.contains("신한카드") {
-            self.process_shinhan_card(split_args_vec, user_seq)
+            self.process_shinhan_card(split_args_vec, user_seq, room_seq)
         } else {
             Err(anyhow!("[Error][process_by_consume_filter] Variable 'consume_type' contains an undefined string: {}", consume_type))
         }
     }
-
+    
     #[doc = "Functions that take into account installment payments"]
     /// # Arguments
     /// * `spent_detail_by_installment` - Spent detail with installment information

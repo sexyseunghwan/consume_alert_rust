@@ -82,6 +82,40 @@ impl<
 
     // ── Cache-backed lookup helpers ──────────────────────────────────────────
 
+
+    /// Resolves `user_id` via Redis cache, falling back to MySQL on a miss.
+    ///
+    /// Returns `Ok(None)` when no user row exists for the given `user_seq`.
+    async fn resolve_user_id(
+        &self,
+        redis_key: &str,
+        user_seq: i64,
+    ) -> anyhow::Result<Option<String>> {
+        if let Some(cached) = self
+            .redis_service
+            .get_string(redis_key)
+            .await
+            .context("[resolve_user_id] Redis read failed")?
+        {
+            return Ok(Some(cached));
+        }
+
+        let user_id_opt: Option<String> = self
+            .mysql_query_service
+            .get_user_id_by_seq(user_seq)
+            .await
+            .context("[resolve_user_id] MySQL query failed")?;
+
+        if let Some(ref user_id) = user_id_opt {
+            self.redis_service
+                .set_string(redis_key, user_id, None)
+                .await
+                .context("[resolve_user_id] Redis write failed")?;
+        }
+
+        Ok(user_id_opt)
+    }
+
     /// Resolves `user_seq` via Redis cache, falling back to MySQL on a miss.
     ///
     /// Returns `Ok(None)` when the token / user_id pair is not registered.
@@ -158,40 +192,58 @@ impl<
         Ok(seq_opt)
     }
 
-    /// Resolves the spend type via Elasticsearch and loads its display name from MySQL.
-    ///
-    /// Returns `(ConsumingIndexProdtType, CommonConsumeKeywordType)`.
     async fn resolve_spend_type(
         &self,
         spend_name: &str,
-    ) -> anyhow::Result<(ConsumingIndexProdtType, CommonConsumeKeywordType)> {
+    ) -> anyhow::Result<ConsumingIndexProdtType> {
         let spent_type: ConsumingIndexProdtType = self
             .elastic_query_service
             .get_consume_type_judgement(spend_name)
             .await
             .context("[MainController::resolve_spend_type] Elasticsearch query failed")?;
 
-        // When Elasticsearch returns consume_keyword_type_id = 0 (no match found),
-        // return a default "etc" type without querying MySQL
-        // let spent_type_nm: CommonConsumeKeywordType = if spent_type.consume_keyword_type_id == 0 {
-        //     CommonConsumeKeywordType::new(0, "etc".to_string())
-        // } else {
-        //     self
-        //         .mysql_query_service
-        //         .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
-        //         .await
-        //         .context("[resolve_spend_type] MySQL query failed")?
-        // };
-        
-        let spent_type_nm: CommonConsumeKeywordType = self
-            .mysql_query_service
-            .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
-            .await
-            .context("[MainController::resolve_spend_type] MySQL query failed")?;
-
-
-        Ok((spent_type, spent_type_nm))
+        Ok(spent_type)
     }
+
+
+
+    /// Resolves the spend type via Elasticsearch and loads its display name from MySQL.
+    ///
+    /// Returns `(ConsumingIndexProdtType, CommonConsumeKeywordType)`.
+    // async fn resolve_spend_type(
+    //     &self,
+    //     spend_name: &str,
+    // ) -> anyhow::Result<(ConsumingIndexProdtType, CommonConsumeKeywordType)> {
+    //     let spent_type: ConsumingIndexProdtType = self
+    //         .elastic_query_service
+    //         .get_consume_type_judgement(spend_name)
+    //         .await
+    //         .context("[MainController::resolve_spend_type] Elasticsearch query failed")?;
+
+    //     println!("spent_type: {:?}", spent_type);
+
+    //     // When Elasticsearch returns consume_keyword_type_id = 0 (no match found),
+    //     // return a default "etc" type without querying MySQL
+    //     // let spent_type_nm: CommonConsumeKeywordType = if spent_type.consume_keyword_type_id == 0 {
+    //     //     CommonConsumeKeywordType::new(0, "etc".to_string())
+    //     // } else {
+    //     //     self
+    //     //         .mysql_query_service
+    //     //         .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
+    //     //         .await
+    //     //         .context("[resolve_spend_type] MySQL query failed")?
+    //     // };
+
+    //     let spent_type_nm: CommonConsumeKeywordType = self
+    //         .mysql_query_service
+    //         .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
+    //         .await
+    //         .context("[MainController::resolve_spend_type] MySQL query failed")?;
+
+    //     println!("spent_type_nm: {:?}", spent_type_nm);
+
+    //     Ok((spent_type, spent_type_nm))
+    // }
 
     // ── Entry point ──────────────────────────────────────────────────────────
 
@@ -207,18 +259,40 @@ impl<
             telegram_user_id,
             telegram_token
         );
+
         let redis_room_key: String = format!(
             "{}:{}:{}",
             app_config.redis_room_key(),
             telegram_user_id,
             telegram_token
-        );
-
+        );  
+        
         let user_seq: i64 = match self
             .resolve_user_seq(&redis_user_key, &telegram_token, &telegram_user_id)
             .await?
         {
             Some(seq) => seq,
+            None => {
+                self.tele_bot_service
+                    .send_message_confirm(
+                        "The token is invalid or you are not an authorized user.\nPlease contact the administrator.",
+                    )
+                    .await?;
+                return Ok(());
+            }
+        };
+
+        let redis_user_id_key: String = format!(
+            "{}:{}",
+            app_config.redis_user_id_key(),
+            user_seq
+        );
+
+        let user_id: String = match self
+            .resolve_user_id(&redis_user_id_key, user_seq)
+            .await?
+        {
+            Some(id) => id,
             None => {
                 self.tele_bot_service
                     .send_message_confirm(
@@ -249,7 +323,7 @@ impl<
 
         match input_text.split_whitespace().next().unwrap_or("") {
             "c" => {
-                self.command_consumption(user_seq, produce_topic, room_seq)
+                self.command_consumption(user_seq, produce_topic, room_seq, &user_id)
                     .await?
             }
             "cd" => self.command_delete_recent_consumption().await?, // 일단 보류...
@@ -260,14 +334,14 @@ impl<
             "cw" => self.command_consumption_per_week().await?,
             "cy" => self.command_consumption_per_year().await?,
             _ => {
-                self.command_consumption_auto(user_seq, produce_topic, room_seq)
+                self.command_consumption_auto(user_seq, produce_topic, room_seq, &user_id)
                     .await?
             }
         }
-
+        
         Ok(())
     }
-
+    
     // ── Shared helpers ───────────────────────────────────────────────────────
 
     /// Splits the raw command text (skipping the 2-char command prefix) by `delimiter`.
@@ -386,6 +460,7 @@ impl<
         user_seq: i64,
         produce_topic: &str,
         room_seq: i64,
+        user_id: &str
     ) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(":");
 
@@ -414,11 +489,16 @@ impl<
             }
         };
 
-        let (spent_type, spent_type_nm) = self
+        let spent_type: ConsumingIndexProdtType =  self
             .resolve_spend_type(consume_name)
             .await
-            .context("[command_consumption] Failed to resolve spend type")?;
+            .context("[command_consumption_auto] Failed to resolve spend type")?;
 
+        // let (spent_type, spent_type_nm) = self
+        //     .resolve_spend_type(consume_name)
+        //     .await
+        //     .context("[command_consumption] Failed to resolve spend type")?;
+        
         let spent_detail: SpentDetail = SpentDetail::new(
             consume_name.to_string(),
             consume_cash,
@@ -427,10 +507,11 @@ impl<
             user_seq,
             1,
             spent_type.consume_keyword_type_id,
+            room_seq
         );
 
         let spent_detail_view: SpentDetailView = spent_detail
-            .convert_spent_detail_to_view(&spent_type_nm)
+            .convert_spent_detail_to_view(&spent_type)
             .context("[command_consumption] Failed to build view")?;
 
         let spent_idx: i64 = self
@@ -442,16 +523,17 @@ impl<
         let produce_payload: SpentDetailByProduce = spent_detail
             .convert_to_spent_detail_by_produce(
                 spent_idx,
-                spent_type_nm.consume_keyword_type(),
+                spent_type.consume_keyword_type(),
                 room_seq,
                 IndexingType::Insert,
+                user_id
             );
 
         self.producer_service
             .produce_object_to_topic(produce_topic, &produce_payload, None)
             .await
             .context("[command_consumption] Failed to produce Kafka message")?;
-
+        
         self.tele_bot_service
             .send_message_struct_info(&spent_detail_view)
             .await
@@ -466,6 +548,7 @@ impl<
         user_seq: i64,
         produce_topic: &str,
         room_seq: i64,
+        user_id: &str
     ) -> anyhow::Result<()> {
         let args: String = self.tele_bot_service.get_input_text();
 
@@ -486,7 +569,7 @@ impl<
 
         let spent_detail_by_installment: SpentDetailByInstallment = self
             .process_service
-            .process_by_consume_filter(&lines, user_seq)
+            .process_by_consume_filter(&lines, user_seq, room_seq)
             .context("[command_consumption_auto] Failed to parse card notification")?;
 
         let mut spent_details: Vec<SpentDetail> = self
@@ -499,8 +582,8 @@ impl<
             .ok_or_else(|| anyhow!("[command_consumption_auto] spent_details is empty"))?
             .spent_name()
             .clone();
-
-        let (spent_type, spent_type_nm) = self
+        
+        let spent_type: ConsumingIndexProdtType =  self
             .resolve_spend_type(&primary_name)
             .await
             .context("[command_consumption_auto] Failed to resolve spend type")?;
@@ -510,7 +593,7 @@ impl<
             .map(|detail| {
                 detail.set_consume_keyword_type_id(*spent_type.consume_keyword_type_id());
                 detail
-                    .convert_spent_detail_to_view(&spent_type_nm)
+                    .convert_spent_detail_to_view(&spent_type)
                     .context("[command_consumption_auto] Failed to build view")
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
@@ -529,9 +612,10 @@ impl<
             .map(|(spent_idx, detail)| {
                 detail.convert_to_spent_detail_by_produce(
                     spent_idx,
-                    spent_type_nm.consume_keyword_type(),
+                    spent_type.consume_keyword_type(),
                     room_seq,
                     IndexingType::Insert,
+                    user_id
                 )
             })
             .collect();

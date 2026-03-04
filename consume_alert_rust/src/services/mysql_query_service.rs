@@ -56,10 +56,7 @@ pub trait MysqlQueryService {
         room_token: &str,
         user_seq: i64,
     ) -> anyhow::Result<Option<i64>>;
-    async fn get_common_consume_keyword_type(
-        &self,
-        consume_keyword_type_id: i64,
-    ) -> anyhow::Result<CommonConsumeKeywordType>;
+    async fn get_user_id_by_seq(&self, user_seq: i64) -> anyhow::Result<Option<String>>;
 }
 
 #[derive(Debug, Getters, Clone, new)]
@@ -174,37 +171,18 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         Ok(result.map(|room| room.room_seq))
     }
 
-    #[doc = "Get CommonConsumeKeywordType by consume_keyword_type_id"]
-    /// # Arguments
-    /// * `consume_keyword_type_id` - Primary key to search
-    ///
-    /// # Returns
-    /// * `anyhow::Result<CommonConsumeKeywordType>` - Found model or error if not found
-    async fn get_common_consume_keyword_type(
-        &self,
-        consume_keyword_type_id: i64,
-    ) -> anyhow::Result<CommonConsumeKeywordType> {
-        let result: Option<common_consume_keyword_type::Model> = common_consume_keyword_type::Entity::find()
-            .filter(common_consume_keyword_type::Column::ConsumeKeywordTypeId.eq(consume_keyword_type_id))
+    async fn get_user_id_by_seq(&self, user_seq: i64) -> anyhow::Result<Option<String>> {
+        let result: Option<users::Model> = users::Entity::find()
+            .filter(users::Column::UserSeq.eq(user_seq))
             .one(self.db_conn.get_connection())
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[MysqlQueryServiceImpl::get_common_consume_keyword_type] Failed to query: {:?}",
+                    "[MysqlQueryServiceImpl::get_user_id_by_seq] Failed to query: {:?}",
                     e
                 )
             })?;
 
-        let entity: common_consume_keyword_type::Model = result.ok_or_else(|| {
-            anyhow!(
-                "[MysqlQueryServiceImpl::get_common_consume_keyword_type] Not found: consume_keyword_type_id = {}",
-                consume_keyword_type_id
-            )
-        })?;
-
-        Ok(CommonConsumeKeywordType::new(
-            entity.consume_keyword_type_id,
-            entity.consume_keyword_type,
-        ))
+        Ok(result.map(|user| user.user_id))
     }
 }

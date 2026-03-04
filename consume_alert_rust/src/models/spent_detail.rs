@@ -7,7 +7,7 @@ use crate::views::spent_detail_view::*;
 use crate::entity::spent_detail;
 use crate::entity::spent_detail::ActiveModel;
 
-use crate::models::{common_consume_keyword_type::*, spent_detail_by_produce::*};
+use crate::models::{common_consume_keyword_type::*, spent_detail_by_produce::*, consume_index_prodt_type::*};
 
 use crate::enums::indexing_type::*;
 
@@ -21,6 +21,7 @@ pub struct SpentDetail {
     pub user_seq: i64,
     pub spent_group_id: i64,
     pub consume_keyword_type_id: i64,
+    pub room_seq: i64
 }
 
 impl SpentDetail {
@@ -43,6 +44,7 @@ impl SpentDetail {
             user_seq: Set(self.user_seq),
             spent_group_id: Set(self.spent_group_id),
             consume_keyword_type_id: Set(self.consume_keyword_type_id),
+            room_seq: Set(self.room_seq)
         })
     }
 
@@ -52,6 +54,7 @@ impl SpentDetail {
         consume_keyword_type: &str,
         room_seq: i64,
         indexing_type: IndexingType,
+        user_id: &str
     ) -> SpentDetailByProduce {
         let now: DateTime<Utc> = Utc::now();
 
@@ -67,18 +70,19 @@ impl SpentDetail {
             room_seq,
             indexing_type,
             now,
+            user_id.to_string()
         )
     }
 
     pub fn convert_spent_detail_to_view(
         &self,
-        consume_keyword_type: &CommonConsumeKeywordType,
+        spent_type: &ConsumingIndexProdtType
     ) -> anyhow::Result<SpentDetailView> {
         Ok(SpentDetailView {
             spent_name: self.spent_name().to_string(),
             spent_money: self.spent_money.to_formatted_string(&Locale::en),
             spent_at: self.spent_at,
-            consume_keyword_type_nm: consume_keyword_type.consume_keyword_type().to_string(),
+            consume_keyword_type_nm: spent_type.consume_keyword_type().to_string(),
         })
     }
 }
