@@ -7,6 +7,7 @@ use crate::common::*;
 
 use crate::enums::indexing_type::*;
 
+#[allow(clippy::too_many_arguments)]
 #[derive(Debug, Clone, Serialize, Deserialize, new)]
 pub struct SpentDetailByProduce {
     /// Primary key of the spent detail

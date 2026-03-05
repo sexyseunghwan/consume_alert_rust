@@ -3,44 +3,24 @@ use crate::common::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
 
-static HTTP_CLIENT: once_lazy<Client> = once_lazy::new(|| initialize_http_clients());
+use crate::service_traits::graph_api_service::*;
+
+static HTTP_CLIENT: once_lazy<Client> = once_lazy::new(initialize_http_clients);
 
 #[doc = "Function to initialize the HTTP client"]
 fn initialize_http_clients() -> Client {
     reqwest::Client::new()
 }
 
-#[async_trait]
-pub trait GraphApiService {
-    async fn post_api<T: Serialize + Send>(
-        &self,
-        uri: &str,
-        to_python_graph: T,
-    ) -> Result<String, anyhow::Error>;
-    async fn call_python_matplot_consume_detail_single(
-        &self,
-        python_graph_info: &ToPythonGraphLine,
-    ) -> Result<String, anyhow::Error>;
-    async fn call_python_matplot_consume_detail_double(
-        &self,
-        cur_python_graph_info: &ToPythonGraphLine,
-        versus_python_graph_info: &ToPythonGraphLine,
-    ) -> Result<String, anyhow::Error>;
-    async fn call_python_matplot_consume_type(
-        &self,
-        to_python_graph_circle: &ToPythonGraphCircle,
-    ) -> Result<String, anyhow::Error>;
-}
-
 #[derive(Debug, Getters, Clone)]
-pub struct GraphApiServicePub {
+pub struct GraphApiServiceImpl {
     graph_api_url: String,
 }
 
-impl GraphApiServicePub {
+impl GraphApiServiceImpl {
     pub fn new() -> Self {
         let graph_api_url: String = env::var("GRAPH_API_URL").expect(
-            "[ENV file read Error][GraphApiServicePub -> new()] 'GRAPH_API_URL' must be set",
+            "[ENV file read Error][GraphApiServiceImpl -> new()] 'GRAPH_API_URL' must be set",
         );
 
         Self { graph_api_url }
@@ -48,7 +28,7 @@ impl GraphApiServicePub {
 }
 
 #[async_trait]
-impl GraphApiService for GraphApiServicePub {
+impl GraphApiService for GraphApiServiceImpl {
     #[doc = "Function to send post request to 'Python' api"]
     /// # Arguments
     /// * `uri` - uri information
@@ -78,26 +58,6 @@ impl GraphApiService for GraphApiServicePub {
         }
     }
 
-    #[doc = "Function that calls python api to draw a line chart. - single"]
-    /// # Arguments
-    /// * `python_graph_info` - Objects for representing consumption details in a Python graph
-    ///
-    /// # Returns
-    /// * Result<String, anyhow::Error> -> image file name
-    async fn call_python_matplot_consume_detail_single(
-        &self,
-        python_graph_info: &ToPythonGraphLine,
-    ) -> Result<String, anyhow::Error> {
-        let mut python_graph_vec: Vec<ToPythonGraphLine> = Vec::new();
-        python_graph_vec.push(python_graph_info.clone());
-
-        let resp_body: String = self
-            .post_api("/api/consume_detail", python_graph_vec)
-            .await?;
-
-        Ok(resp_body)
-    }
-
     #[doc = "Function that calls python api to draw a line chart. - double"]
     /// # Arguments
     /// * `cur_python_graph_info` - Objects for representing consumption details in a Python graph
@@ -110,9 +70,10 @@ impl GraphApiService for GraphApiServicePub {
         cur_python_graph_info: &ToPythonGraphLine,
         versus_python_graph_info: &ToPythonGraphLine,
     ) -> Result<String, anyhow::Error> {
-        let mut python_graph_vec: Vec<ToPythonGraphLine> = Vec::new();
-        python_graph_vec.push(cur_python_graph_info.clone());
-        python_graph_vec.push(versus_python_graph_info.clone());
+        let python_graph_vec: Vec<ToPythonGraphLine> = vec![
+            cur_python_graph_info.clone(),
+            versus_python_graph_info.clone(),
+        ];
 
         let resp_body: String = self
             .post_api("/api/consume_detail", python_graph_vec)
@@ -121,7 +82,6 @@ impl GraphApiService for GraphApiServicePub {
         Ok(resp_body)
     }
 
-    #[doc = ""]
     /// # Arguments
     /// * `to_python_graph_circle` -
     ///

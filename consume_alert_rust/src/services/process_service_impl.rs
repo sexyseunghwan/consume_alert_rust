@@ -11,47 +11,12 @@ use crate::models::spent_detail_by_installment::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::spent_detail_by_es::*;
 
-#[async_trait]
-pub trait ProcessService {
-    fn process_by_consume_filter(
-        &self,
-        split_args_vec: &Vec<String>,
-        user_seq: i64,
-        room_seq: i64
-    ) -> Result<SpentDetailByInstallment, anyhow::Error>;
-    fn get_spent_detail_installment_process(
-        &self,
-        spent_detail_by_installment: &SpentDetailByInstallment,
-    ) -> Result<Vec<SpentDetail>, anyhow::Error>;
-    fn get_nmonth_to_current_date(
-        &self,
-        date_start: DateTime<Utc>,
-        date_end: DateTime<Utc>,
-        nmonth: i32,
-    ) -> Result<PerDatetime, anyhow::Error>;
-    fn convert_consume_result_by_type_to_python_graph_circle(
-        &self,
-        consume_result_by_types: &Vec<ConsumeResultByType>,
-        total_cost: f64,
-        start_dt: DateTime<Utc>,
-        end_dt: DateTime<Utc>,
-    ) -> Result<ToPythonGraphCircle, anyhow::Error>;
-    fn get_consumption_result_by_category(
-        &self,
-        spent_details: &AggResultSet<SpentDetailByEs>,
-    ) -> Result<Vec<ConsumeResultByType>, anyhow::Error>;
-    fn get_nday_to_current_date(
-        &self,
-        date_start: DateTime<Utc>,
-        date_end: DateTime<Utc>,
-        nday: i32,
-    ) -> Result<PerDatetime, anyhow::Error>;
-}
+use crate::service_traits::process_service::*;
 
 #[derive(Debug, Getters, Clone, new)]
-pub struct ProcessServicePub;
+pub struct ProcessServiceImpl;
 
-impl ProcessServicePub {
+impl ProcessServiceImpl {
     #[doc = "Functions that vectorize by spaces, excluding certain characters from a string (internal helper)"]
     /// # Arguments
     /// * `intput_str`  - Applied String : ex) "289,545원 일시불"
@@ -62,7 +27,7 @@ impl ProcessServicePub {
     fn get_string_vector_by_replace(
         &self,
         intput_str: &str,
-        replacements: &Vec<&str>,
+        replacements: &[&str],
     ) -> Result<Vec<String>, anyhow::Error> {
         let consume_price_vec: Vec<String> = intput_str
             .to_string()
@@ -86,7 +51,7 @@ impl ProcessServicePub {
     /// * Result<i64, anyhow::Error
     fn get_consume_prodt_money(
         &self,
-        consume_price_vec: &Vec<String>,
+        consume_price_vec: &[String],
         idx: usize,
     ) -> Result<i64, anyhow::Error> {
         let consume_price: i64 = consume_price_vec
@@ -97,35 +62,6 @@ impl ProcessServicePub {
         Ok(consume_price)
     }
 
-    #[doc = "Function that parses date data from consumption data (internal helper)"]
-    /// # Arguments
-    /// * `consume_time_name_vec` - Vector with date, time data : ex) ["11/25", "10:02"]
-    ///
-    /// # Returns
-    /// * Result<String, anyhow::Error>
-    fn get_consume_time(
-        &self,
-        consume_time_name_vec: &Vec<String>,
-    ) -> Result<String, anyhow::Error> {
-        /* "11/25" */
-        let parsed_date: &String = consume_time_name_vec
-            .get(0)
-            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed.", 0))?;
-
-        /* "10:02" */
-        let parsed_time: &String = consume_time_name_vec
-            .get(1)
-            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_time()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed.", 1))?;
-
-        let cur_year: i32 = get_current_kor_naivedate().year();
-        let formatted_date_str: String = format!("{}/{}", cur_year, parsed_date);
-        let format_date: NaiveDate = NaiveDate::parse_from_str(&formatted_date_str, "%Y/%m/%d")?;
-        let format_time: NaiveTime = NaiveTime::parse_from_str(&parsed_time, "%H:%M")?;
-        let format_datetime: NaiveDateTime = NaiveDateTime::new(format_date, format_time);
-
-        Ok(format_datetime.format("%Y-%m-%dT%H:%M:%SZ").to_string())
-    }
-
     #[doc = "Function that parses date data and returns DateTime<Local> (internal helper)"]
     /// # Arguments
     /// * `consume_time_name_vec` - Vector with date, time data : ex) ["11/25", "10:02"]
@@ -134,11 +70,11 @@ impl ProcessServicePub {
     /// * Result<DateTime<Local>, anyhow::Error>
     fn get_consume_datetime_local(
         &self,
-        consume_time_name_vec: &Vec<String>,
+        consume_time_name_vec: &[String],
     ) -> Result<DateTime<Local>, anyhow::Error> {
         /* "11/25" */
         let parsed_date: &String = consume_time_name_vec
-            .get(0)
+            .first()
             .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_datetime_local()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed.", 0))?;
 
         /* "10:02" */
@@ -149,7 +85,7 @@ impl ProcessServicePub {
         let cur_year: i32 = get_current_kor_naivedate().year();
         let formatted_date_str: String = format!("{}/{}", cur_year, parsed_date);
         let format_date: NaiveDate = NaiveDate::parse_from_str(&formatted_date_str, "%Y/%m/%d")?;
-        let format_time: NaiveTime = NaiveTime::parse_from_str(&parsed_time, "%H:%M")?;
+        let format_time: NaiveTime = NaiveTime::parse_from_str(parsed_time, "%H:%M")?;
         let format_naive_datetime: NaiveDateTime = NaiveDateTime::new(format_date, format_time);
 
         // Convert NaiveDateTime to DateTime<Local> using Seoul timezone
@@ -203,7 +139,7 @@ impl ProcessServicePub {
                 let prodt_type: String = key.to_string();
                 let prodt_cost: i64 = *value;
 
-                let prodt_per: f64 = (prodt_cost as f64 / total_cost as f64) * 100.0;
+                let prodt_per: f64 = (prodt_cost as f64 / total_cost) * 100.0;
                 let prodt_per_rounded: f64 = (prodt_per * 10.0).round() / 10.0; /* Round to the second decimal place */
 
                 ConsumeResultByType::new(prodt_type, prodt_cost, prodt_per_rounded)
@@ -222,7 +158,7 @@ impl ProcessServicePub {
     /// * Result<SpentDetailByInstallment, anyhow::Error>
     fn process_nh_card(
         &self,
-        split_args_vec: &Vec<String>,
+        split_args_vec: &[String],
         user_seq: i64,
         room_seq: i64
     ) -> Result<SpentDetailByInstallment, anyhow::Error> {
@@ -272,7 +208,7 @@ impl ProcessServicePub {
     /// * Result<SpentDetailByInstallment, anyhow::Error>
     fn process_samsung_card(
         &self,
-        split_args_vec: &Vec<String>,
+        split_args_vec: &[String],
         user_seq: i64,
         room_seq: i64
     ) -> Result<SpentDetailByInstallment, anyhow::Error> {
@@ -329,7 +265,7 @@ impl ProcessServicePub {
     /// * Result<SpentDetailByInstallment, anyhow::Error>
     fn process_shinhan_card(
         &self,
-        split_args_vec: &Vec<String>,
+        split_args_vec: &[String],
         user_seq: i64,
         room_seq: i64
     ) -> Result<SpentDetailByInstallment, anyhow::Error> {
@@ -337,7 +273,7 @@ impl ProcessServicePub {
 
         // Extract and parse price information
         let first_field = split_args_vec
-            .get(0)
+            .first()
             .ok_or_else(|| anyhow!("[Shinhan Card] First field (index 0) not found"))?;
         let consume_price_vec: Vec<String> =
             self.get_string_vector_by_replace(first_field, &split_val)?;
@@ -357,7 +293,7 @@ impl ProcessServicePub {
             .collect();
 
         let consume_price: i64 = split_by_front
-            .get(0)
+            .first()
             .ok_or_else(|| anyhow!("[Shinhan Card] Price parsing failed"))?
             .parse::<i64>()?;
 
@@ -407,7 +343,7 @@ impl ProcessServicePub {
 }
 
 #[async_trait]
-impl ProcessService for ProcessServicePub {
+impl ProcessService for ProcessServiceImpl {
     #[doc = "Process processing function based on the type of payment"]
     /// # Arguments
     /// * `split_args_vec` - Array with strings as elements : Payment-related information vector:
@@ -418,12 +354,12 @@ impl ProcessService for ProcessServicePub {
     /// * Result<SpentDetailByInstallment, anyhow::Error>
     fn process_by_consume_filter(
         &self,
-        split_args_vec: &Vec<String>,
+        split_args_vec: &[String],
         user_seq: i64,
         room_seq: i64
     ) -> Result<SpentDetailByInstallment, anyhow::Error> {
         let consume_type: &String = split_args_vec
-            .get(0)
+            .first()
             .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_filter] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
 
         if consume_type.contains("nh") {
@@ -436,7 +372,7 @@ impl ProcessService for ProcessServicePub {
             Err(anyhow!("[Error][process_by_consume_filter] Variable 'consume_type' contains an undefined string: {}", consume_type))
         }
     }
-    
+
     #[doc = "Functions that take into account installment payments"]
     /// # Arguments
     /// * `spent_detail_by_installment` - Spent detail with installment information
@@ -461,7 +397,7 @@ impl ProcessService for ProcessServicePub {
 
                 let spent_at: DateTime<Local> = *spent_detail_clone.spent_at();
                 let calculate_spent_at: DateTime<Local> =
-                    spent_at + chrono::Duration::days(30 * (idx as i64));
+                    spent_at + chrono::Duration::days(30 * idx);
 
                 spent_detail_clone.set_spent_at(calculate_spent_at);
                 spent_detail_clone.set_spent_money(spent_money_ceil);
@@ -484,11 +420,11 @@ impl ProcessService for ProcessServicePub {
     #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` months"]
     /// # Arguments
     /// * `date_start` - Start date
-    /// * `date_end` - End date    
+    /// * `date_end` - End date
     /// * `nmonth` - Before or after `N` months
     ///
     /// # Returns
-    /// * Result<PermonDatetime, anyhow::Error>  
+    /// * Result<PermonDatetime, anyhow::Error>
     fn get_nmonth_to_current_date(
         &self,
         date_start: DateTime<Utc>,
@@ -496,14 +432,14 @@ impl ProcessService for ProcessServicePub {
         nmonth: i32,
     ) -> Result<PerDatetime, anyhow::Error> {
         let n_month_start: DateTime<Utc> = get_add_month_from_naivedate(date_start, nmonth)
-            .map_err(|e| anyhow!("[ProcessServicePub::get_nmonth_to_current_date] {:?} -> in get_nmonth_to_current_date().n_month_start", e))?;
+            .map_err(|e| anyhow!("[ProcessServiceImpl::get_nmonth_to_current_date] {:?} -> in get_nmonth_to_current_date().n_month_start", e))?;
 
         let n_month_end: DateTime<Utc> = get_add_month_from_naivedate(date_end, nmonth)
-            .map_err(|e| anyhow!("[ProcessServicePub::get_nmonth_to_current_date] {:?} -> in get_nmonth_to_current_date().n_month_end", e))?;
+            .map_err(|e| anyhow!("[ProcessServiceImpl::get_nmonth_to_current_date] {:?} -> in get_nmonth_to_current_date().n_month_end", e))?;
 
         let per_mon_datetim: PerDatetime =
             PerDatetime::new(date_start, date_end, n_month_start, n_month_end);
-        
+
         Ok(per_mon_datetim)
     }
 
@@ -520,7 +456,7 @@ impl ProcessService for ProcessServicePub {
         let spent_inner_details: &Vec<DocumentWithId<SpentDetailByEs>> =
             spent_details.source_list();
         let total_cost: f64 = *spent_details.agg_result();
-        
+
         let mut cost_map: HashMap<String, i64> =
             spent_inner_details
                 .iter()
@@ -528,7 +464,7 @@ impl ProcessService for ProcessServicePub {
                     let detail: &SpentDetailByEs = spent_detail.source();
                     let prodt_type: String = detail.consume_keyword_type().to_string();
                     let prodt_money: i64 = detail.spent_money as i64;
-                    
+
                     acc.entry(prodt_type)
                         .and_modify(|value| *value += prodt_money)
                         .or_insert(prodt_money);
@@ -557,7 +493,7 @@ impl ProcessService for ProcessServicePub {
     /// * Result<ToPythonGraphCircle, anyhow::Error>
     fn convert_consume_result_by_type_to_python_graph_circle(
         &self,
-        consume_result_by_types: &Vec<ConsumeResultByType>,
+        consume_result_by_types: &[ConsumeResultByType],
         total_cost: f64,
         start_dt: DateTime<Utc>,
         end_dt: DateTime<Utc>,
@@ -586,8 +522,8 @@ impl ProcessService for ProcessServicePub {
 
     #[doc = "Function that returns the time allotted as a parameter and the time before/after `N` days"]
     /// # Arguments
-    /// * `date_start`  
-    /// * `date_end`    
+    /// * `date_start`
+    /// * `date_end`
     /// * `nday` - Before or after `N` days
     ///
     /// # Returns

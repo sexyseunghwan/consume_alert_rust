@@ -1,5 +1,3 @@
-use sea_orm::Iden;
-
 use crate::common::*;
 
 use crate::views::spent_detail_view::*;
@@ -11,6 +9,7 @@ use crate::models::{spent_detail_by_produce::*, consume_index_prodt_type::*};
 
 use crate::enums::indexing_type::*;
 
+#[allow(clippy::too_many_arguments)]
 #[derive(Debug, Serialize, Deserialize, Clone, Getters, Setters, new)]
 #[getset(get = "pub", set = "pub")]
 pub struct SpentDetail {

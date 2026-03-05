@@ -38,34 +38,6 @@ pub trait RedisRepository {
     /// # Returns
     /// * `Result<(), anyhow::Error>` - Ok if set succeeds
     async fn set_ex(&self, key: &str, value: &str, seconds: u64) -> anyhow::Result<()>;
-
-    /// Delete a key
-    ///
-    /// # Arguments
-    /// * `key` - The key to delete
-    ///
-    /// # Returns
-    /// * `Result<(), anyhow::Error>` - Ok if delete succeeds
-    async fn del(&self, key: &str) -> anyhow::Result<()>;
-
-    /// Check if a key exists
-    ///
-    /// # Arguments
-    /// * `key` - The key to check
-    ///
-    /// # Returns
-    /// * `Result<bool, anyhow::Error>` - True if key exists, false otherwise
-    async fn exists(&self, key: &str) -> anyhow::Result<bool>;
-
-    /// Set expiration time for a key
-    ///
-    /// # Arguments
-    /// * `key` - The key to set expiration
-    /// * `seconds` - Expiration time in seconds
-    ///
-    /// # Returns
-    /// * `Result<(), anyhow::Error>` - Ok if expire succeeds
-    async fn expire(&self, key: &str, seconds: u64) -> anyhow::Result<()>;
 }
 
 /// Redis repository implementation
@@ -215,76 +187,4 @@ impl RedisRepository for RedisRepositoryImpl {
         }
     }
 
-    async fn del(&self, key: &str) -> anyhow::Result<()> {
-        match &self.conn {
-            RedisConnectionType::Single(conn) => {
-                let mut conn = conn.clone();
-                conn.del::<_, ()>(key).await.map_err(|e: RedisError| {
-                    anyhow!(
-                        "[RedisRepositoryImpl::del] Failed to delete key '{}': {:?}",
-                        key,
-                        e
-                    )
-                })?;
-                Ok(())
-            }
-            RedisConnectionType::Cluster(conn) => {
-                let mut conn = conn.clone();
-                conn.del::<_, ()>(key).await.map_err(|e: RedisError| {
-                    anyhow!(
-                        "[RedisRepositoryImpl::del] Failed to delete key '{}': {:?}",
-                        key,
-                        e
-                    )
-                })?;
-                Ok(())
-            }
-        }
-    }
-
-    async fn exists(&self, key: &str) -> anyhow::Result<bool> {
-        match &self.conn {
-            RedisConnectionType::Single(conn) => {
-                let mut conn = conn.clone();
-                let exists: bool = conn.exists(key).await.map_err(|e: RedisError| {
-                    anyhow!(
-                        "[RedisRepositoryImpl::exists] Failed to check key '{}': {:?}",
-                        key,
-                        e
-                    )
-                })?;
-                Ok(exists)
-            }
-            RedisConnectionType::Cluster(conn) => {
-                let mut conn = conn.clone();
-                let exists: bool = conn.exists(key).await.map_err(|e: RedisError| {
-                    anyhow!(
-                        "[RedisRepositoryImpl::exists] Failed to check key '{}': {:?}",
-                        key,
-                        e
-                    )
-                })?;
-                Ok(exists)
-            }
-        }
-    }
-
-    async fn expire(&self, key: &str, seconds: u64) -> anyhow::Result<()> {
-        match &self.conn {
-            RedisConnectionType::Single(conn) => {
-                let mut conn = conn.clone();
-                conn.expire::<_, ()>(key, seconds as i64)
-                    .await
-                    .map_err(|e: RedisError| anyhow!("[RedisRepositoryImpl::expire] Failed to set expiration for key '{}': {:?}", key, e))?;
-                Ok(())
-            }
-            RedisConnectionType::Cluster(conn) => {
-                let mut conn = conn.clone();
-                conn.expire::<_, ()>(key, seconds as i64)
-                    .await
-                    .map_err(|e: RedisError| anyhow!("[RedisRepositoryImpl::expire] Failed to set expiration for key '{}': {:?}", key, e))?;
-                Ok(())
-            }
-        }
-    }
 }

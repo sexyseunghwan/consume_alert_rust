@@ -1,7 +1,5 @@
 use crate::common::*;
 
-use crate::utils_modules::io_utils::*;
-
 use crate::repository::es_repository::*;
 
 use crate::models::agg_result_set::*;
@@ -13,57 +11,17 @@ use crate::configuration::elasitc_index_name::*;
 
 use crate::enums::range_operator::*;
 
-#[async_trait]
-pub trait ElasticQueryService {
-    async fn get_query_result_vec<T: DeserializeOwned>(
-        &self,
-        response_body: &Value,
-    ) -> Result<Vec<DocumentWithId<T>>, anyhow::Error>;
+use crate::service_traits::elastic_query_service::*;
 
-    async fn get_consume_type_judgement(
-        &self,
-        prodt_name: &str,
-    ) -> Result<ConsumingIndexProdtType, anyhow::Error>;
-    async fn get_info_orderby_cnt<T: DeserializeOwned>(
-        &self,
-        index_name: &str,
-        order_by_field: &str,
-        top_size: i64,
-        asc_yn: bool,
-    ) -> Result<Vec<DocumentWithId<T>>, anyhow::Error>;
-    async fn get_info_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
-        &self,
-        index_name: &str,
-        range_field: &str,
-        start_date: DateTime<Utc>,
-        end_date: DateTime<Utc>,
-        start_op: RangeOperator,
-        end_op: RangeOperator,
-        order_by_field: &str,
-        asc_yn: bool,
-        aggs_field: &str,
-    ) -> Result<AggResultSet<T>, anyhow::Error>;
-    async fn delete_es_doc<T: Send + Sync>(
-        &self,
-        index_name: &str,
-        doc: &DocumentWithId<T>,
-    ) -> Result<(), anyhow::Error>;
-    async fn post_query_struct<T: Serialize + Sync>(
-        &self,
-        param_struct: &T,
-        index_name: &str,
-    ) -> anyhow::Result<()>;
-    async fn post_query(&self, document: &Value, index_name: &str) -> anyhow::Result<()>;
-}
 
 #[derive(Debug, Getters, Clone, new)]
-pub struct ElasticQueryServicePub<R: EsRepository> {
+pub struct ElasticQueryServiceImpl<R: EsRepository> {
     elastic_conn: R,
 }
 
 #[async_trait]
 impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
-    for ElasticQueryServicePub<R>
+    for ElasticQueryServiceImpl<R>
 {
     #[doc = "Functions that return queried results as vectors"]
     /// # Arguments
@@ -137,7 +95,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[ElasticQueryServicePub::get_consume_type_judgement] response_body: {:?}",
+                    "[ElasticQueryServiceImpl::get_consume_type_judgement] response_body: {:?}",
                     e
                 )
             })?;
@@ -147,12 +105,12 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[ElasticQueryServicePub::get_consume_type_judgement] results: {:?}",
+                    "[ElasticQueryServiceImpl::get_consume_type_judgement] results: {:?}",
                     e
                 )
             })?;
 
-        if results.len() == 0 {
+        if results.is_empty() {
             return Ok(ConsumingIndexProdtType::new(
                 21,
                 String::from("etc"),
@@ -170,7 +128,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                 let keyword: &str = consume_type.source.consume_keyword();
 
                 /* Use the 'levenshtein' algorithm to determine word match */
-                let word_dist: usize = levenshtein(keyword, &prodt_name);
+                let word_dist: usize = levenshtein(keyword, prodt_name);
                 let word_dist_i64: i64 = word_dist.try_into()?;
                 manager.insert(word_dist_i64 + score_i64, consume_type.source);
             }
@@ -179,7 +137,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
             {
                 Some(score_data_keyword) => score_data_keyword,
                 None => {
-                    return Err(anyhow!("[ElasticQueryServicePub::get_consume_type_judgement] The mapped data for variable 'score_data_keyword' does not exist."));
+                    return Err(anyhow!("[ElasticQueryServiceImpl::get_consume_type_judgement] The mapped data for variable 'score_data_keyword' does not exist."));
                 }
             };
 
@@ -234,6 +192,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
     ///
     /// # Returns
     /// * Result<AggResultSet<T>, anyhow::Error>
+    #[allow(clippy::too_many_arguments)]
     async fn get_info_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
         &self,
         index_name: &str,
@@ -314,27 +273,4 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
         Ok(())
     }
 
-    #[doc = "Function that EXECUTES elasticsearch queries - indexing struct"]
-    async fn post_query_struct<T: Serialize + Sync>(
-        &self,
-        param_struct: &T,
-        index_name: &str,
-    ) -> anyhow::Result<()> {
-        let struct_json: Value = convert_json_from_struct(param_struct)?;
-        self.elastic_conn
-            .post_query(&struct_json, index_name)
-            .await?;
-
-        Ok(())
-    }
-
-    #[doc = "Function that EXECUTES elasticsearch queries - indexing"]
-    async fn post_query(&self, document: &Value, index_name: &str) -> anyhow::Result<()> {
-        self.elastic_conn
-            .post_query(document, index_name)
-            .await
-            .map_err(|e| anyhow!("[ElasticQueryServicePub::post_query] {:?}", e))?;
-
-        Ok(())
-    }
 }

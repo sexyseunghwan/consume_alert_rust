@@ -3,8 +3,6 @@ pub use std::{
     cmp::Ordering,
     collections::{BinaryHeap, HashMap},
     env,
-    fmt::Display,
-    fs,
     io::Write,
     path::Path,
     str::FromStr,
@@ -41,7 +39,7 @@ pub use elasticsearch::{
         TransportBuilder,
     },
     http::Url,
-    DeleteParts, Elasticsearch, IndexParts, SearchParts,
+    DeleteParts, Elasticsearch, SearchParts,
 };
 
 pub use anyhow::{anyhow, Context, Result};

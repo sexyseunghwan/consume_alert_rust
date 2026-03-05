@@ -1,30 +1,5 @@
 use crate::common::*;
 
-#[doc = "Function to convert structure to JSON value"]
-/// # Arguments
-/// * input_struct -
-///
-/// # Returns
-/// * Result<Value, anyhow::Error>
-pub fn convert_json_from_struct<T: Serialize>(input_struct: &T) -> Result<Value, anyhow::Error> {
-    serde_json::to_value(input_struct).map_err(|err| {
-        anyhow!(
-            "[Error][convert_json_from_struct()] Failed to serialize struct to JSON: {}",
-            err
-        )
-    })
-}
-
-#[doc = ""]
-/// # Arguments
-/// * value -
-///
-/// # Returns
-/// * String
-pub fn format_number(value: i64) -> String {
-    value.to_formatted_string(&Locale::en)
-}
-
 #[doc = "Function that takes a particular value from a vector - Access by Index"]
 /// # Arguments
 /// * `vec`     - Vector data
@@ -33,7 +8,7 @@ pub fn format_number(value: i64) -> String {
 /// # Returns
 /// * Result<T, anyhow::Error>
 pub fn get_parsed_value_from_vector<T: FromStr>(
-    vec: &Vec<String>,
+    vec: &[String],
     index: usize,
 ) -> Result<T, anyhow::Error>
 where
@@ -55,16 +30,19 @@ where
     })
 }
 
-#[doc = "Function to delete files"]
+#[doc = "Function that deletes files from the given path list"]
 /// # Arguments
-/// * `path_vec` - Image path vector to delete
+/// * `path_vec` - Vector of file paths to delete
 ///
 /// # Returns
 /// * Result<(), anyhow::Error>
 pub fn delete_file(path_vec: Vec<String>) -> Result<(), anyhow::Error> {
-    for dir_name in path_vec {
-        fs::remove_file(Path::new(&dir_name))?;
+    for path in path_vec {
+        if std::path::Path::new(&path).exists() {
+            std::fs::remove_file(&path).map_err(|e| {
+                anyhow!("[Error][delete_file()] Failed to delete file '{}': {:?}", path, e)
+            })?;
+        }
     }
-
     Ok(())
 }

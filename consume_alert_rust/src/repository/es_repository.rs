@@ -7,7 +7,6 @@ pub trait EsRepository {
         es_query: &Value,
         index_name: &str,
     ) -> Result<Value, anyhow::Error>;
-    async fn post_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error>;
     async fn delete_query(&self, doc_id: &str, index_name: &str) -> Result<(), anyhow::Error>;
 }
 
@@ -73,27 +72,6 @@ impl EsRepository for EsRepositoryPub {
                 "[EsRepositoryPub::node_search_query] response status is failed: {:?}",
                 error_body
             ))
-        }
-    }
-
-    #[doc = "Function that EXECUTES elasticsearch queries - indexing"]
-    async fn post_query(&self, document: &Value, index_name: &str) -> anyhow::Result<()> {
-        let response: Response = self
-            .es_client
-            .index(IndexParts::Index(index_name))
-            .body(document)
-            .send()
-            .await?;
-
-        if response.status_code().is_success() {
-            info!("[EsRepositoryPub::post_query] index_name: {}", index_name);
-            Ok(())
-        } else {
-            let error_message = format!(
-                "[EsRepositoryPub::post_query] Failed to index document: Status Code: {}",
-                response.status_code()
-            );
-            Err(anyhow!(error_message))
         }
     }
 

@@ -69,8 +69,3 @@ pub async fn errork(err: anyhow::Error) {
     //logging_kafka(&err.to_string()).await;
 }
 
-#[doc = "Function that writes the information history to a file and sends it to kafka"]
-pub async fn infok(info: &str) {
-    info!("{:?}", info);
-    //logging_kafka(info).await;
-}

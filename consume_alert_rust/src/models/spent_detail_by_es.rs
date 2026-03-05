@@ -6,6 +6,7 @@
 use crate::common::*;
 
 
+#[allow(clippy::too_many_arguments)]
 #[derive(Debug, Clone, Serialize, Deserialize, Getters, new)]
 #[getset(get = "pub")]
 pub struct SpentDetailByEs {

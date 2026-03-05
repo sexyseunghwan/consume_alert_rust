@@ -1,12 +1,12 @@
 use crate::common::*;
 
-use crate::services::elastic_query_service::*;
-use crate::services::graph_api_service::*;
-use crate::services::mysql_query_service::*;
-use crate::services::process_service::*;
-use crate::services::producer_service::*;
-use crate::services::redis_service::*;
-use crate::services::telebot_service::*;
+use crate::service_traits::elastic_query_service::*;
+use crate::service_traits::graph_api_service::*;
+use crate::service_traits::mysql_query_service::*;
+use crate::service_traits::process_service::*;
+use crate::service_traits::producer_service::*;
+use crate::service_traits::redis_service::*;
+use crate::service_traits::telebot_service::*;
 
 use crate::utils_modules::io_utils::*;
 use crate::utils_modules::time_utils::*;
@@ -204,49 +204,11 @@ impl<
         Ok(spent_type)
     }
 
-
-
-    /// Resolves the spend type via Elasticsearch and loads its display name from MySQL.
-    ///
-    /// Returns `(ConsumingIndexProdtType, CommonConsumeKeywordType)`.
-    // async fn resolve_spend_type(
-    //     &self,
-    //     spend_name: &str,
-    // ) -> anyhow::Result<(ConsumingIndexProdtType, CommonConsumeKeywordType)> {
-    //     let spent_type: ConsumingIndexProdtType = self
-    //         .elastic_query_service
-    //         .get_consume_type_judgement(spend_name)
-    //         .await
-    //         .context("[MainController::resolve_spend_type] Elasticsearch query failed")?;
-
-    //     println!("spent_type: {:?}", spent_type);
-
-    //     // When Elasticsearch returns consume_keyword_type_id = 0 (no match found),
-    //     // return a default "etc" type without querying MySQL
-    //     // let spent_type_nm: CommonConsumeKeywordType = if spent_type.consume_keyword_type_id == 0 {
-    //     //     CommonConsumeKeywordType::new(0, "etc".to_string())
-    //     // } else {
-    //     //     self
-    //     //         .mysql_query_service
-    //     //         .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
-    //     //         .await
-    //     //         .context("[resolve_spend_type] MySQL query failed")?
-    //     // };
-
-    //     let spent_type_nm: CommonConsumeKeywordType = self
-    //         .mysql_query_service
-    //         .get_common_consume_keyword_type(spent_type.consume_keyword_type_id)
-    //         .await
-    //         .context("[MainController::resolve_spend_type] MySQL query failed")?;
-
-    //     println!("spent_type_nm: {:?}", spent_type_nm);
-
-    //     Ok((spent_type, spent_type_nm))
-    // }
-
     // ── Entry point ──────────────────────────────────────────────────────────
 
     /// Dispatches each incoming Telegram message to the matching command handler.
+    /// 
+    /// ************ Main Function ************
     pub async fn main_call_function(&self) -> anyhow::Result<()> {
         let telegram_token: String = self.tele_bot_service.get_telegram_token();
         let telegram_user_id: String = self.tele_bot_service.get_telegram_user_id();
@@ -407,7 +369,7 @@ impl<
         )?;
 
         self.tele_bot_service
-            .send_message_consume_split(&cur_python_graph, &spent_detail_info.source_list())
+            .send_message_consume_split(&cur_python_graph, spent_detail_info.source_list())
             .await?;
 
         let consume_detail_img_path: String = self
@@ -681,7 +643,7 @@ impl<
                 self.process_service
                     .get_nmonth_to_current_date(date_start, date_end, -1)?
             }
-            2 if args.get(1).map_or(false, |d| {
+            2 if args.get(1).is_some_and(|d| {
                 validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)
             }) =>
             {
@@ -726,7 +688,7 @@ impl<
         let args = self.preprocess_string(" ");
 
         let permon_datetime = match args.len() {
-            2 if args.get(1).map_or(false, |d| {
+            2 if args.get(1).is_some_and(|d| {
                 validate_date_format(d, r"^\d{4}\.\d{2}\.\d{2}-\d{4}\.\d{2}\.\d{2}$")
                     .unwrap_or(false)
             }) =>
@@ -771,7 +733,7 @@ impl<
                 self.process_service
                     .get_nday_to_current_date(today, today, -1)?
             }
-            2 if args.get(1).map_or(false, |d| {
+            2 if args.get(1).is_some_and(|d| {
                 validate_date_format(d, r"^\d{4}\.\d{2}\.\d{2}$").unwrap_or(false)
             }) =>
             {
@@ -850,7 +812,7 @@ impl<
                 self.process_service
                     .get_nmonth_to_current_date(start_date, end_date, -12)?
             }
-            2 if args.get(1).map_or(false, |d| {
+            2 if args.get(1).is_some_and(|d| {
                 validate_date_format(d, r"^\d{4}$").unwrap_or(false)
             }) =>
             {
@@ -885,7 +847,7 @@ impl<
     /// `cs [YYYY.MM]` — Shows consumption from the last payday (25th) to the next.
     pub async fn command_consumption_per_salary(&self) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(" ");
-
+        
         let permon_datetime: PerDatetime = match args.len() {
             1 => {
                 let today: DateTime<Utc> = get_current_kor_naivedate();
@@ -903,7 +865,7 @@ impl<
                 self.process_service
                     .get_nmonth_to_current_date(cur_date_start, cur_date_end, -1)?
             }
-            2 if args.get(1).map_or(false, |d| {
+            2 if args.get(1).is_some_and(|d| {
                 validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)
             }) =>
             {

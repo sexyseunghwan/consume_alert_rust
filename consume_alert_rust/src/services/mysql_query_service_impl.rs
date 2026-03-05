@@ -1,91 +1,18 @@
 use crate::common::*;
 
-use crate::entity::{
-    consume_prodt_detail, spent_detail, telegram_room, users,
-};
-use crate::models::{consume_prodt_info::*, spent_detail::*};
+use crate::entity::{spent_detail, telegram_room, users};
+use crate::models::spent_detail::*;
 use crate::repository::mysql_repository::*;
 
-#[async_trait]
-pub trait MysqlQueryService {
-    async fn insert_consume_prodt_detail(
-        &self,
-        consume_info: &ConsumeProdtInfo,
-    ) -> anyhow::Result<()>;
-    /// Converts a [`SpentDetail`] to a SeaORM `ActiveModel` and inserts it within a
-    /// transaction, returning the auto-incremented `spent_idx` assigned by the database.
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(i64)` - The `spent_idx` assigned to the inserted row.
-    /// * `Err`     - Conversion or database failure; the transaction is rolled back.
-    async fn insert_prodt_detail_with_transaction(
-        &self,
-        spent_detail: &SpentDetail,
-    ) -> anyhow::Result<i64>;
-    /// Converts each [`SpentDetail`] to a SeaORM `ActiveModel`, then delegates to
-    /// the repository to insert them all within a single database transaction.
-    ///
-    /// # Ordering guarantee
-    ///
-    /// The returned `Vec<i64>` is in the **same order** as `spent_details`.
-    /// `spent_idxs[i]` is the auto-incremented primary key assigned by the database
-    /// to `spent_details[i]`.
-    ///
-    /// # Arguments
-    ///
-    /// * `spent_details` - Slice of domain model records to persist, in the order
-    ///   they should be tracked.
-    ///
-    /// # Returns
-    ///
-    /// * `Ok(Vec<i64>)` - Assigned `spent_idx` values, one per input record,
-    ///   in the same order as `spent_details`.
-    /// * `Err` - Conversion or database failure; the transaction is rolled back.
-    async fn insert_prodt_details_with_transaction(
-        &self,
-        spent_details: &[SpentDetail],
-    ) -> anyhow::Result<Vec<i64>>;
-    async fn exists_telegram_room_by_token_and_id(
-        &self,
-        room_token: &str,
-        user_id: &str,
-    ) -> anyhow::Result<Option<i64>>;
-    async fn get_telegram_room_seq_by_token_and_userseq(
-        &self,
-        room_token: &str,
-        user_seq: i64,
-    ) -> anyhow::Result<Option<i64>>;
-    async fn get_user_id_by_seq(&self, user_seq: i64) -> anyhow::Result<Option<String>>;
-}
+use crate::service_traits::mysql_query_service::*;
 
 #[derive(Debug, Getters, Clone, new)]
 pub struct MysqlQueryServiceImpl<R: MysqlRepository> {
     db_conn: R,
 }
 
-impl<R: MysqlRepository> MysqlQueryServiceImpl<R> {}
-
 #[async_trait]
 impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceImpl<R> {
-    #[doc = ""]
-    async fn insert_consume_prodt_detail(
-        &self,
-        consume_info: &ConsumeProdtInfo,
-    ) -> anyhow::Result<()> {
-        /* ConsumeProdtInfo -> ActiveModel */
-        let active_model: consume_prodt_detail::ActiveModel = consume_info
-            .convert_consume_info_to_active_model()
-            .map_err(|e| {
-                anyhow!(
-                    "[MysqlQueryServiceImpl::insert_consume_prodt_detail] active_model: {:?}",
-                    e
-                )
-            })?;
-
-        self.db_conn.insert(active_model).await
-    }
-
     async fn insert_prodt_detail_with_transaction(
         &self,
         spent_detail: &SpentDetail,

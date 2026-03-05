@@ -63,7 +63,7 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2025-06-07 Seunghwan Shin       # [v.3.1.0] Added Shinhan Card Payment Details
               2025-10-04 Seunghwan Shin       # [v.3.1.1] Prevented negative values from being displayed in the pie chart by hiding those sections.
               2026-03-03 Seunghwan Shin       # [v.4.0.0] Code Refactorubg and Feature Enhancement.
-              2026-03-00 Seunghwan Shin       # [v.4.0.1] 
+              2026-03-05 Seunghwan Shin       # [v.4.0.1] Fix an issue where the conusme category type was not retrieved correctly.
 */
 mod common;
 use common::*;
@@ -81,8 +81,8 @@ mod schema;
 mod services;
 
 use services::{
-    elastic_query_service::*, graph_api_service::*, mysql_query_service::*, process_service::*,
-    producer_service::*, redis_service::*, telebot_service::*,
+    elastic_query_service_impl::*, graph_api_service_impl::*, mysql_query_service_impl::*, process_service_impl::*,
+    producer_service_impl::*, redis_service_impl::*, telebot_service_impl::*,
 };
 
 mod controller;
@@ -98,9 +98,11 @@ mod entity;
 
 mod views;
 
+mod service_traits;
+
 /* ─── Concrete service types used throughout main ─────────────────────────── */
 type AppRedisService = RedisServiceImpl<RedisRepositoryImpl>;
-type AppElasticService = ElasticQueryServicePub<EsRepositoryPub>;
+type AppElasticService = ElasticQueryServiceImpl<EsRepositoryPub>;
 type AppMysqlService = MysqlQueryServiceImpl<MysqlRepositoryImpl>;
 type AppProducerService = ProducerServiceImpl<KafkaRepositoryImpl>;
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -151,11 +153,11 @@ async fn main() {
 
     /* Shared services — wrapped in Arc so each bot task can clone cheaply. */
     let redis_service: Arc<AppRedisService> = Arc::new(AppRedisService::new(redis_conn));
-    let graph_api_service: Arc<GraphApiServicePub> = Arc::new(GraphApiServicePub::new());
+    let graph_api_service: Arc<GraphApiServiceImpl> = Arc::new(GraphApiServiceImpl::new());
     let elastic_query_service: Arc<AppElasticService> =
         Arc::new(AppElasticService::new(elastic_conn));
     let mysql_query_service: Arc<AppMysqlService> = Arc::new(AppMysqlService::new(mysql_conn));
-    let process_service: Arc<ProcessServicePub> = Arc::new(ProcessServicePub::new());
+    let process_service: Arc<ProcessServiceImpl> = Arc::new(ProcessServiceImpl::new());
     let producer_service: Arc<AppProducerService> = Arc::new(AppProducerService::new(kafka_conn));
 
     /* Build one Bot per token listed in BOT_TOKENS.
@@ -175,10 +177,10 @@ async fn main() {
     for bot in bots {
         let handle = tokio::spawn({
             /* Clone Arc pointers — cheap, no data is copied. */
-            let graph_api_service: Arc<GraphApiServicePub> = Arc::clone(&graph_api_service);
+            let graph_api_service: Arc<GraphApiServiceImpl> = Arc::clone(&graph_api_service);
             let elastic_query_service: Arc<AppElasticService> = Arc::clone(&elastic_query_service);
             let mysql_query_service: Arc<AppMysqlService> = Arc::clone(&mysql_query_service);
-            let process_service: Arc<ProcessServicePub> = Arc::clone(&process_service);
+            let process_service: Arc<ProcessServiceImpl> = Arc::clone(&process_service);
             let producer_service: Arc<AppProducerService> = Arc::clone(&producer_service);
             let redis_service: Arc<AppRedisService> = Arc::clone(&redis_service);
 
@@ -192,24 +194,26 @@ async fn main() {
                  * teloxide::repl polls the Telegram API and dispatches messages
                  * to the handler closure one at a time (per bot). */
                 teloxide::repl(bot, move |message: Message, bot: Arc<Bot>| {
-                    let graph_api_service: Arc<GraphApiServicePub> = Arc::clone(&graph_api_service);
+
+                    let graph_api_service: Arc<GraphApiServiceImpl> = Arc::clone(&graph_api_service);
                     let elastic_query_service: Arc<AppElasticService> =
                         Arc::clone(&elastic_query_service);
                     let mysql_query_service: Arc<AppMysqlService> =
                         Arc::clone(&mysql_query_service);
-                    let process_service: Arc<ProcessServicePub> = Arc::clone(&process_service);
+                    let process_service: Arc<ProcessServiceImpl> = Arc::clone(&process_service);
                     let producer_service: Arc<AppProducerService> = Arc::clone(&producer_service);
                     let redis_service: Arc<AppRedisService> = Arc::clone(&redis_service);
 
                     async move {
-                        let tele_bot_service: TelebotServicePub =
-                            TelebotServicePub::new(bot, message);
+                        let tele_bot_service: TelebotServiceImpl =
+                            TelebotServiceImpl::new(bot, message);
+                        #[allow(clippy::type_complexity)]
                         let main_controller: MainController<
-                            GraphApiServicePub,
-                            ElasticQueryServicePub<EsRepositoryPub>,
+                            GraphApiServiceImpl,
+                            ElasticQueryServiceImpl<EsRepositoryPub>,
                             MysqlQueryServiceImpl<MysqlRepositoryImpl>,
-                            TelebotServicePub,
-                            ProcessServicePub,
+                            TelebotServiceImpl,
+                            ProcessServiceImpl,
                             ProducerServiceImpl<KafkaRepositoryImpl>,
                             RedisServiceImpl<RedisRepositoryImpl>,
                         > = MainController::new(

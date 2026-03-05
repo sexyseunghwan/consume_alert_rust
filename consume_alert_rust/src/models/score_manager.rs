@@ -1,9 +1,7 @@
 use crate::common::*;
 
-#[derive(Debug, Clone, Getters)]
-#[getset(get = "pub")]
+#[derive(Debug, Clone)]
 pub struct ScoredData<T> {
-    pub score: i64,
     pub data: T,
 }
 
@@ -43,8 +41,8 @@ impl<T: std::fmt::Debug> ScoreManager<T> {
         /* Insert Data */
         self.data_map
             .entry(score)
-            .or_insert_with(Vec::new)
-            .push(ScoredData { score, data });
+            .or_default()
+            .push(ScoredData { data });
 
         /* Add scores to the heap (you can insert duplicate scores that already exist) */
         if !self.heap.iter().any(|MinHeapItem(s)| *s == score) {

@@ -6,6 +6,7 @@ use crate::common::*;
 /// This struct is thread-safe and can be accessed from multiple threads concurrently
 #[derive(Debug, Clone, Getters)]
 #[getset(get = "pub")]
+#[allow(dead_code)]
 pub struct AppConfig {
     /// Telegram bot token list (parsed from comma-separated BOT_TOKENS env var).
     /// The application spawns one independent polling loop per token.
@@ -46,14 +47,12 @@ impl AppConfig {
     /// * `Result<(), String>` - Ok if initialization succeeds, Err with message if fails
     ///
     /// # Example
-    /// ```
+    /// ```no_run
     /// use consume_alert_rust::config::AppConfig;
     ///
-    /// fn main() {
-    ///     AppConfig::init().expect("Failed to initialize config");
-    ///     let config = AppConfig::global();
-    ///     println!("Consume topic: {}", config.consume_topic);
-    /// }
+    /// AppConfig::init().expect("Failed to initialize config");
+    /// let config = AppConfig::global();
+    /// println!("Consume topic: {}", config.produce_topic);
     /// ```
     pub fn init() -> Result<(), String> {
         dotenv::dotenv().ok();
@@ -117,6 +116,7 @@ impl AppConfig {
     ///
     /// # Returns
     /// * `Option<&'static AppConfig>` - Some if initialized, None otherwise
+    #[allow(dead_code)]
     pub fn try_global() -> Option<&'static AppConfig> {
         APP_CONFIG.get()
     }

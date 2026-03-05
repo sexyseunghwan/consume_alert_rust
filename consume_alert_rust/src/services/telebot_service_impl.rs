@@ -7,62 +7,19 @@ use crate::models::document_with_id::*;
 use crate::models::to_python_graph_line::*;
 use crate::models::spent_detail_by_es::*;
 
-#[async_trait]
-pub trait TelebotService {
-    async fn send_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error>;
-    async fn send_photo_confirm(&self, image_path_vec: &Vec<String>) -> Result<(), anyhow::Error>;
+use crate::service_traits::telebot_service::*;
 
-    async fn send_consumption_message<'life1, 'life2, 'msg, T>(
-        &self,
-        items: &'life1 Vec<T>,
-        message_builder: fn(&'life2 T) -> String,
-        empty_flag: bool,
-        empty_msg: &'msg str,
-        msg_title: &'msg str,
-    ) -> Result<(), anyhow::Error>
-    where
-        'life1: 'life2,
-        T: Send + Sync;
-
-    async fn send_message_consume_split(
-        &self,
-        to_python_graph_line: &ToPythonGraphLine,
-        spent_detail_list: &Vec<DocumentWithId<SpentDetailByEs>>,
-    ) -> Result<(), anyhow::Error>;
-
-    async fn send_message_consume_info_by_typelist(
-        &self,
-        type_consume_info: &Vec<ConsumeResultByType>,
-        start_dt: DateTime<Utc>,
-        end_dt: DateTime<Utc>,
-        total_cost: f64,
-    ) -> Result<(), anyhow::Error>;
-
-    fn get_input_text(&self) -> String;
-
-    async fn send_message_struct_info<T: Serialize + Sync>(
-        &self,
-        obj_struct: &T,
-    ) -> Result<(), anyhow::Error>;
-
-    async fn send_message_struct_list<T: Serialize + Sync>(
-        &self,
-        obj_list: &[T],
-    ) -> Result<(), anyhow::Error>;
-
-    fn get_telegram_token(&self) -> String;
-    fn get_telegram_user_id(&self) -> String;
-}
+use crate::utils_modules::time_utils::*;
 
 #[derive(Debug, Getters)]
-pub struct TelebotServicePub {
+pub struct TelebotServiceImpl {
     pub bot: Arc<Bot>,
     pub chat_id: ChatId,
     pub input_text: String,
     pub user_id: String,
 }
 
-impl TelebotServicePub {
+impl TelebotServiceImpl {
     #[doc = "Telegram Bot Service"]
     /// # Arguments
     /// * `bot`     - Telegram Bot
@@ -77,7 +34,7 @@ impl TelebotServicePub {
         let input_text: String = match message.text() {
             Some(input_text) => input_text,
             None => {
-                error!("[TelebotServicePub::handle_commandhandle_command()] The entered value does not exist.");
+                error!("[TelebotServiceImpl::handle_commandhandle_command()] The entered value does not exist.");
                 ""
             }
         }
@@ -172,7 +129,7 @@ impl TelebotServicePub {
         header: Option<&str>,
     ) -> Result<String, anyhow::Error> {
         let obj_val: Value = serde_json::to_value(obj_struct).context(
-            "[TelebotServicePub::format_struct_to_string] Failed to serialize struct to JSON",
+            "[TelebotServiceImpl::format_struct_to_string] Failed to serialize struct to JSON",
         )?;
 
         if let Some(obj) = obj_val.as_object() {
@@ -209,14 +166,14 @@ impl TelebotServicePub {
             Ok(result_string)
         } else {
             Err(anyhow!(
-                "[TelebotServicePub::format_struct_to_string] Parsed JSON is not an object"
+                "[TelebotServiceImpl::format_struct_to_string] Parsed JSON is not an object"
             ))
         }
     }
 }
 
 #[async_trait]
-impl TelebotService for TelebotServicePub {
+impl TelebotService for TelebotServiceImpl {
     #[doc = "This async function serializes a generic struct into a formatted string"]
     /// # Arguments
     /// * obj_struct - Distinguishing characters
@@ -243,12 +200,12 @@ impl TelebotService for TelebotServicePub {
         obj_list: &[T],
     ) -> Result<(), anyhow::Error> {
         if obj_list.is_empty() {
-            warn!("[TelebotServicePub::send_message_struct_list] Empty list provided");
+            warn!("[TelebotServiceImpl::send_message_struct_list] Empty list provided");
             return Ok(());
         }
 
         info!(
-            "[TelebotServicePub::send_message_struct_list] Processing {} objects",
+            "[TelebotServiceImpl::send_message_struct_list] Processing {} objects",
             obj_list.len()
         );
 
@@ -276,7 +233,7 @@ impl TelebotService for TelebotServicePub {
         for (idx, result) in results.into_iter().enumerate() {
             if let Err(e) = result {
                 error!(
-                    "[TelebotServicePub::send_message_struct_list] Failed to send message for object {}: {:?}",
+                    "[TelebotServiceImpl::send_message_struct_list] Failed to send message for object {}: {:?}",
                     idx + 1,
                     e
                 );
@@ -289,7 +246,7 @@ impl TelebotService for TelebotServicePub {
         }
 
         info!(
-            "[TelebotServicePub::send_message_struct_list] Successfully sent {} messages",
+            "[TelebotServiceImpl::send_message_struct_list] Successfully sent {} messages",
             obj_list.len()
         );
 
@@ -308,7 +265,7 @@ impl TelebotService for TelebotServicePub {
     ///
     /// # Returns
     /// * Result<(), anyhow::Error>
-    async fn send_photo_confirm(&self, image_path_vec: &Vec<String>) -> Result<(), anyhow::Error> {
+    async fn send_photo_confirm(&self, image_path_vec: &[String]) -> Result<(), anyhow::Error> {
         for image_path in image_path_vec {
             self.try_send_operation(
                 || self.tele_bot_send_photo(image_path),
@@ -324,7 +281,7 @@ impl TelebotService for TelebotServicePub {
     #[doc = "Functions that send messages related to consumption details"]
     async fn send_consumption_message<'life1, 'life2, 'msg, T>(
         &self,
-        items: &'life1 Vec<T>,
+        items: &'life1 [T],
         message_builder: fn(&'life2 T) -> String,
         empty_flag: bool,
         empty_msg: &'msg str,
@@ -336,8 +293,7 @@ impl TelebotService for TelebotServicePub {
     {
         let cnt: usize = 10;
         let items_len: usize = items.len();
-        let loop_cnt: usize = (items_len / cnt) + (if items_len % cnt != 0 { 1 } else { 0 });
-
+        let loop_cnt: usize = items_len.div_ceil(cnt);
 
         if empty_flag {
             self.send_message_confirm(empty_msg).await?;
@@ -350,9 +306,9 @@ impl TelebotService for TelebotServicePub {
                     send_text.push_str(msg_title);
                 }
 
-                for inner_idx in (cnt * idx)..end_idx {
+                for item in &items[(cnt * idx)..end_idx] {
                     send_text.push_str("---------------------------------\n");
-                    send_text.push_str(&message_builder(&items[inner_idx]));
+                    send_text.push_str(&message_builder(item));
                 }
 
                 self.send_message_confirm(&send_text).await?;
@@ -372,48 +328,34 @@ impl TelebotService for TelebotServicePub {
     async fn send_message_consume_split(
         &self,
         to_python_graph_line: &ToPythonGraphLine,
-        spent_detail_list: &Vec<DocumentWithId<SpentDetailByEs>>,
+        spent_detail_list: &[DocumentWithId<SpentDetailByEs>],
     ) -> Result<(), anyhow::Error> {
         let start_dt: &String = to_python_graph_line.start_dt();
         let end_dt: &String = to_python_graph_line.end_dt();
         let total_cost: f64 = *to_python_graph_line.total_cost();
         let total_cost_i64: i64 = total_cost as i64;
 
-        let empty_flag: bool = if spent_detail_list.is_empty() {
-            true
-        } else {
-            false
-        };
-        
+        let empty_flag: bool = spent_detail_list.is_empty();
+
         self
             .send_consumption_message(
                 spent_detail_list,
                 |item| {
+
+                    let kor_time: String = format_kst_datetime(item.source.spent_at, "%Y-%m-%dT%H:%M");
+                    
                     format!(
                         "name : {}\ndate : {}\ncost : {}\ntype: {}\n",
                         item.source.spent_name,
-                        item.source.spent_at,
+                        kor_time,
                         item.source.spent_money.to_formatted_string(&Locale::ko),
                         item.source.consume_keyword_type
                     )
-                }, 
-                empty_flag, 
+                },
+                empty_flag,
             &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i64.to_formatted_string(&Locale::ko)),
-            &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i64.to_formatted_string(&Locale::ko)) 
+            &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i64.to_formatted_string(&Locale::ko))
             ).await
-
-        // self.send_consumption_message(spent_detail_list, |item| {
-        //     format!(
-        //         "name : {}\ndate : {}\ncost : {}\ntype: {}\n",
-        //         item.source.prodt_name(),
-        //         item.source.timestamp(),
-        //         item.source.prodt_money().to_formatted_string(&Locale::ko),
-        //         item.source.prodt_type()
-        //     )},
-        //     empty_flag,
-        //     &format!("The money you spent from [{} ~ {}] is [ {} won ]\nThere is no consumption history to be viewed during that period.", start_dt, end_dt, total_cost_i64.to_formatted_string(&Locale::ko)),
-        //     &format!("The money you spent from [{} ~ {}] is [ {} won ]\n=========[DETAIL]=========\n", start_dt, end_dt, total_cost_i64.to_formatted_string(&Locale::ko)) 
-        // ).await
     }
 
     #[doc = "Functions that return consumption aggregate information by category over a specific period of time"]
@@ -426,17 +368,13 @@ impl TelebotService for TelebotServicePub {
     /// * Result<(), anyhow::Error>
     async fn send_message_consume_info_by_typelist(
         &self,
-        type_consume_info: &Vec<ConsumeResultByType>,
+        type_consume_info: &[ConsumeResultByType],
         start_dt: DateTime<Utc>,
         end_dt: DateTime<Utc>,
         total_cost: f64,
     ) -> Result<(), anyhow::Error> {
         let total_cost_i64: i64 = total_cost as i64;
-        let empty_flag: bool = if type_consume_info.is_empty() {
-            true
-        } else {
-            false
-        };
+        let empty_flag: bool = type_consume_info.is_empty();
         let start_str = start_dt.format("%Y-%m-%d");
         let end_str = end_dt.format("%Y-%m-%d");
 

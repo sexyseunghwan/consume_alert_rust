@@ -1,6 +1,5 @@
 use crate::common::*;
 
-#[doc = ""]
 #[derive(Debug, Getters, Serialize, Deserialize, new)]
 #[getset(get = "pub")]
 pub struct ConsumeResultByType {

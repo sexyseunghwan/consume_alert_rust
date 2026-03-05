@@ -1,4 +1,5 @@
 // @generated automatically by Diesel CLI.
+#![allow(non_snake_case)]
 
 diesel::table! {
     CONSUME_PRODT_DETAIL (timestamp, prodt_name) {
