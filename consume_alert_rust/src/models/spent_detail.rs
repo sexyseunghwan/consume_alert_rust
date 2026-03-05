@@ -7,7 +7,7 @@ use crate::views::spent_detail_view::*;
 use crate::entity::spent_detail;
 use crate::entity::spent_detail::ActiveModel;
 
-use crate::models::{common_consume_keyword_type::*, spent_detail_by_produce::*, consume_index_prodt_type::*};
+use crate::models::{spent_detail_by_produce::*, consume_index_prodt_type::*};
 
 use crate::enums::indexing_type::*;
 

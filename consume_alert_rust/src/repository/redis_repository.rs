@@ -173,7 +173,7 @@ impl RedisRepository for RedisRepositoryImpl {
         match &self.conn {
             RedisConnectionType::Single(conn) => {
                 let mut conn = conn.clone();
-                conn.set(key, value).await.map_err(|e: RedisError| {
+                conn.set::<_, _, ()>(key, value).await.map_err(|e: RedisError| {
                     anyhow!(
                         "[RedisRepositoryImpl::set] Failed to set key '{}': {:?}",
                         key,
@@ -184,7 +184,7 @@ impl RedisRepository for RedisRepositoryImpl {
             }
             RedisConnectionType::Cluster(conn) => {
                 let mut conn = conn.clone();
-                conn.set(key, value).await.map_err(|e: RedisError| {
+                conn.set::<_, _, ()>(key, value).await.map_err(|e: RedisError| {
                     anyhow!(
                         "[RedisRepositoryImpl::set] Failed to set key '{}': {:?}",
                         key,
@@ -200,14 +200,14 @@ impl RedisRepository for RedisRepositoryImpl {
         match &self.conn {
             RedisConnectionType::Single(conn) => {
                 let mut conn = conn.clone();
-                conn.set_ex(key, value, seconds)
+                conn.set_ex::<_, _, ()>(key, value, seconds)
                     .await
                     .map_err(|e: RedisError| anyhow!("[RedisRepositoryImpl::set_ex] Failed to set key '{}' with expiration: {:?}", key, e))?;
                 Ok(())
             }
             RedisConnectionType::Cluster(conn) => {
                 let mut conn = conn.clone();
-                conn.set_ex(key, value, seconds)
+                conn.set_ex::<_, _, ()>(key, value, seconds)
                     .await
                     .map_err(|e: RedisError| anyhow!("[RedisRepositoryImpl::set_ex] Failed to set key '{}' with expiration: {:?}", key, e))?;
                 Ok(())
@@ -219,7 +219,7 @@ impl RedisRepository for RedisRepositoryImpl {
         match &self.conn {
             RedisConnectionType::Single(conn) => {
                 let mut conn = conn.clone();
-                conn.del(key).await.map_err(|e: RedisError| {
+                conn.del::<_, ()>(key).await.map_err(|e: RedisError| {
                     anyhow!(
                         "[RedisRepositoryImpl::del] Failed to delete key '{}': {:?}",
                         key,
@@ -230,7 +230,7 @@ impl RedisRepository for RedisRepositoryImpl {
             }
             RedisConnectionType::Cluster(conn) => {
                 let mut conn = conn.clone();
-                conn.del(key).await.map_err(|e: RedisError| {
+                conn.del::<_, ()>(key).await.map_err(|e: RedisError| {
                     anyhow!(
                         "[RedisRepositoryImpl::del] Failed to delete key '{}': {:?}",
                         key,
@@ -273,14 +273,14 @@ impl RedisRepository for RedisRepositoryImpl {
         match &self.conn {
             RedisConnectionType::Single(conn) => {
                 let mut conn = conn.clone();
-                conn.expire(key, seconds as i64)
+                conn.expire::<_, ()>(key, seconds as i64)
                     .await
                     .map_err(|e: RedisError| anyhow!("[RedisRepositoryImpl::expire] Failed to set expiration for key '{}': {:?}", key, e))?;
                 Ok(())
             }
             RedisConnectionType::Cluster(conn) => {
                 let mut conn = conn.clone();
-                conn.expire(key, seconds as i64)
+                conn.expire::<_, ()>(key, seconds as i64)
                     .await
                     .map_err(|e: RedisError| anyhow!("[RedisRepositoryImpl::expire] Failed to set expiration for key '{}': {:?}", key, e))?;
                 Ok(())

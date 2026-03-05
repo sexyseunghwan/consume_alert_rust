@@ -14,7 +14,6 @@ use crate::utils_modules::time_utils::*;
 use crate::configuration::elasitc_index_name::*;
 
 use crate::models::agg_result_set::*;
-use crate::models::common_consume_keyword_type::*;
 use crate::models::consume_index_prodt_type::*;
 use crate::models::consume_prodt_info::*;
 use crate::models::consume_result_by_type::*;
@@ -377,7 +376,7 @@ impl<
                 "spent_money",
             )
             .await?;
-        
+
         let versus_spent_detail_info: AggResultSet<SpentDetailByEs> = self
             .elastic_query_service
             .get_info_orderby_aggs_range(
@@ -411,7 +410,7 @@ impl<
             .send_message_consume_split(&cur_python_graph, &spent_detail_info.source_list())
             .await?;
 
-        let consume_detail_img_path = self
+        let consume_detail_img_path: String = self
             .graph_api_service
             .call_python_matplot_consume_detail_double(&cur_python_graph, &versus_python_graph)
             .await?;

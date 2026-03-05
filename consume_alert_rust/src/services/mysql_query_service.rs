@@ -1,9 +1,9 @@
 use crate::common::*;
 
 use crate::entity::{
-    common_consume_keyword_type, consume_prodt_detail, spent_detail, telegram_room, users,
+    consume_prodt_detail, spent_detail, telegram_room, users,
 };
-use crate::models::{common_consume_keyword_type::*, consume_prodt_info::*, spent_detail::*};
+use crate::models::{consume_prodt_info::*, spent_detail::*};
 use crate::repository::mysql_repository::*;
 
 #[async_trait]

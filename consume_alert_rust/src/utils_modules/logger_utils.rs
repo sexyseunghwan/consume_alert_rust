@@ -1,6 +1,5 @@
 use crate::common::*;
 
-use crate::repository::kafka_repository::*;
 
 #[doc = "Function responsible for logging"]
 pub fn set_global_logger() {

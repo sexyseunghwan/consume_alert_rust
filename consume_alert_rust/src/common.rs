@@ -1,22 +1,20 @@
 pub use std::{
     cmp,
     cmp::Ordering,
-    collections::{BinaryHeap, HashMap, VecDeque},
+    collections::{BinaryHeap, HashMap},
     env,
     fmt::Display,
     fs,
-    future::Future,
     io::Write,
     path::Path,
     str::FromStr,
-    sync::{Arc, Mutex, MutexGuard},
+    sync::Arc,
     thread,
     time::Duration,
 };
 
-pub use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 
-pub use tokio::{sync::OnceCell, task};
+pub use tokio::task;
 
 pub use log::{error, info, warn};
 
@@ -39,7 +37,7 @@ pub use elasticsearch::{
     auth::Credentials as EsCredentials,
     http::response::Response,
     http::transport::{
-        ConnectionPool, MultiNodeConnectionPool, SingleNodeConnectionPool, Transport,
+        ConnectionPool, MultiNodeConnectionPool, Transport,
         TransportBuilder,
     },
     http::Url,
@@ -79,9 +77,9 @@ pub use strsim::levenshtein;
 pub use rayon::prelude::*;
 
 pub use sea_orm::{
-    ActiveModelBehavior, ActiveModelTrait, ActiveValue, ColumnTrait, Condition, Database,
-    DatabaseConnection, DatabaseTransaction, DbErr, EntityTrait, FromQueryResult, InsertResult,
-    NotSet, QueryFilter, QueryOrder, QueryResult, QuerySelect, Select, Set, TransactionTrait,
+    ActiveModelBehavior, ActiveModelTrait, ColumnTrait, Database,
+    DatabaseConnection, DatabaseTransaction, EntityTrait, InsertResult,
+    NotSet, QueryFilter, QuerySelect, Set, TransactionTrait,
 };
 
 //pub use redis::AsyncCommands;

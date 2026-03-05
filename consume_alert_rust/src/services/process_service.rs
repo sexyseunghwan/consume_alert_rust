@@ -1,11 +1,8 @@
 use crate::common::*;
 
-use crate::models::consume_prodt_info;
 use crate::utils_modules::time_utils::*;
 
 use crate::models::agg_result_set::*;
-use crate::models::consume_prodt_info::*;
-use crate::models::consume_prodt_info_by_installment::*;
 use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;

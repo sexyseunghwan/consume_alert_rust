@@ -5,7 +5,6 @@
 
 use crate::common::*;
 
-use crate::enums::indexing_type::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Getters, new)]
 #[getset(get = "pub")]

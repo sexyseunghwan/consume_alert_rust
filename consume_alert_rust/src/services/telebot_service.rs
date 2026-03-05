@@ -2,7 +2,6 @@ use crate::common::*;
 
 use crate::AppConfig;
 
-use crate::models::consume_prodt_info::*;
 use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
 use crate::models::to_python_graph_line::*;
@@ -339,6 +338,7 @@ impl TelebotService for TelebotServicePub {
         let items_len: usize = items.len();
         let loop_cnt: usize = (items_len / cnt) + (if items_len % cnt != 0 { 1 } else { 0 });
 
+
         if empty_flag {
             self.send_message_confirm(empty_msg).await?;
         } else {
@@ -393,7 +393,7 @@ impl TelebotService for TelebotServicePub {
                         "name : {}\ndate : {}\ncost : {}\ntype: {}\n",
                         item.source.spent_name,
                         item.source.spent_at,
-                        item.source.spent_money,
+                        item.source.spent_money.to_formatted_string(&Locale::ko),
                         item.source.consume_keyword_type
                     )
                 }, 
