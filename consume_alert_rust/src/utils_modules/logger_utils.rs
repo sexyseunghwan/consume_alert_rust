@@ -1,6 +1,5 @@
 use crate::common::*;
 
-
 #[doc = "Function responsible for logging"]
 pub fn set_global_logger() {
     let log_directory = "logs"; /* Directory to store log files */
@@ -68,4 +67,3 @@ pub async fn errork(err: anyhow::Error) {
     error!("{:?}", err);
     //logging_kafka(&err.to_string()).await;
 }
-

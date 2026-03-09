@@ -15,16 +15,15 @@ use crate::configuration::elasitc_index_name::*;
 
 use crate::models::agg_result_set::*;
 use crate::models::consume_index_prodt_type::*;
-use crate::models::consume_prodt_info::*;
 use crate::models::consume_result_by_type::*;
-use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 use crate::models::spent_detail::*;
+use crate::models::spent_detail_by_es::*;
 use crate::models::spent_detail_by_installment::*;
 use crate::models::spent_detail_by_produce::*;
+use crate::models::spent_detail_with_info::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
-use crate::models::spent_detail_by_es::*;
 
 use crate::enums::{indexing_type::*, range_operator::*};
 
@@ -80,7 +79,6 @@ impl<
     }
 
     // ── Cache-backed lookup helpers ──────────────────────────────────────────
-
 
     /// Resolves `user_id` via Redis cache, falling back to MySQL on a miss.
     ///
@@ -207,7 +205,7 @@ impl<
     // ── Entry point ──────────────────────────────────────────────────────────
 
     /// Dispatches each incoming Telegram message to the matching command handler.
-    /// 
+    ///
     /// ************ Main Function ************
     pub async fn main_call_function(&self) -> anyhow::Result<()> {
         let telegram_token: String = self.tele_bot_service.get_telegram_token();
@@ -226,8 +224,8 @@ impl<
             app_config.redis_room_key(),
             telegram_user_id,
             telegram_token
-        );  
-        
+        );
+
         let user_seq: i64 = match self
             .resolve_user_seq(&redis_user_key, &telegram_token, &telegram_user_id)
             .await?
@@ -243,16 +241,9 @@ impl<
             }
         };
 
-        let redis_user_id_key: String = format!(
-            "{}:{}",
-            app_config.redis_user_id_key(),
-            user_seq
-        );
+        let redis_user_id_key: String = format!("{}:{}", app_config.redis_user_id_key(), user_seq);
 
-        let user_id: String = match self
-            .resolve_user_id(&redis_user_id_key, user_seq)
-            .await?
-        {
+        let user_id: String = match self.resolve_user_id(&redis_user_id_key, user_seq).await? {
             Some(id) => id,
             None => {
                 self.tele_bot_service
@@ -287,7 +278,10 @@ impl<
                 self.command_consumption(user_seq, produce_topic, room_seq, &user_id)
                     .await?
             }
-            "cd" => self.command_delete_recent_consumption().await?, // 일단 보류...
+            "cd" => {
+                self.command_delete_recent_consumption(produce_topic, user_seq, room_seq)
+                    .await?
+            }
             "cm" => self.command_consumption_per_mon().await?,
             "ctr" => self.command_consumption_per_term().await?,
             "ct" => self.command_consumption_per_day().await?,
@@ -299,10 +293,10 @@ impl<
                     .await?
             }
         }
-        
+
         Ok(())
     }
-    
+
     // ── Shared helpers ───────────────────────────────────────────────────────
 
     /// Splits the raw command text (skipping the 2-char command prefix) by `delimiter`.
@@ -323,7 +317,6 @@ impl<
         start_op: RangeOperator,
         end_op: RangeOperator,
     ) -> anyhow::Result<()> {
-        
         let spent_detail_info: AggResultSet<SpentDetailByEs> = self
             .elastic_query_service
             .get_info_orderby_aggs_range(
@@ -353,7 +346,7 @@ impl<
                 "spent_money",
             )
             .await?;
-            
+
         let cur_python_graph: ToPythonGraphLine = ToPythonGraphLine::new(
             "cur",
             permon_datetime.date_start,
@@ -421,7 +414,7 @@ impl<
         user_seq: i64,
         produce_topic: &str,
         room_seq: i64,
-        user_id: &str
+        user_id: &str,
     ) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(":");
 
@@ -450,16 +443,11 @@ impl<
             }
         };
 
-        let spent_type: ConsumingIndexProdtType =  self
+        let spent_type: ConsumingIndexProdtType = self
             .resolve_spend_type(consume_name)
             .await
             .context("[command_consumption_auto] Failed to resolve spend type")?;
 
-        // let (spent_type, spent_type_nm) = self
-        //     .resolve_spend_type(consume_name)
-        //     .await
-        //     .context("[command_consumption] Failed to resolve spend type")?;
-        
         let spent_detail: SpentDetail = SpentDetail::new(
             consume_name.to_string(),
             consume_cash,
@@ -468,7 +456,7 @@ impl<
             user_seq,
             1,
             spent_type.consume_keyword_type_id,
-            room_seq
+            room_seq,
         );
 
         let spent_detail_view: SpentDetailView = spent_detail
@@ -487,16 +475,16 @@ impl<
                 spent_type.consume_keyword_type(),
                 room_seq,
                 IndexingType::Insert,
-                user_id
+                user_id,
             );
 
         self.producer_service
             .produce_object_to_topic(produce_topic, &produce_payload, None)
             .await
             .context("[command_consumption] Failed to produce Kafka message")?;
-        
+
         self.tele_bot_service
-            .send_message_struct_info(&spent_detail_view)
+            .send_message_confirm(&spent_detail_view.to_telegram_string())
             .await
             .context("[command_consumption] Failed to send Telegram message")?;
 
@@ -509,7 +497,7 @@ impl<
         user_seq: i64,
         produce_topic: &str,
         room_seq: i64,
-        user_id: &str
+        user_id: &str,
     ) -> anyhow::Result<()> {
         let args: String = self.tele_bot_service.get_input_text();
 
@@ -543,8 +531,8 @@ impl<
             .ok_or_else(|| anyhow!("[command_consumption_auto] spent_details is empty"))?
             .spent_name()
             .clone();
-        
-        let spent_type: ConsumingIndexProdtType =  self
+
+        let spent_type: ConsumingIndexProdtType = self
             .resolve_spend_type(&primary_name)
             .await
             .context("[command_consumption_auto] Failed to resolve spend type")?;
@@ -576,7 +564,7 @@ impl<
                     spent_type.consume_keyword_type(),
                     room_seq,
                     IndexingType::Insert,
-                    user_id
+                    user_id,
                 )
             })
             .collect();
@@ -590,17 +578,27 @@ impl<
             .await
             .context("[command_consumption_auto] Failed to produce Kafka messages")?;
 
-        self.tele_bot_service
-            .send_message_struct_list(&spent_detail_views)
-            .await
-            .context("[command_consumption_auto] Failed to send Telegram message")?;
+        for (idx, view) in spent_detail_views.iter().enumerate() {
+            let header: String =
+                format!("===== {} / {} =====\n", idx + 1, spent_detail_views.len());
+            let msg: String = format!("{}{}", header, view.to_telegram_string());
+            self.tele_bot_service
+                .send_message_confirm(&msg)
+                .await
+                .context("[command_consumption_auto] Failed to send Telegram message")?;
+        }
 
         Ok(())
     }
 
     /// `cd` — Deletes the most recently recorded consumption entry.
-    async fn command_delete_recent_consumption(&self) -> anyhow::Result<()> {
-        let args = self.preprocess_string(" ");
+    async fn command_delete_recent_consumption(
+        &self,
+        produce_topic: &str,
+        user_seq: i64,
+        room_seq: i64,
+    ) -> anyhow::Result<()> {
+        let args: Vec<String> = self.preprocess_string(" ");
 
         if args.len() != 1 {
             self.tele_bot_service
@@ -611,28 +609,59 @@ impl<
             return Ok(());
         }
 
-        let recent: Vec<DocumentWithId<ConsumeProdtInfo>> = self
-            .elastic_query_service
-            .get_info_orderby_cnt(&CONSUME_DETAIL, "cur_timestamp", 1, false)
-            .await?;
+        let spent_idx: i64 = match self
+            .mysql_query_service
+            .get_latest_spent_idx(user_seq, room_seq)
+            .await?
+        {
+            Some(idx) => idx,
+            None => {
+                self.tele_bot_service
+                    .send_message_confirm("No expenses to delete.")
+                    .await?;
+                return Ok(());
+            }
+        };
 
-        let top = recent.first().ok_or_else(|| {
-            anyhow!("[command_delete_recent_consumption] No consumption records found")
-        })?;
+        let spent_detail_info: SpentDetailWithInfo = match self
+            .mysql_query_service
+            .get_spent_detail_with_info(spent_idx)
+            .await?
+        {
+            Some(detail_info) => detail_info,
+            None => {
+                self.tele_bot_service
+                    .send_message_confirm("No detail records to delete.")
+                    .await?;
+                return Ok(());
+            }
+        };
 
-        self.elastic_query_service
-            .delete_es_doc(&CONSUME_DETAIL, top)
-            .await?;
+        let produce_spent_detail_info: SpentDetailByProduce =
+            spent_detail_info.to_spent_detail_by_produce(IndexingType::Delete);
 
-        self.tele_bot_service
-            .send_message_struct_info(top.source())
-            .await?;
-
+        self.producer_service
+            .produce_object_to_topic(produce_topic, &produce_spent_detail_info, None)
+            .await
+            .context("[command_delete_recent_consumption] Failed to produce Kafka message")?;
+        
+        match self.mysql_query_service.delete_spent_detail_with_transaction(spent_idx).await {
+            Ok(_) => {
+                info!(
+                    "[command_delete_recent_consumption] latest spent_idx={} (user_seq={}, room_seq={})",
+                    spent_idx, user_seq, room_seq
+                );
+            },
+            Err(e) => {
+                error!("[command_delete_recent_consumption] Failed delete SPENT_DETAIL information-{}: {:#}", spent_idx, e)
+            }
+        }
+        
         Ok(())
     }
 
     /// `cm [YYYY.MM]` — Shows monthly consumption summary (current month if no arg).
-    pub async fn command_consumption_per_mon(&self) -> anyhow::Result<()> {       
+    pub async fn command_consumption_per_mon(&self) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(" ");
 
         let permon_datetime: PerDatetime = match args.len() {
@@ -643,9 +672,9 @@ impl<
                 self.process_service
                     .get_nmonth_to_current_date(date_start, date_end, -1)?
             }
-            2 if args.get(1).is_some_and(|d| {
-                validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)
-            }) =>
+            2 if args
+                .get(1)
+                .is_some_and(|d| validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)) =>
             {
                 let parts: Vec<&str> = args[1].split('.').collect();
                 let year: i32 = parts
@@ -812,9 +841,9 @@ impl<
                 self.process_service
                     .get_nmonth_to_current_date(start_date, end_date, -12)?
             }
-            2 if args.get(1).is_some_and(|d| {
-                validate_date_format(d, r"^\d{4}$").unwrap_or(false)
-            }) =>
+            2 if args
+                .get(1)
+                .is_some_and(|d| validate_date_format(d, r"^\d{4}$").unwrap_or(false)) =>
             {
                 let year: i32 = args[1].parse()?;
                 let start_date: DateTime<Utc> = get_naivedate(year, 1, 1)?;
@@ -847,7 +876,7 @@ impl<
     /// `cs [YYYY.MM]` — Shows consumption from the last payday (25th) to the next.
     pub async fn command_consumption_per_salary(&self) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(" ");
-        
+
         let permon_datetime: PerDatetime = match args.len() {
             1 => {
                 let today: DateTime<Utc> = get_current_kor_naivedate();
@@ -865,9 +894,9 @@ impl<
                 self.process_service
                     .get_nmonth_to_current_date(cur_date_start, cur_date_end, -1)?
             }
-            2 if args.get(1).is_some_and(|d| {
-                validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)
-            }) =>
+            2 if args
+                .get(1)
+                .is_some_and(|d| validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)) =>
             {
                 let ref_date: DateTime<Utc> =
                     parse_date_as_utc_datetime(&format!("{}.01", args[1]), "%Y.%m.%d")

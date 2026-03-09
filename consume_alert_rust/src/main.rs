@@ -64,6 +64,7 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2025-10-04 Seunghwan Shin       # [v.3.1.1] Prevented negative values from being displayed in the pie chart by hiding those sections.
               2026-03-03 Seunghwan Shin       # [v.4.0.0] Code Refactorubg and Feature Enhancement.
               2026-03-05 Seunghwan Shin       # [v.4.0.1] Fix an issue where the conusme category type was not retrieved correctly.
+              2026-03-09 Seunghwan Shin       # [v.4.0.2]
 */
 mod common;
 use common::*;
@@ -81,8 +82,9 @@ mod schema;
 mod services;
 
 use services::{
-    elastic_query_service_impl::*, graph_api_service_impl::*, mysql_query_service_impl::*, process_service_impl::*,
-    producer_service_impl::*, redis_service_impl::*, telebot_service_impl::*,
+    elastic_query_service_impl::*, graph_api_service_impl::*, mysql_query_service_impl::*,
+    process_service_impl::*, producer_service_impl::*, redis_service_impl::*,
+    telebot_service_impl::*,
 };
 
 mod controller;
@@ -194,8 +196,8 @@ async fn main() {
                  * teloxide::repl polls the Telegram API and dispatches messages
                  * to the handler closure one at a time (per bot). */
                 teloxide::repl(bot, move |message: Message, bot: Arc<Bot>| {
-
-                    let graph_api_service: Arc<GraphApiServiceImpl> = Arc::clone(&graph_api_service);
+                    let graph_api_service: Arc<GraphApiServiceImpl> =
+                        Arc::clone(&graph_api_service);
                     let elastic_query_service: Arc<AppElasticService> =
                         Arc::clone(&elastic_query_service);
                     let mysql_query_service: Arc<AppMysqlService> =

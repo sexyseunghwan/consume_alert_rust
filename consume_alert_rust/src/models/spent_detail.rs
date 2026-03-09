@@ -5,7 +5,7 @@ use crate::views::spent_detail_view::*;
 use crate::entity::spent_detail;
 use crate::entity::spent_detail::ActiveModel;
 
-use crate::models::{spent_detail_by_produce::*, consume_index_prodt_type::*};
+use crate::models::{consume_index_prodt_type::*, spent_detail_by_produce::*};
 
 use crate::enums::indexing_type::*;
 
@@ -20,7 +20,7 @@ pub struct SpentDetail {
     pub user_seq: i64,
     pub spent_group_id: i64,
     pub consume_keyword_type_id: i64,
-    pub room_seq: i64
+    pub room_seq: i64,
 }
 
 impl SpentDetail {
@@ -43,7 +43,7 @@ impl SpentDetail {
             user_seq: Set(self.user_seq),
             spent_group_id: Set(self.spent_group_id),
             consume_keyword_type_id: Set(self.consume_keyword_type_id),
-            room_seq: Set(self.room_seq)
+            room_seq: Set(self.room_seq),
         })
     }
 
@@ -53,7 +53,7 @@ impl SpentDetail {
         consume_keyword_type: &str,
         room_seq: i64,
         indexing_type: IndexingType,
-        user_id: &str
+        user_id: &str,
     ) -> SpentDetailByProduce {
         let now: DateTime<Utc> = Utc::now();
 
@@ -69,13 +69,13 @@ impl SpentDetail {
             room_seq,
             indexing_type,
             now,
-            user_id.to_string()
+            user_id.to_string(),
         )
     }
 
     pub fn convert_spent_detail_to_view(
         &self,
-        spent_type: &ConsumingIndexProdtType
+        spent_type: &ConsumingIndexProdtType,
     ) -> anyhow::Result<SpentDetailView> {
         Ok(SpentDetailView {
             spent_name: self.spent_name().to_string(),

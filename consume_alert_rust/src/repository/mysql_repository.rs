@@ -50,6 +50,14 @@ pub trait MysqlRepository {
         active_models: Vec<spent_detail::ActiveModel>,
     ) -> anyhow::Result<Vec<i64>>;
 
+    /// Deletes a single [`spent_detail`] row identified by `spent_idx` within a transaction.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Row deleted and transaction committed.
+    /// * `Err`    - The transaction is rolled back and the error is propagated.
+    async fn delete_spent_detail_with_transaction(&self, spent_idx: i64) -> anyhow::Result<()>;
+
     /// Returns a reference to the DatabaseConnection.
     ///
     /// # Returns
@@ -152,6 +160,34 @@ impl MysqlRepository for MysqlRepositoryImpl {
             ))?;
 
         Ok(inserted_ids)
+    }
+
+    async fn delete_spent_detail_with_transaction(&self, spent_idx: i64) -> anyhow::Result<()> {
+        let txn: DatabaseTransaction = self
+            .db_conn
+            .begin()
+            .await
+            .map_err(|e| anyhow!(
+                "[MysqlRepositoryImpl::delete_spent_detail_with_transaction] Failed to begin transaction: {:?}",
+                e
+            ))?;
+
+        spent_detail::Entity::delete_by_id(spent_idx)
+            .exec(&txn)
+            .await
+            .map_err(|e| anyhow!(
+                "[MysqlRepositoryImpl::delete_spent_detail_with_transaction] Failed to delete record: {:?}",
+                e
+            ))?;
+
+        txn.commit()
+            .await
+            .map_err(|e| anyhow!(
+                "[MysqlRepositoryImpl::delete_spent_detail_with_transaction] Failed to commit transaction: {:?}",
+                e
+            ))?;
+
+        Ok(())
     }
 
     #[doc = "Get a reference to the underlying database connection"]

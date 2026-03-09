@@ -145,24 +145,28 @@ impl RedisRepository for RedisRepositoryImpl {
         match &self.conn {
             RedisConnectionType::Single(conn) => {
                 let mut conn = conn.clone();
-                conn.set::<_, _, ()>(key, value).await.map_err(|e: RedisError| {
-                    anyhow!(
-                        "[RedisRepositoryImpl::set] Failed to set key '{}': {:?}",
-                        key,
-                        e
-                    )
-                })?;
+                conn.set::<_, _, ()>(key, value)
+                    .await
+                    .map_err(|e: RedisError| {
+                        anyhow!(
+                            "[RedisRepositoryImpl::set] Failed to set key '{}': {:?}",
+                            key,
+                            e
+                        )
+                    })?;
                 Ok(())
             }
             RedisConnectionType::Cluster(conn) => {
                 let mut conn = conn.clone();
-                conn.set::<_, _, ()>(key, value).await.map_err(|e: RedisError| {
-                    anyhow!(
-                        "[RedisRepositoryImpl::set] Failed to set key '{}': {:?}",
-                        key,
-                        e
-                    )
-                })?;
+                conn.set::<_, _, ()>(key, value)
+                    .await
+                    .map_err(|e: RedisError| {
+                        anyhow!(
+                            "[RedisRepositoryImpl::set] Failed to set key '{}': {:?}",
+                            key,
+                            e
+                        )
+                    })?;
                 Ok(())
             }
         }
@@ -186,5 +190,4 @@ impl RedisRepository for RedisRepositoryImpl {
             }
         }
     }
-
 }

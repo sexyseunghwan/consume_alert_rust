@@ -13,7 +13,6 @@ use crate::enums::range_operator::*;
 
 use crate::service_traits::elastic_query_service::*;
 
-
 #[derive(Debug, Getters, Clone, new)]
 pub struct ElasticQueryServiceImpl<R: EsRepository> {
     elastic_conn: R,
@@ -88,7 +87,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                 }
             }
         });
-        
+
         let response_body: Value = self
             .elastic_conn
             .get_search_query(&es_query, &CONSUME_TYPE)
@@ -272,5 +271,4 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
 
         Ok(())
     }
-
 }

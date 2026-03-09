@@ -4,8 +4,8 @@ use crate::AppConfig;
 
 use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
-use crate::models::to_python_graph_line::*;
 use crate::models::spent_detail_by_es::*;
+use crate::models::to_python_graph_line::*;
 
 use crate::service_traits::telebot_service::*;
 
@@ -189,69 +189,70 @@ impl TelebotService for TelebotServiceImpl {
         Ok(())
     }
 
-    #[doc = "Send multiple struct info messages in parallel"]
-    /// # Arguments
-    /// * obj_list - List of serializable objects
-    ///
-    /// # Returns
-    /// * Result<(), anyhow::Error>
-    async fn send_message_struct_list<T: Serialize + Sync>(
-        &self,
-        obj_list: &[T],
-    ) -> Result<(), anyhow::Error> {
-        if obj_list.is_empty() {
-            warn!("[TelebotServiceImpl::send_message_struct_list] Empty list provided");
-            return Ok(());
-        }
+    // #[doc = "Send multiple struct info messages in parallel"]
+    // /// # Arguments
+    // /// * obj_list - List of serializable objects
+    // ///
+    // /// # Returns
+    // /// * Result<(), anyhow::Error>
+    // async fn send_message_struct_list<T: Serialize + Sync>(
+    //     &self,
+    //     obj_list: &[T],
+    // ) -> Result<(), anyhow::Error> {
 
-        info!(
-            "[TelebotServiceImpl::send_message_struct_list] Processing {} objects",
-            obj_list.len()
-        );
+    //     if obj_list.is_empty() {
+    //         warn!("[TelebotServiceImpl::send_message_struct_list] Empty list provided");
+    //         return Ok(());
+    //     }
 
-        // Process each object using the common formatting function
-        let mut formatted_messages: Vec<String> = Vec::new();
+    //     info!(
+    //         "[TelebotServiceImpl::send_message_struct_list] Processing {} objects",
+    //         obj_list.len()
+    //     );
 
-        for (idx, obj_struct) in obj_list.iter().enumerate() {
-            let header: String = format!("===== Object {} =====", idx + 1);
-            let formatted_string: String =
-                self.format_struct_to_string(obj_struct, Some(&header))?;
-            formatted_messages.push(formatted_string);
-        }
+    //     // Process each object using the common formatting function
+    //     let mut formatted_messages: Vec<String> = Vec::new();
 
-        // Send all messages using futures::join_all for parallel execution
-        use futures::future::join_all;
+    //     for (idx, obj_struct) in obj_list.iter().enumerate() {
+    //         let header: String = format!("===== Object {} =====", idx + 1);
+    //         let formatted_string: String =
+    //             self.format_struct_to_string(obj_struct, Some(&header))?;
+    //         formatted_messages.push(formatted_string);
+    //     }
 
-        let send_futures: Vec<_> = formatted_messages
-            .iter()
-            .map(|msg| self.send_message_confirm(msg))
-            .collect();
+    //     // Send all messages using futures::join_all for parallel execution
+    //     use futures::future::join_all;
 
-        let results: Vec<std::result::Result<(), anyhow::Error>> = join_all(send_futures).await;
+    //     let send_futures: Vec<_> = formatted_messages
+    //         .iter()
+    //         .map(|msg| self.send_message_confirm(msg))
+    //         .collect();
 
-        // Check if any failed
-        for (idx, result) in results.into_iter().enumerate() {
-            if let Err(e) = result {
-                error!(
-                    "[TelebotServiceImpl::send_message_struct_list] Failed to send message for object {}: {:?}",
-                    idx + 1,
-                    e
-                );
-                return Err(anyhow!(
-                    "Failed to send message for object {}: {}",
-                    idx + 1,
-                    e
-                ));
-            }
-        }
+    //     let results: Vec<std::result::Result<(), anyhow::Error>> = join_all(send_futures).await;
 
-        info!(
-            "[TelebotServiceImpl::send_message_struct_list] Successfully sent {} messages",
-            obj_list.len()
-        );
+    //     // Check if any failed
+    //     for (idx, result) in results.into_iter().enumerate() {
+    //         if let Err(e) = result {
+    //             error!(
+    //                 "[TelebotServiceImpl::send_message_struct_list] Failed to send message for object {}: {:?}",
+    //                 idx + 1,
+    //                 e
+    //             );
+    //             return Err(anyhow!(
+    //                 "Failed to send message for object {}: {}",
+    //                 idx + 1,
+    //                 e
+    //             ));
+    //         }
+    //     }
 
-        Ok(())
-    }
+    //     info!(
+    //         "[TelebotServiceImpl::send_message_struct_list] Successfully sent {} messages",
+    //         obj_list.len()
+    //     );
+
+    //     Ok(())
+    // }
 
     #[doc = "Retry sending messages"]
     async fn send_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error> {

@@ -1,6 +1,7 @@
 use crate::common::*;
 
 use crate::models::spent_detail::*;
+use crate::models::spent_detail_with_info::*;
 
 #[async_trait]
 pub trait MysqlQueryService {
@@ -23,4 +24,14 @@ pub trait MysqlQueryService {
         user_seq: i64,
     ) -> anyhow::Result<Option<i64>>;
     async fn get_user_id_by_seq(&self, user_seq: i64) -> anyhow::Result<Option<String>>;
+    async fn get_latest_spent_idx(
+        &self,
+        user_seq: i64,
+        room_seq: i64,
+    ) -> anyhow::Result<Option<i64>>;
+    async fn get_spent_detail_with_info(
+        &self,
+        spent_idx: i64,
+    ) -> anyhow::Result<Option<SpentDetailWithInfo>>;
+    async fn delete_spent_detail_with_transaction(&self, spent_idx: i64) -> anyhow::Result<()>;
 }

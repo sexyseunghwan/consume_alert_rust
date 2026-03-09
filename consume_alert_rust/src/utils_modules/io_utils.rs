@@ -40,7 +40,11 @@ pub fn delete_file(path_vec: Vec<String>) -> Result<(), anyhow::Error> {
     for path in path_vec {
         if std::path::Path::new(&path).exists() {
             std::fs::remove_file(&path).map_err(|e| {
-                anyhow!("[Error][delete_file()] Failed to delete file '{}': {:?}", path, e)
+                anyhow!(
+                    "[Error][delete_file()] Failed to delete file '{}': {:?}",
+                    path,
+                    e
+                )
             })?;
         }
     }

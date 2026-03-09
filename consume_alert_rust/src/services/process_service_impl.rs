@@ -7,9 +7,9 @@ use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
 use crate::models::per_datetime::*;
 use crate::models::spent_detail::*;
+use crate::models::spent_detail_by_es::*;
 use crate::models::spent_detail_by_installment::*;
 use crate::models::to_python_graph_circle::*;
-use crate::models::spent_detail_by_es::*;
 
 use crate::service_traits::process_service::*;
 
@@ -160,7 +160,7 @@ impl ProcessServiceImpl {
         &self,
         split_args_vec: &[String],
         user_seq: i64,
-        room_seq: i64
+        room_seq: i64,
     ) -> Result<SpentDetailByInstallment, anyhow::Error> {
         let split_val: Vec<&str> = vec![",", "원"];
 
@@ -193,7 +193,7 @@ impl ProcessServiceImpl {
             user_seq,
             1, // spent_group_id
             1,
-            room_seq
+            room_seq,
         );
 
         Ok(SpentDetailByInstallment::new(0, spent_detail))
@@ -210,7 +210,7 @@ impl ProcessServiceImpl {
         &self,
         split_args_vec: &[String],
         user_seq: i64,
-        room_seq: i64
+        room_seq: i64,
     ) -> Result<SpentDetailByInstallment, anyhow::Error> {
         let split_val: Vec<&str> = vec![",", "원"];
 
@@ -247,7 +247,7 @@ impl ProcessServiceImpl {
             user_seq,
             1, // spent_group_id
             1,
-            room_seq
+            room_seq,
         );
 
         Ok(SpentDetailByInstallment::new(
@@ -267,7 +267,7 @@ impl ProcessServiceImpl {
         &self,
         split_args_vec: &[String],
         user_seq: i64,
-        room_seq: i64
+        room_seq: i64,
     ) -> Result<SpentDetailByInstallment, anyhow::Error> {
         let split_val: Vec<&str> = vec![",", "원"];
 
@@ -332,7 +332,7 @@ impl ProcessServiceImpl {
             user_seq,
             1, // spent_group_id
             1,
-            room_seq
+            room_seq,
         );
 
         Ok(SpentDetailByInstallment::new(
@@ -356,7 +356,7 @@ impl ProcessService for ProcessServiceImpl {
         &self,
         split_args_vec: &[String],
         user_seq: i64,
-        room_seq: i64
+        room_seq: i64,
     ) -> Result<SpentDetailByInstallment, anyhow::Error> {
         let consume_type: &String = split_args_vec
             .first()

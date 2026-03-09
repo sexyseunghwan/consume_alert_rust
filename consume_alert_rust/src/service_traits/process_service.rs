@@ -4,9 +4,9 @@ use crate::models::agg_result_set::*;
 use crate::models::consume_result_by_type::*;
 use crate::models::per_datetime::*;
 use crate::models::spent_detail::*;
+use crate::models::spent_detail_by_es::*;
 use crate::models::spent_detail_by_installment::*;
 use crate::models::to_python_graph_circle::*;
-use crate::models::spent_detail_by_es::*;
 
 #[async_trait]
 pub trait ProcessService {

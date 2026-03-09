@@ -32,7 +32,7 @@ pub struct AppConfig {
 
     pub redis_room_key: String,
 
-    pub redis_user_id_key: String
+    pub redis_user_id_key: String,
 }
 
 /// Global static instance of AppConfig

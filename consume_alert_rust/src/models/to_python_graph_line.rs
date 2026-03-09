@@ -14,20 +14,20 @@ pub struct ToPythonGraphLine {
 }
 
 impl ToPythonGraphLine {
-
     pub fn new(
         line_type: &str,
         start_dt: DateTime<Utc>,
         end_dt: DateTime<Utc>,
-        spent_detail: &AggResultSet<SpentDetailByEs>
+        spent_detail: &AggResultSet<SpentDetailByEs>,
     ) -> anyhow::Result<Self> {
-
         let mut date_consume: HashMap<DateTime<Utc>, i64> = HashMap::new();
 
         let total_cost: f64 = *spent_detail.agg_result();
 
         for elem in spent_detail.source_list() {
-            let elem_date: DateTime<Utc> = elem.source.spent_at
+            let elem_date: DateTime<Utc> = elem
+                .source
+                .spent_at
                 .date_naive()
                 .and_time(NaiveTime::MIN)
                 .and_utc();
@@ -60,7 +60,6 @@ impl ToPythonGraphLine {
             total_cost,
             consume_accumulate_list,
         })
-
     }
 
     // pub fn new(

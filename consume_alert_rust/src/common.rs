@@ -11,10 +11,9 @@ pub use std::{
     time::Duration,
 };
 
-
 pub use tokio::task;
 
-pub use log::{error, info, warn};
+pub use log::{error, info};
 
 pub use flexi_logger::{Age, Cleanup, Criterion, FileSpec, Logger, Naming, Record};
 
@@ -34,10 +33,7 @@ pub use dotenv::dotenv;
 pub use elasticsearch::{
     auth::Credentials as EsCredentials,
     http::response::Response,
-    http::transport::{
-        ConnectionPool, MultiNodeConnectionPool, Transport,
-        TransportBuilder,
-    },
+    http::transport::{ConnectionPool, MultiNodeConnectionPool, Transport, TransportBuilder},
     http::Url,
     DeleteParts, Elasticsearch, SearchParts,
 };
@@ -75,9 +71,9 @@ pub use strsim::levenshtein;
 pub use rayon::prelude::*;
 
 pub use sea_orm::{
-    ActiveModelBehavior, ActiveModelTrait, ColumnTrait, Database,
-    DatabaseConnection, DatabaseTransaction, EntityTrait, InsertResult,
-    NotSet, QueryFilter, QuerySelect, Set, TransactionTrait,
+    ActiveModelBehavior, ActiveModelTrait, ColumnTrait, Database, DatabaseConnection,
+    DatabaseTransaction, EntityTrait, FromQueryResult, InsertResult, JoinType, NotSet, QueryFilter,
+    QueryOrder, QuerySelect, RelationTrait, Set, TransactionTrait,
 };
 
 //pub use redis::AsyncCommands;

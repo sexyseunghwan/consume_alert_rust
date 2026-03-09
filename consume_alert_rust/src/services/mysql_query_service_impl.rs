@@ -1,7 +1,8 @@
 use crate::common::*;
 
-use crate::entity::{spent_detail, telegram_room, users};
+use crate::entity::{common_consume_keyword_type, spent_detail, telegram_room, users};
 use crate::models::spent_detail::*;
+use crate::models::spent_detail_with_info::*;
 use crate::repository::mysql_repository::*;
 
 use crate::service_traits::mysql_query_service::*;
@@ -111,5 +112,67 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
             })?;
 
         Ok(result.map(|user| user.user_id))
+    }
+
+    async fn get_latest_spent_idx(
+        &self,
+        user_seq: i64,
+        room_seq: i64,
+    ) -> anyhow::Result<Option<i64>> {
+        let result: Option<spent_detail::Model> = spent_detail::Entity::find()
+            .filter(spent_detail::Column::UserSeq.eq(user_seq))
+            .filter(spent_detail::Column::RoomSeq.eq(room_seq))
+            .order_by_desc(spent_detail::Column::SpentIdx)
+            .one(self.db_conn.get_connection())
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "[MysqlQueryServiceImpl::get_latest_spent_idx] Failed to query: {:?}",
+                    e
+                )
+            })?;
+
+        Ok(result.map(|row| row.spent_idx))
+    }
+
+    async fn get_spent_detail_with_info(
+        &self,
+        spent_idx: i64,
+    ) -> anyhow::Result<Option<SpentDetailWithInfo>> {
+        let result: Option<SpentDetailWithInfo> = spent_detail::Entity::find()
+            .select_only()
+            .column(spent_detail::Column::SpentIdx)
+            .column(spent_detail::Column::SpentName)
+            .column(spent_detail::Column::SpentMoney)
+            .column(spent_detail::Column::SpentAt)
+            .column(spent_detail::Column::CreatedAt)
+            .column(spent_detail::Column::UserSeq)
+            .column(spent_detail::Column::ConsumeKeywordTypeId)
+            .column(common_consume_keyword_type::Column::ConsumeKeywordType)
+            .column(spent_detail::Column::RoomSeq)
+            .column(users::Column::UserId)
+            .join(
+                JoinType::InnerJoin,
+                spent_detail::Relation::CommonConsumeKeywordType.def(),
+            )
+            .join(JoinType::InnerJoin, spent_detail::Relation::Users.def())
+            .filter(spent_detail::Column::SpentIdx.eq(spent_idx))
+            .into_model::<SpentDetailWithInfo>()
+            .one(self.db_conn.get_connection())
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "[MysqlQueryServiceImpl::get_spent_detail_with_info] Failed to query: {:?}",
+                    e
+                )
+            })?;
+
+        Ok(result)
+    }
+
+    async fn delete_spent_detail_with_transaction(&self, spent_idx: i64) -> anyhow::Result<()> {
+        self.db_conn
+            .delete_spent_detail_with_transaction(spent_idx)
+            .await
     }
 }

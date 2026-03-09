@@ -2,8 +2,8 @@ use crate::common::*;
 
 use crate::models::consume_result_by_type::*;
 use crate::models::document_with_id::*;
-use crate::models::to_python_graph_line::*;
 use crate::models::spent_detail_by_es::*;
+use crate::models::to_python_graph_line::*;
 
 #[async_trait]
 pub trait TelebotService {
@@ -43,10 +43,10 @@ pub trait TelebotService {
         obj_struct: &T,
     ) -> Result<(), anyhow::Error>;
 
-    async fn send_message_struct_list<T: Serialize + Sync>(
-        &self,
-        obj_list: &[T],
-    ) -> Result<(), anyhow::Error>;
+    // async fn send_message_struct_list<T: Serialize + Sync>(
+    //     &self,
+    //     obj_list: &[T],
+    // ) -> Result<(), anyhow::Error>;
 
     fn get_telegram_token(&self) -> String;
     fn get_telegram_user_id(&self) -> String;
