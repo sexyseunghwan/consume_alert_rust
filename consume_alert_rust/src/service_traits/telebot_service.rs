@@ -38,6 +38,7 @@ pub trait TelebotService {
 
     fn get_input_text(&self) -> String;
 
+    #[allow(dead_code)]
     async fn send_message_struct_info<T: Serialize + Sync>(
         &self,
         obj_struct: &T,

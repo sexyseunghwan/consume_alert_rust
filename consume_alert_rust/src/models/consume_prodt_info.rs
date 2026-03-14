@@ -3,6 +3,7 @@ use crate::common::*;
 #[doc = "Structure containing consumption information."]
 #[derive(Debug, Serialize, Deserialize, Clone, Getters, Setters, new)]
 #[getset(get = "pub", set = "pub")]
+#[allow(dead_code)]
 pub struct ConsumeProdtInfo {
     #[serde(rename = "@timestamp")]
     pub timestamp: String,

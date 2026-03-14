@@ -209,11 +209,24 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
         let query: Value = json!({
             "size": 10000,
             "query": {
-                "range": {
-                    range_field: {
-                        start_op.as_str() : start_date.format("%Y-%m-%d").to_string(),
-                        end_op.as_str() : end_date.format("%Y-%m-%d").to_string()
-                    }
+                "bool": {
+                    "must": [
+                        {
+                            "range": {
+                                range_field: {
+                                    start_op.as_str() : start_date.format("%Y-%m-%d").to_string(),
+                                    end_op.as_str() : end_date.format("%Y-%m-%d").to_string()
+                                }
+                            }
+                        },
+                        {
+                            "range": {
+                                aggs_field: {
+                                    "gt": 0
+                                }
+                            }
+                        }
+                    ]
                 }
             },
             "aggs": {

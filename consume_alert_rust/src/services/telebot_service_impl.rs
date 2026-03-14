@@ -123,6 +123,7 @@ impl TelebotServiceImpl {
     ///
     /// # Returns
     /// * Result<String, anyhow::Error> - Formatted string representation
+    #[allow(dead_code)]
     fn format_struct_to_string<T: Serialize>(
         &self,
         obj_struct: &T,

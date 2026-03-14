@@ -7,6 +7,7 @@ pub trait EsRepository {
         es_query: &Value,
         index_name: &str,
     ) -> Result<Value, anyhow::Error>;
+    #[allow(dead_code)]
     async fn delete_query(&self, doc_id: &str, index_name: &str) -> Result<(), anyhow::Error>;
 }
 

@@ -17,6 +17,7 @@ pub trait ElasticQueryService {
         &self,
         prodt_name: &str,
     ) -> Result<ConsumingIndexProdtType, anyhow::Error>;
+    #[allow(dead_code)]
     async fn get_info_orderby_cnt<T: DeserializeOwned>(
         &self,
         index_name: &str,
@@ -37,6 +38,7 @@ pub trait ElasticQueryService {
         asc_yn: bool,
         aggs_field: &str,
     ) -> Result<AggResultSet<T>, anyhow::Error>;
+    #[allow(dead_code)]
     async fn delete_es_doc<T: Send + Sync>(
         &self,
         index_name: &str,

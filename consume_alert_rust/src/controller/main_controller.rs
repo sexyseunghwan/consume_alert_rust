@@ -272,7 +272,7 @@ impl<
 
         let produce_topic: &str = &app_config.produce_topic;
         let input_text: String = self.tele_bot_service.get_input_text();
-
+        
         match input_text.split_whitespace().next().unwrap_or("") {
             "c" => {
                 self.command_consumption(user_seq, produce_topic, room_seq, &user_id)
@@ -636,7 +636,7 @@ impl<
                 return Ok(());
             }
         };
-
+        
         let produce_spent_detail_info: SpentDetailByProduce =
             spent_detail_info.to_spent_detail_by_produce(IndexingType::Delete);
 
