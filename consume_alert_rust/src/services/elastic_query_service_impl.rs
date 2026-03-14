@@ -218,13 +218,6 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                                     end_op.as_str() : end_date.format("%Y-%m-%d").to_string()
                                 }
                             }
-                        },
-                        {
-                            "range": {
-                                aggs_field: {
-                                    "gt": 0
-                                }
-                            }
                         }
                     ]
                 }

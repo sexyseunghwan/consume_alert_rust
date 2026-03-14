@@ -135,6 +135,7 @@ impl ProcessServiceImpl {
     ) -> Result<Vec<ConsumeResultByType>, anyhow::Error> {
         let consume_result_by_types : Vec<ConsumeResultByType> = type_map
             .iter()
+            .filter(|(_, value)| **value > 0)
             .map(|(key, value)| {
                 let prodt_type: String = key.to_string();
                 let prodt_cost: i64 = *value;
