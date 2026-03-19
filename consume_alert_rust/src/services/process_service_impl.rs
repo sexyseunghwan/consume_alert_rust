@@ -499,16 +499,25 @@ impl ProcessService for ProcessServiceImpl {
         start_dt: DateTime<Utc>,
         end_dt: DateTime<Utc>,
     ) -> Result<ToPythonGraphCircle, anyhow::Error> {
+
+        let etc_per: f64 = consume_result_by_types
+            .iter()
+            .filter(|elem| *elem.consume_prodt_per() <= 3.0)
+            .map(|elem| elem.consume_prodt_per())
+            .sum();
+
+        let mut entries: Vec<(String, f64)> = consume_result_by_types
+            .iter()
+            .filter(|elem| *elem.consume_prodt_per() > 3.0)
+            .map(|elem| (elem.consume_prodt_type().to_string(), *elem.consume_prodt_per()))
+            .collect();
+        
+        if etc_per > 0.0 {
+            entries.push(("etc".to_string(), etc_per));
+        }
+        
         let (prodt_type_vec, prodt_type_cost_per_vec): (Vec<String>, Vec<f64>) =
-            consume_result_by_types
-                .iter()
-                .map(|elem| {
-                    (
-                        elem.consume_prodt_type().to_string(),
-                        *elem.consume_prodt_per(),
-                    )
-                })
-                .unzip();
+            entries.into_iter().unzip();
 
         let to_python_graph_circle: ToPythonGraphCircle = ToPythonGraphCircle::new(
             prodt_type_vec,
