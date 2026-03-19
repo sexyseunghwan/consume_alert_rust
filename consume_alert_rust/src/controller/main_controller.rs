@@ -282,12 +282,12 @@ impl<
                 self.command_delete_recent_consumption(produce_topic, user_seq, room_seq)
                     .await?
             }
-            "cm" => self.command_consumption_per_mon().await?,
-            "ctr" => self.command_consumption_per_term().await?,
-            "ct" => self.command_consumption_per_day().await?,
-            "cs" => self.command_consumption_per_salary().await?,
-            "cw" => self.command_consumption_per_week().await?,
-            "cy" => self.command_consumption_per_year().await?,
+            "cm" => self.command_consumption_per_mon(room_seq).await?,
+            "ctr" => self.command_consumption_per_term(room_seq).await?,
+            "ct" => self.command_consumption_per_day(room_seq).await?,
+            "cs" => self.command_consumption_per_salary(room_seq).await?,
+            "cw" => self.command_consumption_per_week(room_seq).await?,
+            "cy" => self.command_consumption_per_year(room_seq).await?,
             _ => {
                 self.command_consumption_auto(user_seq, produce_topic, room_seq, &user_id)
                     .await?
@@ -316,7 +316,10 @@ impl<
         permon_datetime: PerDatetime,
         start_op: RangeOperator,
         end_op: RangeOperator,
+        room_seq: i64,
+        detail_yn: bool
     ) -> anyhow::Result<()> {
+
         let spent_detail_info: AggResultSet<SpentDetailByEs> = self
             .elastic_query_service
             .get_info_orderby_aggs_range(
@@ -329,6 +332,7 @@ impl<
                 "spent_at",
                 true,
                 "spent_money",
+                room_seq
             )
             .await?;
 
@@ -344,30 +348,33 @@ impl<
                 "spent_at",
                 true,
                 "spent_money",
+                room_seq
             )
             .await?;
 
-        let cur_python_graph: ToPythonGraphLine = ToPythonGraphLine::new(
+        let cur_python_graph_info: ToPythonGraphLine = ToPythonGraphLine::new(
             "cur",
             permon_datetime.date_start,
             permon_datetime.date_end,
             &spent_detail_info,
         )?;
 
-        let versus_python_graph: ToPythonGraphLine = ToPythonGraphLine::new(
+        let versus_python_graph_info: ToPythonGraphLine = ToPythonGraphLine::new(
             "versus",
             permon_datetime.n_date_start,
             permon_datetime.n_date_end,
             &versus_spent_detail_info,
         )?;
-
-        self.tele_bot_service
-            .send_message_consume_split(&cur_python_graph, spent_detail_info.source_list())
-            .await?;
-
+         
+        if detail_yn {
+            self.tele_bot_service
+                .send_message_consume_split(&cur_python_graph_info, spent_detail_info.source_list())
+                .await?;
+        }
+        
         let consume_detail_img_path: String = self
             .graph_api_service
-            .call_python_matplot_consume_detail_double(&cur_python_graph, &versus_python_graph)
+            .call_python_matplot_consume_detail_double(&cur_python_graph_info, &versus_python_graph_info)
             .await?;
 
         let consume_result_by_type: Vec<ConsumeResultByType> = self
@@ -661,7 +668,7 @@ impl<
     }
 
     /// `cm [YYYY.MM]` — Shows monthly consumption summary (current month if no arg).
-    pub async fn command_consumption_per_mon(&self) -> anyhow::Result<()> {
+    pub async fn command_consumption_per_mon(&self, room_seq: i64) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(" ");
 
         let permon_datetime: PerDatetime = match args.len() {
@@ -708,12 +715,14 @@ impl<
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
+            room_seq,
+            true
         )
         .await
     }
 
     /// `ctr YYYY.MM.DD-YYYY.MM.DD` — Shows consumption summary for a custom date range.
-    async fn command_consumption_per_term(&self) -> anyhow::Result<()> {
+    async fn command_consumption_per_term(&self, room_seq: i64) -> anyhow::Result<()> {
         let args = self.preprocess_string(" ");
 
         let permon_datetime = match args.len() {
@@ -748,12 +757,14 @@ impl<
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
+            room_seq,
+            true
         )
         .await
     }
 
     /// `ct [YYYY.MM.DD]` — Shows daily consumption summary (today if no arg).
-    async fn command_consumption_per_day(&self) -> anyhow::Result<()> {
+    async fn command_consumption_per_day(&self, room_seq: i64) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(" ");
 
         let permon_datetime: PerDatetime = match args.len() {
@@ -789,12 +800,14 @@ impl<
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
+            room_seq,
+            true
         )
         .await
     }
 
     /// `cw` — Shows consumption summary for the current week (Mon–Sun).
-    async fn command_consumption_per_week(&self) -> anyhow::Result<()> {
+    async fn command_consumption_per_week(&self, room_seq: i64) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(" ");
 
         let permon_datetime: PerDatetime = match args.len() {
@@ -825,12 +838,14 @@ impl<
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
+            room_seq,
+            true
         )
         .await
     }
 
     /// `cy [YYYY]` — Shows yearly consumption summary (current year if no arg).
-    async fn command_consumption_per_year(&self) -> anyhow::Result<()> {
+    async fn command_consumption_per_year(&self, room_seq: i64) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(" ");
 
         let permon_datetime: PerDatetime = match args.len() {
@@ -869,12 +884,14 @@ impl<
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
+            room_seq,
+            false
         )
         .await
     }
 
     /// `cs [YYYY.MM]` — Shows consumption from the last payday (25th) to the next.
-    pub async fn command_consumption_per_salary(&self) -> anyhow::Result<()> {
+    pub async fn command_consumption_per_salary(&self, room_seq: i64) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(" ");
 
         let permon_datetime: PerDatetime = match args.len() {
@@ -925,6 +942,8 @@ impl<
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThan,
+            room_seq,
+            true
         )
         .await
     }

@@ -37,6 +37,7 @@ pub trait ElasticQueryService {
         order_by_field: &str,
         asc_yn: bool,
         aggs_field: &str,
+        room_seq: i64
     ) -> Result<AggResultSet<T>, anyhow::Error>;
     #[allow(dead_code)]
     async fn delete_es_doc<T: Send + Sync>(

@@ -203,6 +203,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
         order_by_field: &str,
         asc_yn: bool,
         aggs_field: &str,
+        room_seq: i64
     ) -> Result<AggResultSet<T>, anyhow::Error> {
         let order_by_asc: &str = if asc_yn { "asc" } else { "desc" };
 
@@ -210,13 +211,18 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
             "size": 10000,
             "query": {
                 "bool": {
-                    "must": [
+                    "filter": [
                         {
                             "range": {
                                 range_field: {
                                     start_op.as_str() : start_date.format("%Y-%m-%d").to_string(),
                                     end_op.as_str() : end_date.format("%Y-%m-%d").to_string()
                                 }
+                            }
+                        },
+                        {
+                            "term": {
+                                "room_seq": room_seq
                             }
                         }
                     ]
