@@ -2,6 +2,7 @@ use crate::common::*;
 
 use crate::models::spent_detail::*;
 use crate::models::spent_detail_with_info::*;
+use crate::models::user_payment_method::*;
 
 #[async_trait]
 pub trait MysqlQueryService {
@@ -34,4 +35,8 @@ pub trait MysqlQueryService {
         spent_idx: i64,
     ) -> anyhow::Result<Option<SpentDetailWithInfo>>;
     async fn delete_spent_detail_with_transaction(&self, spent_idx: i64) -> anyhow::Result<()>;
+    async fn get_user_payment_methods(
+        &self,
+        user_seq: i64,
+    ) -> anyhow::Result<Vec<UserPaymentMethod>>;
 }

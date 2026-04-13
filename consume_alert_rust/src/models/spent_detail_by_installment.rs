@@ -1,6 +1,6 @@
 use crate::common::*;
 
-use super::spent_detail::SpentDetail;
+use super::spent_detail::*;
 
 #[doc = "Structure containing spent detail with installment information."]
 #[derive(Debug, Serialize, Deserialize, Clone, Getters, new)]

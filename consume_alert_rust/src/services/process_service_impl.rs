@@ -195,6 +195,7 @@ impl ProcessServiceImpl {
             1, // spent_group_id
             1,
             room_seq,
+            0, // payment_method_id (default)
         );
 
         Ok(SpentDetailByInstallment::new(0, spent_detail))
@@ -249,6 +250,7 @@ impl ProcessServiceImpl {
             1, // spent_group_id
             1,
             room_seq,
+            0, // payment_method_id (default)
         );
 
         Ok(SpentDetailByInstallment::new(
@@ -334,6 +336,7 @@ impl ProcessServiceImpl {
             1, // spent_group_id
             1,
             room_seq,
+            0, // payment_method_id (default)
         );
 
         Ok(SpentDetailByInstallment::new(
@@ -362,7 +365,7 @@ impl ProcessService for ProcessServiceImpl {
         let consume_type: &String = split_args_vec
             .first()
             .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_filter] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
-
+        
         if consume_type.contains("nh") {
             self.process_nh_card(split_args_vec, user_seq, room_seq)
         } else if consume_type.contains("삼성") {
@@ -372,6 +375,24 @@ impl ProcessService for ProcessServiceImpl {
         } else {
             Err(anyhow!("[Error][process_by_consume_filter] Variable 'consume_type' contains an undefined string: {}", consume_type))
         }
+    }
+
+    // 새로운 버전
+    async fn process_by_consume_filter_v1(
+        &self,
+        split_args_vec: &[String],
+        user_seq: i64,
+        room_seq: i64,
+    ) -> anyhow::Result<()> {
+        let consume_type: &String = split_args_vec
+            .first()
+            .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_filter] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
+                
+        
+
+
+
+        Ok(())
     }
 
     #[doc = "Functions that take into account installment payments"]

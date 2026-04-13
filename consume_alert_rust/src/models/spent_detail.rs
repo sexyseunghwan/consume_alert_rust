@@ -21,6 +21,7 @@ pub struct SpentDetail {
     pub spent_group_id: i64,
     pub consume_keyword_type_id: i64,
     pub room_seq: i64,
+    pub payment_method_id: i64,
 }
 
 impl SpentDetail {
@@ -44,6 +45,7 @@ impl SpentDetail {
             spent_group_id: Set(self.spent_group_id),
             consume_keyword_type_id: Set(self.consume_keyword_type_id),
             room_seq: Set(self.room_seq),
+            payment_method_id: Set(self.payment_method_id)
         })
     }
 

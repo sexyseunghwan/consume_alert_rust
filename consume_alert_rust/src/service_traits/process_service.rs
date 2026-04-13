@@ -16,6 +16,13 @@ pub trait ProcessService {
         user_seq: i64,
         room_seq: i64,
     ) -> Result<SpentDetailByInstallment, anyhow::Error>;
+    async fn process_by_consume_filter_v1(
+        &self,
+        split_args_vec: &[String],
+        user_seq: i64,
+        room_seq: i64,
+    ) -> anyhow::Result<()>;
+    //) -> anyhow::Result<SpentDetail>;
     fn get_spent_detail_installment_process(
         &self,
         spent_detail_by_installment: &SpentDetailByInstallment,

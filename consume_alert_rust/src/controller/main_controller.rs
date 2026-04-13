@@ -24,6 +24,8 @@ use crate::models::spent_detail_by_produce::*;
 use crate::models::spent_detail_with_info::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
+use crate::models::spent_detail_to_kafka::*;
+use crate::models::user_payment_method::*;
 
 use crate::enums::{indexing_type::*, range_operator::*};
 
@@ -464,6 +466,7 @@ impl<
             1,
             spent_type.consume_keyword_type_id,
             room_seq,
+            3 // 이거 향후에 바꿔야함 -> 지금은 그냥 에러안만드려고 넣은것.
         );
 
         let spent_detail_view: SpentDetailView = spent_detail
@@ -523,77 +526,95 @@ impl<
             return Ok(());
         }
 
-        let spent_detail_by_installment: SpentDetailByInstallment = self
-            .process_service
-            .process_by_consume_filter(&lines, user_seq, room_seq)
-            .context("[command_consumption_auto] Failed to parse card notification")?;
-
-        let mut spent_details: Vec<SpentDetail> = self
-            .process_service
-            .get_spent_detail_installment_process(&spent_detail_by_installment)?;
-
-        // Clone the primary name to release the immutable borrow before iter_mut below.
-        let primary_name: String = spent_details
-            .first()
-            .ok_or_else(|| anyhow!("[command_consumption_auto] spent_details is empty"))?
-            .spent_name()
-            .clone();
-
-        let spent_type: ConsumingIndexProdtType = self
-            .resolve_spend_type(&primary_name)
-            .await
-            .context("[command_consumption_auto] Failed to resolve spend type")?;
-
-        let spent_detail_views: Vec<SpentDetailView> = spent_details
-            .iter_mut()
-            .map(|detail| {
-                detail.set_consume_keyword_type_id(*spent_type.consume_keyword_type_id());
-                detail
-                    .convert_spent_detail_to_view(&spent_type)
-                    .context("[command_consumption_auto] Failed to build view")
-            })
-            .collect::<anyhow::Result<Vec<_>>>()?;
-
-        let inserted_idxs: Vec<i64> = self
+        // 여기서 일단 유저의 가능한 결제 정보를 가져와준다.
+        // select
+        // *
+        // from USER_PAYMENT_METHODS
+        // where user_seq = 1;
+        let user_payment_methods: Vec<UserPaymentMethod> = self
             .mysql_query_service
-            .insert_prodt_details_with_transaction(&spent_details)
+            .get_user_payment_methods(user_seq)
             .await
-            .context("[command_consumption_auto] Failed to insert to MySQL")?;
+            .inspect_err(|e| {
+                error!("[main_controller::command_consumption_auto] Failed to get user payment methods: {:#}", e);
+            })?;
+        
 
-        // `inserted_idxs[i]` is the DB-assigned primary key for `spent_details[i]`.
-        let produce_payloads: Vec<SpentDetailByProduce> = inserted_idxs
-            .iter()
-            .copied()
-            .zip(spent_details.iter())
-            .map(|(spent_idx, detail)| {
-                detail.convert_to_spent_detail_by_produce(
-                    spent_idx,
-                    spent_type.consume_keyword_type(),
-                    room_seq,
-                    IndexingType::Insert,
-                    user_id,
-                )
-            })
-            .collect();
+        // let spent_detail = self
+        //     .process_service
+        //     .process_by_consume_filter_v1(&lines, user_seq, room_seq)
+        //     .await
+        //     .inspect_err(|e| {
+        //         error!("[main_controller::command_consumption_auto] {:#}", e);
+        //     })?;
 
-        self.producer_service
-            .produce_objects_to_topic(
-                produce_topic,
-                &produce_payloads,
-                None::<fn(&SpentDetailByProduce) -> String>,
-            )
-            .await
-            .context("[command_consumption_auto] Failed to produce Kafka messages")?;
+        // let spent_detail_by_installment: SpentDetailByInstallment = self
+        //     .process_service
+        //     .process_by_consume_filter(&lines, user_seq, room_seq)
+        //     .context("[command_consumption_auto] Failed to parse card notification")?;
 
-        for (idx, view) in spent_detail_views.iter().enumerate() {
-            let header: String =
-                format!("===== {} / {} =====\n", idx + 1, spent_detail_views.len());
-            let msg: String = format!("{}{}", header, view.to_telegram_string());
-            self.tele_bot_service
-                .send_message_confirm(&msg)
-                .await
-                .context("[command_consumption_auto] Failed to send Telegram message")?;
-        }
+
+
+        // let mut spent_details: Vec<SpentDetail> = self
+        //     .process_service
+        //     .get_spent_detail_installment_process(&spent_detail_by_installment)?;
+
+        // // Clone the primary name to release the immutable borrow before iter_mut below.
+        // let primary_name: String = spent_details
+        //     .first()
+        //     .ok_or_else(|| anyhow!("[command_consumption_auto] spent_details is empty"))?
+        //     .spent_name()
+        //     .clone();
+
+        // let spent_type: ConsumingIndexProdtType = self
+        //     .resolve_spend_type(&primary_name)
+        //     .await
+        //     .context("[command_consumption_auto] Failed to resolve spend type")?;
+
+        // let spent_detail_views: Vec<SpentDetailView> = spent_details
+        //     .iter_mut()
+        //     .map(|detail| {
+        //         detail.set_consume_keyword_type_id(*spent_type.consume_keyword_type_id());
+        //         detail
+        //             .convert_spent_detail_to_view(&spent_type)
+        //             .context("[command_consumption_auto] Failed to build view")
+        //     })
+        //     .collect::<anyhow::Result<Vec<_>>>()?;
+        
+        // let inserted_idxs: Vec<i64> = self
+        //     .mysql_query_service
+        //     .insert_prodt_details_with_transaction(&spent_details)
+        //     .await
+        //     .context("[command_consumption_auto] Failed to insert to MySQL")?;
+        
+        // let utc_now: DateTime<Utc> = Utc::now();
+
+        // // `inserted_idxs[i]` is the DB-assigned primary key for `spent_details[i]`.
+        // let produce_payloads: Vec<SpentDetailToKafka> = inserted_idxs
+        //     .iter()
+        //     .map(|idx| {
+        //         SpentDetailToKafka::new(*idx, String::from("I"), utc_now)
+        //     })
+        //     .collect();
+        
+        // self.producer_service
+        //     .produce_objects_to_topic(
+        //         produce_topic,
+        //         &produce_payloads,
+        //         None::<fn(&SpentDetailToKafka) -> String>,
+        //     )
+        //     .await
+        //     .context("[command_consumption_auto] Failed to produce Kafka messages")?;
+
+        // for (idx, view) in spent_detail_views.iter().enumerate() {
+        //     let header: String =
+        //         format!("===== {} / {} =====\n", idx + 1, spent_detail_views.len());
+        //     let msg: String = format!("{}{}", header, view.to_telegram_string());
+        //     self.tele_bot_service
+        //         .send_message_confirm(&msg)
+        //         .await
+        //         .context("[command_consumption_auto] Failed to send Telegram message")?;
+        // }
 
         Ok(())
     }
@@ -936,7 +957,7 @@ impl<
                 ));
             }
         };
-
+        
         self.common_process_python_double(
             &CONSUME_DETAIL,
             permon_datetime,

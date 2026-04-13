@@ -1,8 +1,9 @@
 use crate::common::*;
 
-use crate::entity::{common_consume_keyword_type, spent_detail, telegram_room, users};
+use crate::entity::{common_consume_keyword_type, spent_detail, telegram_room, user_payment_method, users};
 use crate::models::spent_detail::*;
 use crate::models::spent_detail_with_info::*;
+use crate::models::user_payment_method::*;
 use crate::repository::mysql_repository::*;
 
 use crate::service_traits::mysql_query_service::*;
@@ -174,5 +175,43 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         self.db_conn
             .delete_spent_detail_with_transaction(spent_idx)
             .await
+    }
+
+    async fn get_user_payment_methods(
+        &self,
+        user_seq: i64,
+    ) -> anyhow::Result<Vec<UserPaymentMethod>> {
+        let results: Vec<user_payment_method::Model> = user_payment_method::Entity::find()
+            .filter(user_payment_method::Column::UserSeq.eq(user_seq))
+            .all(self.db_conn.get_connection())
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "[MysqlQueryServiceImpl::get_user_payment_methods] Failed to query: {:?}",
+                    e
+                )
+            })?;
+
+        let user_payment_methods: Vec<UserPaymentMethod> = results
+            .into_iter()
+            .map(|model| {
+                UserPaymentMethod::new(
+                    model.payment_method_id,
+                    model.payment_type_cd,
+                    model.payment_category_cd,
+                    model.card_id,
+                    model.card_alias,
+                    model.use_yn,
+                    DateTime::from_naive_utc_and_offset(model.created_at, Utc),
+                    model.updated_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
+                    model.created_by,
+                    model.updated_by,
+                    model.user_seq,
+                    model.card_company_name
+                )
+            })
+            .collect();
+
+        Ok(user_payment_methods)
     }
 }
