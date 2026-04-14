@@ -25,7 +25,7 @@ use crate::models::spent_detail_with_info::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
 use crate::models::spent_detail_to_kafka::*;
-use crate::models::user_payment_method::*;
+use crate::models::user_payment_methods::*;
 
 use crate::enums::{indexing_type::*, range_operator::*};
 
@@ -526,20 +526,30 @@ impl<
             return Ok(());
         }
 
-        // 여기서 일단 유저의 가능한 결제 정보를 가져와준다.
-        // select
-        // *
-        // from USER_PAYMENT_METHODS
-        // where user_seq = 1;
-        let user_payment_methods: Vec<UserPaymentMethod> = self
+        // 유저의 가능한 결제 정보를 가져와준다 -> 기본값만
+        let user_payment_defaults: Vec<UserPaymentMethods> = self
             .mysql_query_service
-            .get_user_payment_methods(user_seq)
+            .get_user_payment_methods_default(user_seq)
+            .await
+            .inspect_err(|e| {
+                error!("[main_controller::command_consumption_auto] Failed to get user payment default {:#}", e);
+            })?;
+        
+        let user_payment_default: UserPaymentMethods = match user_payment_defaults.get(0) {
+            Some(user_payment_default) => user_payment_default.clone(),
+            None => return Ok(()),
+        };
+        
+        // 유저의 가능한 결제 정보를 가져와준다.
+        let user_payment_methods: Vec<UserPaymentMethods> = self
+            .mysql_query_service
+            .get_user_payment_methods(user_seq, false)
             .await
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption_auto] Failed to get user payment methods: {:#}", e);
             })?;
         
-
+        
         // let spent_detail = self
         //     .process_service
         //     .process_by_consume_filter_v1(&lines, user_seq, room_seq)

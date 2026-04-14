@@ -2,7 +2,7 @@ use crate::common::*;
 
 use crate::models::spent_detail::*;
 use crate::models::spent_detail_with_info::*;
-use crate::models::user_payment_method::*;
+use crate::models::user_payment_methods::*;
 
 #[async_trait]
 pub trait MysqlQueryService {
@@ -38,5 +38,14 @@ pub trait MysqlQueryService {
     async fn get_user_payment_methods(
         &self,
         user_seq: i64,
-    ) -> anyhow::Result<Vec<UserPaymentMethod>>;
+        is_default: bool
+    ) -> anyhow::Result<Vec<UserPaymentMethods>>;
+    // async fn get_user_payment_methods_default(
+    //     &self,
+    //     user_seq: i64,
+    // ) -> anyhow::Result<Vec<UserPaymentMethods>>;
+    // async fn get_user_payment_methods_not_default(
+    //     &self,
+    //     user_seq: i64,
+    // ) -> anyhow::Result<Vec<UserPaymentMethods>>;
 }

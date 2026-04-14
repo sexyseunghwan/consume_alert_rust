@@ -11,4 +11,4 @@ pub mod spent_detail;
 pub mod spent_group_info;
 pub mod telegram_room;
 pub mod users;
-pub mod user_payment_method;
+pub mod user_payment_methods;

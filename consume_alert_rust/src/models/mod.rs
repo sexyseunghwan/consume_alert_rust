@@ -13,4 +13,4 @@ pub mod spent_detail_with_info;
 pub mod to_python_graph_circle;
 pub mod to_python_graph_line;
 pub mod spent_detail_to_kafka;
-pub mod user_payment_method;
+pub mod user_payment_methods;

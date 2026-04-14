@@ -7,6 +7,7 @@ use crate::models::spent_detail::*;
 use crate::models::spent_detail_by_es::*;
 use crate::models::spent_detail_by_installment::*;
 use crate::models::to_python_graph_circle::*;
+use crate::models::user_payment_methods::*;
 
 #[async_trait]
 pub trait ProcessService {
@@ -21,6 +22,7 @@ pub trait ProcessService {
         split_args_vec: &[String],
         user_seq: i64,
         room_seq: i64,
+        user_payments: Vec<UserPaymentMethods>
     ) -> anyhow::Result<()>;
     //) -> anyhow::Result<SpentDetail>;
     fn get_spent_detail_installment_process(
