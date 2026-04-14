@@ -25,19 +25,11 @@ pub enum Relation {
         to = "super::common_consume_keyword_type::Column::ConsumeKeywordTypeId"
     )]
     CommonConsumeKeywordType,
-    #[sea_orm(has_many = "super::spent_detail::Entity")]
-    SpentDetail,
 }
 
 impl Related<super::common_consume_keyword_type::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::CommonConsumeKeywordType.def()
-    }
-}
-
-impl Related<super::spent_detail::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::SpentDetail.def()
     }
 }
 

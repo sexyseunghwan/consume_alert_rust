@@ -19,11 +19,19 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::common_consume_prodt_keyword::Entity")]
     CommonConsumeProdtKeyword,
+    #[sea_orm(has_many = "super::spent_detail::Entity")]
+    SpentDetail,
 }
 
 impl Related<super::common_consume_prodt_keyword::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::CommonConsumeProdtKeyword.def()
+    }
+}
+
+impl Related<super::spent_detail::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::SpentDetail.def()
     }
 }
 

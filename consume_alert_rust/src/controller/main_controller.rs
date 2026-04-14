@@ -526,19 +526,19 @@ impl<
             return Ok(());
         }
 
-        // 유저의 가능한 결제 정보를 가져와준다 -> 기본값만
-        let user_payment_defaults: Vec<UserPaymentMethods> = self
-            .mysql_query_service
-            .get_user_payment_methods_default(user_seq)
-            .await
-            .inspect_err(|e| {
-                error!("[main_controller::command_consumption_auto] Failed to get user payment default {:#}", e);
-            })?;
+        // // 유저의 가능한 결제 정보를 가져와준다 -> 기본값만
+        // let user_payment_defaults: Vec<UserPaymentMethods> = self
+        //     .mysql_query_service
+        //     .get_user_payment_methods_default(user_seq)
+        //     .await
+        //     .inspect_err(|e| {
+        //         error!("[main_controller::command_consumption_auto] Failed to get user payment default {:#}", e);
+        //     })?;
         
-        let user_payment_default: UserPaymentMethods = match user_payment_defaults.get(0) {
-            Some(user_payment_default) => user_payment_default.clone(),
-            None => return Ok(()),
-        };
+        // let user_payment_default: UserPaymentMethods = match user_payment_defaults.get(0) {
+        //     Some(user_payment_default) => user_payment_default.clone(),
+        //     None => return Ok(()),
+        // };
         
         // 유저의 가능한 결제 정보를 가져와준다.
         let user_payment_methods: Vec<UserPaymentMethods> = self

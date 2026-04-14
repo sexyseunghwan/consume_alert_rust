@@ -11,19 +11,19 @@ use crate::models::user_payment_methods::*;
 
 #[async_trait]
 pub trait ProcessService {
-    fn process_by_consume_filter(
-        &self,
-        split_args_vec: &[String],
-        user_seq: i64,
-        room_seq: i64,
-    ) -> Result<SpentDetailByInstallment, anyhow::Error>;
+    // fn process_by_consume_filter(
+    //     &self,
+    //     split_args_vec: &[String],
+    //     user_seq: i64,
+    //     room_seq: i64,
+    // ) -> Result<SpentDetailByInstallment, anyhow::Error>;
     async fn process_by_consume_filter_v1(
         &self,
         split_args_vec: &[String],
         user_seq: i64,
         room_seq: i64,
         user_payments: Vec<UserPaymentMethods>
-    ) -> anyhow::Result<()>;
+    ) -> anyhow::Result<SpentDetail>;
     //) -> anyhow::Result<SpentDetail>;
     fn get_spent_detail_installment_process(
         &self,
