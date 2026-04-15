@@ -16,5 +16,5 @@ pub struct UserPaymentMethods {
     pub updated_by: Option<String>,
     pub is_default: bool,
     pub user_seq: i64,
-    pub card_company_nm: Option<String>
+    pub card_company_nm: Option<String>,
 }

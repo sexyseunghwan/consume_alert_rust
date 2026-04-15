@@ -38,7 +38,7 @@ pub trait MysqlQueryService {
     async fn get_user_payment_methods(
         &self,
         user_seq: i64,
-        is_default: bool
+        is_default: bool,
     ) -> anyhow::Result<Vec<UserPaymentMethods>>;
     // async fn get_user_payment_methods_default(
     //     &self,

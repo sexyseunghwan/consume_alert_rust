@@ -23,7 +23,7 @@ impl ToPythonGraphLine {
         let mut date_consume: HashMap<DateTime<Utc>, i64> = HashMap::new();
 
         let total_cost: f64 = *spent_detail.agg_result();
-        
+
         for elem in spent_detail.source_list() {
             let elem_date: DateTime<Utc> = elem
                 .source

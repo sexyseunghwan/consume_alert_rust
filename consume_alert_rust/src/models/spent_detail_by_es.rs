@@ -36,6 +36,6 @@ pub struct SpentDetailByEs {
     /// Telegram room identifier
     pub room_seq: i64,
 
-    /// Record indexing timestamp   
-    pub produced_at: DateTime<Utc>,
+    /// Record indexing timestamp
+    pub produced_at: Option<DateTime<Utc>>,
 }

@@ -4,11 +4,8 @@ pub mod prelude;
 
 pub mod common_consume_keyword_type;
 pub mod common_consume_prodt_keyword;
-pub mod consume_prodt_detail;
-pub mod consume_prodt_keyword;
-pub mod consumue_keyword_type;
 pub mod spent_detail;
 pub mod spent_group_info;
 pub mod telegram_room;
-pub mod users;
 pub mod user_payment_methods;
+pub mod users;

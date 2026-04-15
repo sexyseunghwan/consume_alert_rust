@@ -14,7 +14,7 @@ use crate::enums::indexing_type::*;
 #[getset(get = "pub", set = "pub")]
 pub struct SpentDetail {
     pub spent_name: String,
-    pub spent_money: i64,
+    pub spent_money: i32,
     pub spent_at: DateTime<Local>,
     pub should_index: i8,
     pub user_seq: i64,
@@ -45,7 +45,7 @@ impl SpentDetail {
             spent_group_id: Set(self.spent_group_id),
             consume_keyword_type_id: Set(self.consume_keyword_type_id),
             room_seq: Set(self.room_seq),
-            payment_method_id: Set(self.payment_method_id)
+            payment_method_id: Set(self.payment_method_id),
         })
     }
 

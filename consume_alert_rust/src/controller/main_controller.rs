@@ -21,10 +21,10 @@ use crate::models::spent_detail::*;
 use crate::models::spent_detail_by_es::*;
 use crate::models::spent_detail_by_installment::*;
 use crate::models::spent_detail_by_produce::*;
+use crate::models::spent_detail_to_kafka::*;
 use crate::models::spent_detail_with_info::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
-use crate::models::spent_detail_to_kafka::*;
 use crate::models::user_payment_methods::*;
 
 use crate::enums::{indexing_type::*, range_operator::*};
@@ -274,10 +274,10 @@ impl<
 
         let produce_topic: &str = &app_config.produce_topic;
         let input_text: String = self.tele_bot_service.get_input_text();
-        
+
         match input_text.split_whitespace().next().unwrap_or("") {
             "c" => {
-                self.command_consumption(user_seq, produce_topic, room_seq, &user_id)
+                self.command_consumption(user_seq, produce_topic, room_seq)
                     .await?
             }
             "cd" => {
@@ -291,7 +291,7 @@ impl<
             "cw" => self.command_consumption_per_week(room_seq).await?,
             "cy" => self.command_consumption_per_year(room_seq).await?,
             _ => {
-                self.command_consumption_auto(user_seq, produce_topic, room_seq, &user_id)
+                self.command_consumption_auto(user_seq, produce_topic, room_seq)
                     .await?
             }
         }
@@ -319,9 +319,8 @@ impl<
         start_op: RangeOperator,
         end_op: RangeOperator,
         room_seq: i64,
-        detail_yn: bool
+        detail_yn: bool,
     ) -> anyhow::Result<()> {
-
         let spent_detail_info: AggResultSet<SpentDetailByEs> = self
             .elastic_query_service
             .get_info_orderby_aggs_range(
@@ -334,7 +333,7 @@ impl<
                 "spent_at",
                 true,
                 "spent_money",
-                room_seq
+                room_seq,
             )
             .await?;
 
@@ -350,7 +349,7 @@ impl<
                 "spent_at",
                 true,
                 "spent_money",
-                room_seq
+                room_seq,
             )
             .await?;
 
@@ -367,16 +366,19 @@ impl<
             permon_datetime.n_date_end,
             &versus_spent_detail_info,
         )?;
-         
+
         if detail_yn {
             self.tele_bot_service
                 .send_message_consume_split(&cur_python_graph_info, spent_detail_info.source_list())
                 .await?;
         }
-        
+
         let consume_detail_img_path: String = self
             .graph_api_service
-            .call_python_matplot_consume_detail_double(&cur_python_graph_info, &versus_python_graph_info)
+            .call_python_matplot_consume_detail_double(
+                &cur_python_graph_info,
+                &versus_python_graph_info,
+            )
             .await?;
 
         let consume_result_by_type: Vec<ConsumeResultByType> = self
@@ -423,7 +425,6 @@ impl<
         user_seq: i64,
         produce_topic: &str,
         room_seq: i64,
-        user_id: &str,
     ) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(":");
 
@@ -434,13 +435,13 @@ impl<
                 )
                 .await?;
             return Err(anyhow!(
-                "[command_consumption] Invalid parameter format: {}",
+                "[main_controller::command_consumptio] Invalid parameter format: {}",
                 self.tele_bot_service.get_input_text()
             ));
         }
 
-        let consume_name: &str = &args[0];
-        let consume_cash: i64 = match get_parsed_value_from_vector(&args, 1) {
+        let spent_name: String = args[0].clone();
+        let spent_money: i32 = match get_parsed_value_from_vector(&args, 1) {
             Ok(cash) => cash,
             Err(e) => {
                 self.tele_bot_service
@@ -448,55 +449,101 @@ impl<
                         "The second parameter must be numeric.\nEX) c snack:15000",
                     )
                     .await?;
-                return Err(e).context("[command_consumption] Non-numeric cash parameter");
+                return Err(anyhow!(
+                    "[main_controller::command_consumptio] Non-numeric cash parameter: {:#}", 
+                    e
+                ));
             }
         };
 
         let spent_type: ConsumingIndexProdtType = self
-            .resolve_spend_type(consume_name)
+            .resolve_spend_type(&spent_name)
             .await
-            .context("[command_consumption_auto] Failed to resolve spend type")?;
+            .inspect_err(|e| {
+                error!(
+                    "[main_controller::command_consumption] Failed to insert to MySQL: {:#}",
+                    e
+                );
+            })?;
+
+        let default_payment_method: UserPaymentMethods = match self
+            .mysql_query_service
+            .get_user_payment_methods(user_seq, true)
+            .await
+            .inspect_err(|e| {
+                error!("[main_controller::command_consumption] Failed to get user payment methods: {:#}", e);
+            })?
+            .get(0) {
+                Some(default_payment_method) => default_payment_method.clone(),
+                None => {
+                    self.tele_bot_service
+                    .send_message_confirm(
+                        "Default payment method does not exist. \n
+                        Please register a default payment method.",
+                    )
+                    .await?;
+                    return Err(anyhow!("[main_controller::command_consumption] Default payment method does not exist."))
+                }
+            };
 
         let spent_detail: SpentDetail = SpentDetail::new(
-            consume_name.to_string(),
-            consume_cash,
+            spent_name,
+            spent_money,
             Local::now(),
             1,
             user_seq,
-            1,
+            0,
             spent_type.consume_keyword_type_id,
             room_seq,
-            3 // 이거 향후에 바꿔야함 -> 지금은 그냥 에러안만드려고 넣은것.
+            default_payment_method.payment_method_id
         );
 
         let spent_detail_view: SpentDetailView = spent_detail
             .convert_spent_detail_to_view(&spent_type)
-            .context("[command_consumption] Failed to build view")?;
+            .inspect_err(|e| {
+                error!(
+                    "[main_controller::command_consumption] Failed to build view: {:#}",
+                    e
+                );
+            })?;
 
         let spent_idx: i64 = self
             .mysql_query_service
             .insert_prodt_detail_with_transaction(&spent_detail)
             .await
-            .context("[command_consumption] Failed to insert to MySQL")?;
+            .inspect_err(|e| {
+                error!(
+                    "[main_controller::command_consumption] Failed to insert to MySQL: {:#}",
+                    e
+                );
+            })?;
+        
+        let utc_now: DateTime<Utc> = Utc::now();
 
-        let produce_payload: SpentDetailByProduce = spent_detail
-            .convert_to_spent_detail_by_produce(
-                spent_idx,
-                spent_type.consume_keyword_type(),
-                room_seq,
-                IndexingType::Insert,
-                user_id,
-            );
+        let produce_payload: SpentDetailToKafka =
+            SpentDetailToKafka::new(spent_idx, String::from("I"), utc_now);
+
+        let partition_key: String = spent_idx.to_string();
 
         self.producer_service
-            .produce_object_to_topic(produce_topic, &produce_payload, None)
+            .produce_object_to_topic(produce_topic, &produce_payload, Some(partition_key.as_str()))
             .await
-            .context("[command_consumption] Failed to produce Kafka message")?;
+            .inspect_err(|e| {
+                error!(
+                    "[main_controller::command_consumption] Failed to produce Kafka message: {:#}",
+                    e
+                );
+            })?;
 
         self.tele_bot_service
             .send_message_confirm(&spent_detail_view.to_telegram_string())
             .await
-            .context("[command_consumption] Failed to send Telegram message")?;
+            .inspect_err(|e| {
+                error!(
+                    "[main_controller::command_consumption] Failed to send Telegram message: {:#}",
+                    e
+                );
+            })?;
 
         Ok(())
     }
@@ -507,12 +554,15 @@ impl<
         user_seq: i64,
         produce_topic: &str,
         room_seq: i64,
-        user_id: &str,
     ) -> anyhow::Result<()> {
         let args: String = self.tele_bot_service.get_input_text();
 
-        let bracket_re: Regex = Regex::new(r"\[.*?\]\n?")
-            .map_err(|e| anyhow!("[command_consumption_auto] Bad regex: {:?}", e))?;
+        let bracket_re: Regex = Regex::new(r"\[.*?\]\n?").map_err(|e| {
+            anyhow!(
+                "[main_controller::command_consumption_auto] Bad regex: {:?}",
+                e
+            )
+        })?;
 
         let lines: Vec<String> = bracket_re
             .replace_all(&args, "")
@@ -526,20 +576,6 @@ impl<
             return Ok(());
         }
 
-        // // 유저의 가능한 결제 정보를 가져와준다 -> 기본값만
-        // let user_payment_defaults: Vec<UserPaymentMethods> = self
-        //     .mysql_query_service
-        //     .get_user_payment_methods_default(user_seq)
-        //     .await
-        //     .inspect_err(|e| {
-        //         error!("[main_controller::command_consumption_auto] Failed to get user payment default {:#}", e);
-        //     })?;
-        
-        // let user_payment_default: UserPaymentMethods = match user_payment_defaults.get(0) {
-        //     Some(user_payment_default) => user_payment_default.clone(),
-        //     None => return Ok(()),
-        // };
-        
         // 유저의 가능한 결제 정보를 가져와준다.
         let user_payment_methods: Vec<UserPaymentMethods> = self
             .mysql_query_service
@@ -548,83 +584,66 @@ impl<
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption_auto] Failed to get user payment methods: {:#}", e);
             })?;
+
+        let mut spent_detail: SpentDetail = self
+            .process_service
+            .process_by_consume_filter(&lines, user_seq, room_seq, user_payment_methods)
+            .inspect_err(|e| {
+                error!("[main_controller::command_consumption_auto] {:#}", e);
+            })?;
         
-        
-        // let spent_detail = self
-        //     .process_service
-        //     .process_by_consume_filter_v1(&lines, user_seq, room_seq)
-        //     .await
-        //     .inspect_err(|e| {
-        //         error!("[main_controller::command_consumption_auto] {:#}", e);
-        //     })?;
+        // Clone the primary name to release the immutable borrow before iter_mut below.
+        let primary_name: String = spent_detail.spent_name().to_string();
 
-        // let spent_detail_by_installment: SpentDetailByInstallment = self
-        //     .process_service
-        //     .process_by_consume_filter(&lines, user_seq, room_seq)
-        //     .context("[command_consumption_auto] Failed to parse card notification")?;
+        let spent_type: ConsumingIndexProdtType = self
+            .resolve_spend_type(&primary_name)
+            .await
+            .inspect_err(|e| {
+                error!("[main_controller::command_consumption_auto] Failed to resolve spend type: {:#}", e);
+            })?;
 
+        spent_detail.set_consume_keyword_type_id(spent_type.consume_keyword_type_id);
 
+        let spent_detail_view: SpentDetailView = spent_detail
+            .convert_spent_detail_to_view(&spent_type)
+            .inspect_err(|e| {
+                error!(
+                    "[main_controller::command_consumption_auto] Failed to build view: {:#}",
+                    e
+                );
+            })?;
 
-        // let mut spent_details: Vec<SpentDetail> = self
-        //     .process_service
-        //     .get_spent_detail_installment_process(&spent_detail_by_installment)?;
+        let spent_idx: i64 = self
+            .mysql_query_service
+            .insert_prodt_detail_with_transaction(&spent_detail)
+            .await
+            .inspect_err(|e| {
+                error!(
+                    "[main_controller::command_consumption_auto] Failed to insert to MySQL: {:#}",
+                    e
+                );
+            })?;
 
-        // // Clone the primary name to release the immutable borrow before iter_mut below.
-        // let primary_name: String = spent_details
-        //     .first()
-        //     .ok_or_else(|| anyhow!("[command_consumption_auto] spent_details is empty"))?
-        //     .spent_name()
-        //     .clone();
+        let utc_now: DateTime<Utc> = Utc::now();
 
-        // let spent_type: ConsumingIndexProdtType = self
-        //     .resolve_spend_type(&primary_name)
-        //     .await
-        //     .context("[command_consumption_auto] Failed to resolve spend type")?;
+        let produce_payload: SpentDetailToKafka =
+            SpentDetailToKafka::new(spent_idx, String::from("I"), utc_now);
 
-        // let spent_detail_views: Vec<SpentDetailView> = spent_details
-        //     .iter_mut()
-        //     .map(|detail| {
-        //         detail.set_consume_keyword_type_id(*spent_type.consume_keyword_type_id());
-        //         detail
-        //             .convert_spent_detail_to_view(&spent_type)
-        //             .context("[command_consumption_auto] Failed to build view")
-        //     })
-        //     .collect::<anyhow::Result<Vec<_>>>()?;
-        
-        // let inserted_idxs: Vec<i64> = self
-        //     .mysql_query_service
-        //     .insert_prodt_details_with_transaction(&spent_details)
-        //     .await
-        //     .context("[command_consumption_auto] Failed to insert to MySQL")?;
-        
-        // let utc_now: DateTime<Utc> = Utc::now();
+        let partition_key: String = spent_idx.to_string();
 
-        // // `inserted_idxs[i]` is the DB-assigned primary key for `spent_details[i]`.
-        // let produce_payloads: Vec<SpentDetailToKafka> = inserted_idxs
-        //     .iter()
-        //     .map(|idx| {
-        //         SpentDetailToKafka::new(*idx, String::from("I"), utc_now)
-        //     })
-        //     .collect();
-        
-        // self.producer_service
-        //     .produce_objects_to_topic(
-        //         produce_topic,
-        //         &produce_payloads,
-        //         None::<fn(&SpentDetailToKafka) -> String>,
-        //     )
-        //     .await
-        //     .context("[command_consumption_auto] Failed to produce Kafka messages")?;
+        self.producer_service
+            .produce_object_to_topic(produce_topic, &produce_payload, Some(partition_key.as_str()))
+            .await
+            .inspect_err(|e| {
+                error!("[main_controller::command_consumption_auto] Failed to produce Kafka message: {:#}", e);
+            })?;
 
-        // for (idx, view) in spent_detail_views.iter().enumerate() {
-        //     let header: String =
-        //         format!("===== {} / {} =====\n", idx + 1, spent_detail_views.len());
-        //     let msg: String = format!("{}{}", header, view.to_telegram_string());
-        //     self.tele_bot_service
-        //         .send_message_confirm(&msg)
-        //         .await
-        //         .context("[command_consumption_auto] Failed to send Telegram message")?;
-        // }
+        self.tele_bot_service
+            .send_message_confirm(&spent_detail_view.to_telegram_string())
+            .await
+            .inspect_err(|e| {
+                error!("[main_controller::command_consumption_auto] Failed to send Telegram message: {:#}", e);
+            })?;
 
         Ok(())
     }
@@ -674,7 +693,7 @@ impl<
                 return Ok(());
             }
         };
-        
+
         let produce_spent_detail_info: SpentDetailByProduce =
             spent_detail_info.to_spent_detail_by_produce(IndexingType::Delete);
 
@@ -682,19 +701,23 @@ impl<
             .produce_object_to_topic(produce_topic, &produce_spent_detail_info, None)
             .await
             .context("[command_delete_recent_consumption] Failed to produce Kafka message")?;
-        
-        match self.mysql_query_service.delete_spent_detail_with_transaction(spent_idx).await {
+
+        match self
+            .mysql_query_service
+            .delete_spent_detail_with_transaction(spent_idx)
+            .await
+        {
             Ok(_) => {
                 info!(
                     "[command_delete_recent_consumption] latest spent_idx={} (user_seq={}, room_seq={})",
                     spent_idx, user_seq, room_seq
                 );
-            },
+            }
             Err(e) => {
                 error!("[command_delete_recent_consumption] Failed delete SPENT_DETAIL information-{}: {:#}", spent_idx, e)
             }
         }
-        
+
         Ok(())
     }
 
@@ -747,7 +770,7 @@ impl<
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
             room_seq,
-            true
+            true,
         )
         .await
     }
@@ -789,7 +812,7 @@ impl<
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
             room_seq,
-            true
+            true,
         )
         .await
     }
@@ -832,7 +855,7 @@ impl<
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
             room_seq,
-            true
+            true,
         )
         .await
     }
@@ -870,7 +893,7 @@ impl<
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
             room_seq,
-            true
+            true,
         )
         .await
     }
@@ -916,7 +939,7 @@ impl<
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
             room_seq,
-            false
+            false,
         )
         .await
     }
@@ -967,14 +990,14 @@ impl<
                 ));
             }
         };
-        
+
         self.common_process_python_double(
             &CONSUME_DETAIL,
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThan,
             room_seq,
-            true
+            true,
         )
         .await
     }

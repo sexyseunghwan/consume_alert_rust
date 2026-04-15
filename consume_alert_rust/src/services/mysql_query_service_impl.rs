@@ -1,6 +1,8 @@
 use crate::common::*;
 
-use crate::entity::{common_consume_keyword_type, spent_detail, telegram_room, user_payment_methods, users};
+use crate::entity::{
+    common_consume_keyword_type, spent_detail, telegram_room, user_payment_methods, users,
+};
 use crate::models::spent_detail::*;
 use crate::models::spent_detail_with_info::*;
 use crate::models::user_payment_methods::*;
@@ -13,9 +15,7 @@ pub struct MysqlQueryServiceImpl<R: MysqlRepository> {
     db_conn: R,
 }
 
-impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {
-
-} 
+impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {}
 
 #[async_trait]
 impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceImpl<R> {
@@ -23,7 +23,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         &self,
         spent_detail: &SpentDetail,
     ) -> anyhow::Result<i64> {
-        let active_model = spent_detail
+        let active_model: spent_detail::ActiveModel = spent_detail
             .convert_spent_detail_to_active_model()
             .context("[insert_prodt_detail_with_transaction] Failed to convert to ActiveModel")?;
 
@@ -184,7 +184,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
     async fn get_user_payment_methods(
         &self,
         user_seq: i64,
-        is_default: bool
+        is_default: bool,
     ) -> anyhow::Result<Vec<UserPaymentMethods>> {
         let results: Vec<user_payment_methods::Model> = user_payment_methods::Entity::find()
             .filter(user_payment_methods::Column::UserSeq.eq(user_seq))
@@ -197,7 +197,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
                     e
                 )
             })?;
-        
+
         let user_payment_methods: Vec<UserPaymentMethods> = results
             .into_iter()
             .map(|model| {
@@ -209,16 +209,18 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
                     model.card_alias,
                     model.is_active,
                     DateTime::from_naive_utc_and_offset(model.created_at, Utc),
-                    model.updated_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
+                    model
+                        .updated_at
+                        .map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
                     model.created_by,
                     model.updated_by,
                     model.is_default,
                     model.user_seq,
-                    model.card_company_nm
+                    model.card_company_nm,
                 )
             })
             .collect();
-        
+
         Ok(user_payment_methods)
     }
 }

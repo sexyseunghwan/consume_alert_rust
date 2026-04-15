@@ -54,11 +54,11 @@ impl ProcessServiceImpl {
         &self,
         consume_price_vec: &[String],
         idx: usize,
-    ) -> Result<i64, anyhow::Error> {
-        let consume_price: i64 = consume_price_vec
+    ) -> Result<i32, anyhow::Error> {
+        let consume_price: i32 = consume_price_vec
             .get(idx)
             .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_prodt_money()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed.", idx))?
-            .parse::<i64>()?;
+            .parse::<i32>()?;
 
         Ok(consume_price)
     }
@@ -151,32 +151,38 @@ impl ProcessServiceImpl {
         Ok(consume_result_by_types)
     }
 
-    fn process_nh_card_v1(
+    fn process_nh_card(
         &self,
         split_args_vec: &[String],
         user_seq: i64,
         room_seq: i64,
-        user_payment_methods: &[UserPaymentMethods]
+        user_payment_methods: &[UserPaymentMethods],
     ) -> anyhow::Result<SpentDetail> {
         let split_val: Vec<&str> = vec![",", "원"];
-        
-        let card_name: &str = split_args_vec
+
+        let card_name: String = split_args_vec
             .get(0)
-            .ok_or_else(|| anyhow!("[NH Card] Price field (index 0) not found"))?;
-        
+            .ok_or_else(|| anyhow!("[NH Card] Price field (index 0) not found"))?
+            .replace("승인", "");
+
         let payment_method_id: i64 = user_payment_methods
             .iter()
             .find(|elem| card_name.contains(elem.card_alias().as_str()))
             .map(|elem| *elem.payment_method_id())
-            .ok_or_else(|| anyhow!("[NH Card] No matching payment method found for card_name: {}", card_name))?;
-        
+            .ok_or_else(|| {
+                anyhow!(
+                    "[NH Card] No matching payment method found for card_name: {}",
+                    card_name
+                )
+            })?;
+
         // Extract price information
         let price_str: &str = split_args_vec
             .get(2)
             .ok_or_else(|| anyhow!("[NH Card] Price field (index 2) not found"))?;
         let consume_price_vec: Vec<String> =
             self.get_string_vector_by_replace(price_str, &split_val)?;
-        let spent_money: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
+        let spent_money: i32 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
 
         // Extract time information
         let time_str: &str = split_args_vec
@@ -191,80 +197,29 @@ impl ProcessServiceImpl {
             .get(4)
             .ok_or_else(|| anyhow!("[NH Card] Product name field (index 4) not found"))?
             .to_string();
-        
+
         let spent_detail: SpentDetail = SpentDetail::new(
-            spent_name, 
-            spent_money, 
-            spent_at, 
-            1, 
-            user_seq, 
-            0, 
-            0, 
-            room_seq, 
-            payment_method_id
+            spent_name,
+            spent_money,
+            spent_at,
+            1,
+            user_seq,
+            0,
+            0,
+            room_seq,
+            payment_method_id,
         );
 
         Ok(spent_detail)
     }
 
-    // #[doc = "Process NH card payment data (internal helper function)"]
-    // /// # Arguments
-    // /// * `split_args_vec` - Payment information vector
-    // /// * `user_seq` - User sequence number
-    // ///
-    // /// # Returns
-    // /// * Result<SpentDetailByInstallment, anyhow::Error>
-    // fn process_nh_card(
-    //     &self,
-    //     split_args_vec: &[String],
-    //     user_seq: i64,
-    //     room_seq: i64,
-    // ) -> Result<SpentDetailByInstallment, anyhow::Error> {
-    //     let split_val: Vec<&str> = vec![",", "원"];
-
-    //     // Extract price information
-    //     let price_str: &str = split_args_vec
-    //         .get(2)
-    //         .ok_or_else(|| anyhow!("[NH Card] Price field (index 2) not found"))?;
-    //     let consume_price_vec: Vec<String> =
-    //         self.get_string_vector_by_replace(price_str, &split_val)?;
-    //     let consume_price: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
-
-    //     // Extract time information
-    //     let time_str = split_args_vec
-    //         .get(3)
-    //         .ok_or_else(|| anyhow!("[NH Card] Time field (index 3) not found"))?;
-    //     let consume_time_vec: Vec<String> =
-    //         time_str.split(" ").map(|s| s.trim().to_string()).collect();
-    //     let spent_at: DateTime<Local> = self.get_consume_datetime_local(&consume_time_vec)?;
-
-    //     // Extract product name
-    //     let consume_name: &String = split_args_vec
-    //         .get(4)
-    //         .ok_or_else(|| anyhow!("[NH Card] Product name field (index 4) not found"))?;
-
-    //     let spent_detail: SpentDetail = SpentDetail::new(
-    //         consume_name.clone(),
-    //         consume_price,
-    //         spent_at,
-    //         1, // should_index = 1 (true)
-    //         user_seq,
-    //         1, // spent_group_id
-    //         1,
-    //         room_seq,
-    //     );
-
-    //     Ok(SpentDetailByInstallment::new(0, spent_detail))
-    // }
-
-    fn process_samsung_card_v1(
+    fn process_samsung_card(
         &self,
         split_args_vec: &[String],
         user_seq: i64,
         room_seq: i64,
-        user_payment_methods: &[UserPaymentMethods]
+        user_payment_methods: &[UserPaymentMethods],
     ) -> anyhow::Result<SpentDetail> {
-
         let split_val: Vec<&str> = vec![",", "원"];
 
         let card_name: &str = split_args_vec
@@ -275,7 +230,12 @@ impl ProcessServiceImpl {
             .iter()
             .find(|elem| card_name.contains(elem.card_alias().as_str()))
             .map(|elem| *elem.payment_method_id())
-            .ok_or_else(|| anyhow!("[NH Card] No matching payment method found for card_name: {}", card_name))?;
+            .ok_or_else(|| {
+                anyhow!(
+                    "[NH Card] No matching payment method found for card_name: {}",
+                    card_name
+                )
+            })?;
 
         // Extract price and payment type
         let price_str = split_args_vec
@@ -283,7 +243,7 @@ impl ProcessServiceImpl {
             .ok_or_else(|| anyhow!("[Samsung Card] Price field (index 1) not found"))?;
         let consume_price_vec: Vec<String> =
             self.get_string_vector_by_replace(price_str, &split_val)?;
-        let spent_money: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
+        let spent_money: i32 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
 
         let payment_type: &str = consume_price_vec
             .get(1)
@@ -303,208 +263,36 @@ impl ProcessServiceImpl {
             .to_string();
 
         let spent_detail: SpentDetail = SpentDetail::new(
-            spent_name, 
-            spent_money, 
-            spent_at, 
-            1, 
-            user_seq, 
-            0, 
-            0, 
-            room_seq, 
-            payment_method_id
+            spent_name,
+            spent_money,
+            spent_at,
+            1,
+            user_seq,
+            0,
+            0,
+            room_seq,
+            payment_method_id,
         );
 
         Ok(spent_detail)
     }
-
-    // #[doc = "Process Samsung card payment data (internal helper function)"]
-    // /// # Arguments
-    // /// * `split_args_vec` - Payment information vector
-    // /// * `user_seq` - User sequence number
-    // ///
-    // /// # Returns
-    // /// * Result<SpentDetailByInstallment, anyhow::Error>
-    // fn process_samsung_card(
-    //     &self,
-    //     split_args_vec: &[String],
-    //     user_seq: i64,
-    //     room_seq: i64,
-    // ) -> Result<SpentDetailByInstallment, anyhow::Error> {
-    //     let split_val: Vec<&str> = vec![",", "원"];
-
-    //     // Extract price and payment type
-    //     let price_str = split_args_vec
-    //         .get(1)
-    //         .ok_or_else(|| anyhow!("[Samsung Card] Price field (index 1) not found"))?;
-    //     let consume_price_vec: Vec<String> =
-    //         self.get_string_vector_by_replace(price_str, &split_val)?;
-    //     let consume_price: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
-
-    //     let payment_type: &str = consume_price_vec
-    //         .get(1)
-    //         .ok_or_else(|| anyhow!("[Samsung Card] Payment type not found"))?
-    //         .trim();
-    //     let monthly_installment_plan: i64 = self.get_installment_payment_filtering(payment_type)?;
-
-    //     // Extract time and product name
-    //     let time_str = split_args_vec
-    //         .get(2)
-    //         .ok_or_else(|| anyhow!("[Samsung Card] Time field (index 2) not found"))?;
-    //     let consume_time_vec: Vec<String> = time_str.split(" ").map(|s| s.to_string()).collect();
-    //     let spent_at: DateTime<Local> = self.get_consume_datetime_local(&consume_time_vec)?;
-
-    //     let consume_name: &String = consume_time_vec
-    //         .get(2)
-    //         .ok_or_else(|| anyhow!("[Samsung Card] Product name not found in time field"))?;
-
-    //     let spent_detail: SpentDetail = SpentDetail::new(
-    //         consume_name.clone(),
-    //         consume_price,
-    //         spent_at,
-    //         1, // should_index = 1 (true)
-    //         user_seq,
-    //         1, // spent_group_id
-    //         1,
-    //         room_seq,
-    //     );
-
-    //     Ok(SpentDetailByInstallment::new(
-    //         monthly_installment_plan,
-    //         spent_detail,
-    //     ))
-    // }
-
-    // #[doc = "Process Shinhan card payment data (internal helper function)"]
-    // /// # Arguments
-    // /// * `split_args_vec` - Payment information vector
-    // /// * `user_seq` - User sequence number
-    // ///
-    // /// # Returns
-    // /// * Result<SpentDetailByInstallment, anyhow::Error>
-    // fn process_shinhan_card(
-    //     &self,
-    //     split_args_vec: &[String],
-    //     user_seq: i64,
-    //     room_seq: i64,
-    // ) -> Result<SpentDetailByInstallment, anyhow::Error> {
-    //     let split_val: Vec<&str> = vec![",", "원"];
-
-    //     // Extract and parse price information
-    //     let first_field = split_args_vec
-    //         .first()
-    //         .ok_or_else(|| anyhow!("[Shinhan Card] First field (index 0) not found"))?;
-    //     let consume_price_vec: Vec<String> =
-    //         self.get_string_vector_by_replace(first_field, &split_val)?;
-
-    //     let spent_detail: &String = consume_price_vec
-    //         .get(2)
-    //         .ok_or_else(|| anyhow!("[Shinhan Card] Price and date field not found"))?;
-
-    //     // Parse format: "123456(일시불)123"
-    //     let split_by_front: Vec<String> = spent_detail
-    //         .split("(")
-    //         .map(|s| s.trim().to_string())
-    //         .collect();
-    //     let split_by_back: Vec<String> = spent_detail
-    //         .split(")")
-    //         .map(|s| s.trim().to_string())
-    //         .collect();
-
-    //     let consume_price: i64 = split_by_front
-    //         .first()
-    //         .ok_or_else(|| anyhow!("[Shinhan Card] Price parsing failed"))?
-    //         .parse::<i64>()?;
-
-    //     let payment_type: String = split_by_front
-    //         .get(1)
-    //         .ok_or_else(|| anyhow!("[Shinhan Card] Payment type parsing failed"))?
-    //         .replace(")", "");
-
-    //     let monthly_installment_plan: i64 =
-    //         self.get_installment_payment_filtering(&payment_type)?;
-
-    //     // Extract date and time
-    //     let consume_date: String = split_by_back
-    //         .get(1)
-    //         .ok_or_else(|| anyhow!("[Shinhan Card] Date parsing failed"))?
-    //         .to_string();
-
-    //     let consume_time: String = consume_price_vec
-    //         .get(3)
-    //         .ok_or_else(|| anyhow!("[Shinhan Card] Time field not found"))?
-    //         .to_string();
-
-    //     let consume_time_vec: Vec<String> = vec![consume_date, consume_time];
-    //     let spent_at: DateTime<Local> = self.get_consume_datetime_local(&consume_time_vec)?;
-
-    //     // Extract product name
-    //     let consume_name = consume_price_vec
-    //         .get(4)
-    //         .ok_or_else(|| anyhow!("[Shinhan Card] Product name not found"))?;
-
-    //     let spent_detail: SpentDetail = SpentDetail::new(
-    //         consume_name.clone(),
-    //         consume_price,
-    //         spent_at,
-    //         1, // should_index = 1 (true)
-    //         user_seq,
-    //         1, // spent_group_id
-    //         1,
-    //         room_seq,
-    //     );
-
-    //     Ok(SpentDetailByInstallment::new(
-    //         monthly_installment_plan,
-    //         spent_detail,
-    //     ))
-    // }
 }
 
 #[async_trait]
 impl ProcessService for ProcessServiceImpl {
-    // #[doc = "Process processing function based on the type of payment"]
-    // /// # Arguments
-    // /// * `split_args_vec` - Array with strings as elements : Payment-related information vector:
-    // /// - ex) ["nh카드3*3*승인", "신*환", "5,500원 일시불", "11/25 10:02", "메가엠지씨커피 선릉", "총누적469,743원"]
-    // /// * `user_seq` - User sequence number
-    // ///
-    // /// # Returns
-    // /// * Result<SpentDetailByInstallment, anyhow::Error>
-    // fn process_by_consume_filter(
-    //     &self,
-    //     split_args_vec: &[String],
-    //     user_seq: i64,
-    //     room_seq: i64,
-    // ) -> Result<SpentDetailByInstallment, anyhow::Error> {
-    //     let consume_type: &String = split_args_vec
-    //         .first()
-    //         .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_filter] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
-        
-    //     if consume_type.contains("nh") {
-    //         self.process_nh_card(split_args_vec, user_seq, room_seq)
-    //     } else if consume_type.contains("삼성") {
-    //         self.process_samsung_card(split_args_vec, user_seq, room_seq)
-    //     } else if consume_type.contains("신한카드") {
-    //         self.process_shinhan_card(split_args_vec, user_seq, room_seq)
-    //     } else {
-    //         Err(anyhow!("[Error][process_by_consume_filter] Variable 'consume_type' contains an undefined string: {}", consume_type))
-    //     }
-    // }
-
     // 새로운 버전
-    async fn process_by_consume_filter_v1(
+    fn process_by_consume_filter(
         &self,
         split_args_vec: &[String],
         user_seq: i64,
         room_seq: i64,
-        user_payments: Vec<UserPaymentMethods>
+        user_payment_methods: Vec<UserPaymentMethods>,
     ) -> anyhow::Result<SpentDetail> {
-        
         let consume_type: &String = split_args_vec
             .first()
             .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_filter] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
-        
-        let card_company_nms: HashMap<String, Vec<UserPaymentMethods>> = user_payments
+
+        let card_company_nms: HashMap<String, Vec<UserPaymentMethods>> = user_payment_methods
             .into_iter()
             .filter_map(|elem| {
                 let nm: String = elem.card_company_nm().clone()?;
@@ -514,21 +302,19 @@ impl ProcessService for ProcessServiceImpl {
                 acc.entry(nm).or_default().push(elem);
                 acc
             });
-        
-        let mut spent_detail:SpentDetail;
 
         if card_company_nms.contains_key("nh") && consume_type.contains("nh") {
             let user_payment_methods: &Vec<UserPaymentMethods> = card_company_nms
                 .get("nh")
                 .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_by_consume_filter_v1] The word ‘NH’ does not exist in the HashMap."))?;
 
-            self.process_nh_card_v1(split_args_vec, user_seq, room_seq, user_payment_methods)
+            self.process_nh_card(split_args_vec, user_seq, room_seq, user_payment_methods)
         } else if card_company_nms.contains_key("삼성") && consume_type.contains("삼성") {
             let user_payment_methods: &Vec<UserPaymentMethods> = card_company_nms
                 .get("삼성")
                 .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_by_consume_filter_v1] The word ‘NH’ does not exist in the HashMap."))?;
 
-            self.process_samsung_card_v1(split_args_vec, user_seq, room_seq, user_payment_methods)
+            self.process_samsung_card(split_args_vec, user_seq, room_seq, user_payment_methods)
         } else {
             Err(anyhow!("[Error][process_by_consume_filter_v1] Variable 'consume_type' contains an undefined string: {}", consume_type))
         }
@@ -548,10 +334,10 @@ impl ProcessService for ProcessServiceImpl {
         let mut spent_detail_vec: Vec<SpentDetail> = Vec::new();
 
         if *spent_detail_by_installment.installment() > 0 {
-            let spent_money: i64 = *spent_detail.spent_money();
-            let spent_money_ceil: i64 = (spent_money as f64
-                / *spent_detail_by_installment.installment() as f64)
-                .ceil() as i64;
+            let spent_money: i32 = *spent_detail.spent_money();
+            let spent_money_ceil: i32 = (spent_money as f32
+                / *spent_detail_by_installment.installment() as f32)
+                .ceil() as i32;
 
             for idx in 0..*spent_detail_by_installment.installment() {
                 let mut spent_detail_clone: SpentDetail = spent_detail.clone();
@@ -659,7 +445,6 @@ impl ProcessService for ProcessServiceImpl {
         start_dt: DateTime<Utc>,
         end_dt: DateTime<Utc>,
     ) -> Result<ToPythonGraphCircle, anyhow::Error> {
-
         let etc_per: f64 = consume_result_by_types
             .iter()
             .filter(|elem| *elem.consume_prodt_per() <= 3.0)
@@ -669,13 +454,18 @@ impl ProcessService for ProcessServiceImpl {
         let mut entries: Vec<(String, f64)> = consume_result_by_types
             .iter()
             .filter(|elem| *elem.consume_prodt_per() > 3.0)
-            .map(|elem| (elem.consume_prodt_type().to_string(), *elem.consume_prodt_per()))
+            .map(|elem| {
+                (
+                    elem.consume_prodt_type().to_string(),
+                    *elem.consume_prodt_per(),
+                )
+            })
             .collect();
-        
+
         if etc_per > 0.0 {
             entries.push(("etc".to_string(), etc_per));
         }
-        
+
         let (prodt_type_vec, prodt_type_cost_per_vec): (Vec<String>, Vec<f64>) =
             entries.into_iter().unzip();
 

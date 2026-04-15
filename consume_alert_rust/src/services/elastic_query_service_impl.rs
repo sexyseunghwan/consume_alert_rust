@@ -203,7 +203,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
         order_by_field: &str,
         asc_yn: bool,
         aggs_field: &str,
-        room_seq: i64
+        room_seq: i64,
     ) -> Result<AggResultSet<T>, anyhow::Error> {
         let order_by_asc: &str = if asc_yn { "asc" } else { "desc" };
 
