@@ -10,6 +10,7 @@ pub trait MysqlQueryService {
         &self,
         spent_detail: &SpentDetail,
     ) -> anyhow::Result<i64>;
+    #[allow(dead_code)]
     async fn insert_prodt_details_with_transaction(
         &self,
         spent_details: &[SpentDetail],
@@ -24,6 +25,7 @@ pub trait MysqlQueryService {
         room_token: &str,
         user_seq: i64,
     ) -> anyhow::Result<Option<i64>>;
+    #[allow(dead_code)]
     async fn get_user_id_by_seq(&self, user_seq: i64) -> anyhow::Result<Option<String>>;
     async fn get_latest_spent_idx(
         &self,
@@ -38,14 +40,6 @@ pub trait MysqlQueryService {
     async fn get_user_payment_methods(
         &self,
         user_seq: i64,
-        is_default: bool,
+        is_default: bool
     ) -> anyhow::Result<Vec<UserPaymentMethods>>;
-    // async fn get_user_payment_methods_default(
-    //     &self,
-    //     user_seq: i64,
-    // ) -> anyhow::Result<Vec<UserPaymentMethods>>;
-    // async fn get_user_payment_methods_not_default(
-    //     &self,
-    //     user_seq: i64,
-    // ) -> anyhow::Result<Vec<UserPaymentMethods>>;
 }

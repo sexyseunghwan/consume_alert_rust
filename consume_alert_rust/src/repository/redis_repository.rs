@@ -114,6 +114,19 @@ impl RedisRepositoryImpl {
 
 #[async_trait]
 impl RedisRepository for RedisRepositoryImpl {
+    /// Retrieves a value from Redis for the given key, supporting both single-node and cluster modes.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The Redis key to look up
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Some(String))` if the key exists, or `Ok(None)` if it does not.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the Redis operation fails.
     async fn get(&self, key: &str) -> anyhow::Result<Option<String>> {
         match &self.conn {
             RedisConnectionType::Single(conn) => {
@@ -141,6 +154,16 @@ impl RedisRepository for RedisRepositoryImpl {
         }
     }
 
+    /// Stores a key-value pair in Redis without an expiration, supporting both single-node and cluster modes.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The Redis key to set
+    /// * `value` - The string value to store
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the Redis operation fails.
     async fn set(&self, key: &str, value: &str) -> anyhow::Result<()> {
         match &self.conn {
             RedisConnectionType::Single(conn) => {
@@ -172,6 +195,17 @@ impl RedisRepository for RedisRepositoryImpl {
         }
     }
 
+    /// Stores a key-value pair in Redis with a TTL expiration, supporting both single-node and cluster modes.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The Redis key to set
+    /// * `value` - The string value to store
+    /// * `seconds` - Time-to-live in seconds after which the key expires
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the Redis operation fails.
     async fn set_ex(&self, key: &str, value: &str, seconds: u64) -> anyhow::Result<()> {
         match &self.conn {
             RedisConnectionType::Single(conn) => {

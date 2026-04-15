@@ -132,14 +132,14 @@ impl ProcessServiceImpl {
     fn get_calculate_pie_infos_from_category(
         &self,
         total_cost: f64,
-        type_map: &HashMap<String, i64>,
+        type_map: &HashMap<String, i32>,
     ) -> Result<Vec<ConsumeResultByType>, anyhow::Error> {
         let consume_result_by_types : Vec<ConsumeResultByType> = type_map
             .iter()
             .filter(|(_, value)| **value > 0)
             .map(|(key, value)| {
                 let prodt_type: String = key.to_string();
-                let prodt_cost: i64 = *value;
+                let prodt_cost: i32 = *value;
 
                 let prodt_per: f64 = (prodt_cost as f64 / total_cost) * 100.0;
                 let prodt_per_rounded: f64 = (prodt_per * 10.0).round() / 10.0; /* Round to the second decimal place */
@@ -151,6 +151,22 @@ impl ProcessServiceImpl {
         Ok(consume_result_by_types)
     }
 
+    /// Parses an NH card payment notification message and builds a `SpentDetail`.
+    ///
+    /// # Arguments
+    ///
+    /// * `split_args_vec` - Tokenized fields extracted from the notification text
+    /// * `user_seq` - Unique identifier of the user
+    /// * `room_seq` - Unique identifier of the Telegram room
+    /// * `user_payment_methods` - Slice of payment methods registered by the user
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(SpentDetail)` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if required fields are missing or the card alias cannot be matched.
     fn process_nh_card(
         &self,
         split_args_vec: &[String],
@@ -161,7 +177,7 @@ impl ProcessServiceImpl {
         let split_val: Vec<&str> = vec![",", "원"];
 
         let card_name: String = split_args_vec
-            .get(0)
+            .first()
             .ok_or_else(|| anyhow!("[NH Card] Price field (index 0) not found"))?
             .replace("승인", "");
 
@@ -213,6 +229,22 @@ impl ProcessServiceImpl {
         Ok(spent_detail)
     }
 
+    /// Parses a Samsung card payment notification message and builds a `SpentDetail`.
+    ///
+    /// # Arguments
+    ///
+    /// * `split_args_vec` - Tokenized fields extracted from the notification text
+    /// * `user_seq` - Unique identifier of the user
+    /// * `room_seq` - Unique identifier of the Telegram room
+    /// * `user_payment_methods` - Slice of payment methods registered by the user
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(SpentDetail)` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if required fields are missing or the card alias cannot be matched.
     fn process_samsung_card(
         &self,
         split_args_vec: &[String],
@@ -223,7 +255,7 @@ impl ProcessServiceImpl {
         let split_val: Vec<&str> = vec![",", "원"];
 
         let card_name: &str = split_args_vec
-            .get(0)
+            .first()
             .ok_or_else(|| anyhow!("[NH Card] Price field (index 0) not found"))?;
 
         let payment_method_id: i64 = user_payment_methods
@@ -244,11 +276,6 @@ impl ProcessServiceImpl {
         let consume_price_vec: Vec<String> =
             self.get_string_vector_by_replace(price_str, &split_val)?;
         let spent_money: i32 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
-
-        let payment_type: &str = consume_price_vec
-            .get(1)
-            .ok_or_else(|| anyhow!("[Samsung Card] Payment type not found"))?
-            .trim();
 
         // Extract time and product name
         let time_str = split_args_vec
@@ -280,6 +307,22 @@ impl ProcessServiceImpl {
 
 #[async_trait]
 impl ProcessService for ProcessServiceImpl {
+    /// Dispatches the card payment notification to the appropriate card-specific parser.
+    ///
+    /// # Arguments
+    ///
+    /// * `split_args_vec` - Tokenized fields extracted from the notification text
+    /// * `user_seq` - Unique identifier of the user
+    /// * `room_seq` - Unique identifier of the Telegram room
+    /// * `user_payment_methods` - List of payment methods registered by the user
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(SpentDetail)` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the card company cannot be identified or parsing fails.
     // 새로운 버전
     fn process_by_consume_filter(
         &self,
@@ -404,13 +447,13 @@ impl ProcessService for ProcessServiceImpl {
             spent_details.source_list();
         let total_cost: f64 = *spent_details.agg_result();
 
-        let mut cost_map: HashMap<String, i64> =
+        let mut cost_map: HashMap<String, i32> =
             spent_inner_details
                 .iter()
                 .fold(HashMap::new(), |mut acc, spent_detail| {
                     let detail: &SpentDetailByEs = spent_detail.source();
                     let prodt_type: String = detail.consume_keyword_type().to_string();
-                    let prodt_money: i64 = detail.spent_money as i64;
+                    let prodt_money: i32 = detail.spent_money;
 
                     acc.entry(prodt_type)
                         .and_modify(|value| *value += prodt_money)

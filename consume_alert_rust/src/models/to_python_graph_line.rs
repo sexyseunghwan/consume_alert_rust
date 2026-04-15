@@ -10,17 +10,33 @@ pub struct ToPythonGraphLine {
     start_dt: String,
     end_dt: String,
     total_cost: f64,
-    consume_accumulate_list: Vec<i64>,
+    consume_accumulate_list: Vec<i32>,
 }
 
 impl ToPythonGraphLine {
+    /// Builds a `ToPythonGraphLine` by aggregating daily spending totals into a cumulative list.
+    ///
+    /// # Arguments
+    ///
+    /// * `line_type` - A label identifying the line series (e.g., `"cur"` or `"versus"`)
+    /// * `start_dt` - The start date of the reporting period
+    /// * `end_dt` - The end date of the reporting period
+    /// * `spent_detail` - Aggregated result set containing individual spending records
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(ToPythonGraphLine)` with cumulative daily consumption data on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if construction fails.
     pub fn new(
         line_type: &str,
         start_dt: DateTime<Utc>,
         end_dt: DateTime<Utc>,
         spent_detail: &AggResultSet<SpentDetailByEs>,
     ) -> anyhow::Result<Self> {
-        let mut date_consume: HashMap<DateTime<Utc>, i64> = HashMap::new();
+        let mut date_consume: HashMap<DateTime<Utc>, i32> = HashMap::new();
 
         let total_cost: f64 = *spent_detail.agg_result();
 
@@ -31,7 +47,7 @@ impl ToPythonGraphLine {
                 .date_naive()
                 .and_time(NaiveTime::MIN)
                 .and_utc();
-            let spent_money: i64 = elem.source.spent_money as i64;
+            let spent_money: i32 = elem.source.spent_money;
 
             date_consume
                 .entry(elem_date)
@@ -42,11 +58,11 @@ impl ToPythonGraphLine {
         let mut sorted_dates: Vec<_> = date_consume.iter().collect(); /* HashMap -> Vector */
         sorted_dates.sort_by(|a, b| a.0.cmp(b.0));
 
-        let sorted_dates_list: Vec<i64> = sorted_dates.into_iter().map(|(_, v)| *v).collect();
+        let sorted_dates_list: Vec<i32> = sorted_dates.into_iter().map(|(_, v)| *v).collect();
 
         /* List for cumulative total results */
-        let mut consume_accumulate_list: Vec<i64> = Vec::new();
-        let mut accumulate_cost: i64 = 0;
+        let mut consume_accumulate_list: Vec<i32> = Vec::new();
+        let mut accumulate_cost: i32 = 0;
 
         for cost in sorted_dates_list {
             accumulate_cost += cost;

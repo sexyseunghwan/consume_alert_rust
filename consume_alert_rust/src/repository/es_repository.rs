@@ -2,11 +2,36 @@ use crate::common::*;
 
 #[async_trait]
 pub trait EsRepository {
+    /// Executes an Elasticsearch search query against the given index and returns the raw JSON response.
+    ///
+    /// # Arguments
+    ///
+    /// * `es_query` - The Elasticsearch query DSL as a JSON value
+    /// * `index_name` - The name of the index to search
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Value)` with the raw Elasticsearch response body on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP request fails or the response indicates a non-success status.
     async fn get_search_query(
         &self,
         es_query: &Value,
         index_name: &str,
     ) -> Result<Value, anyhow::Error>;
+
+    /// Deletes a document identified by `doc_id` from the specified Elasticsearch index.
+    ///
+    /// # Arguments
+    ///
+    /// * `doc_id` - The document ID to delete
+    /// * `index_name` - The name of the index containing the document
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP request fails or the response indicates a non-success status.
     #[allow(dead_code)]
     async fn delete_query(&self, doc_id: &str, index_name: &str) -> Result<(), anyhow::Error>;
 }
@@ -17,6 +42,15 @@ pub struct EsRepositoryPub {
 }
 
 impl EsRepositoryPub {
+    /// Creates a new `EsRepositoryPub` by reading Elasticsearch connection settings from environment variables.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(EsRepositoryPub)` on successful connection setup.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any required environment variable is missing or the transport cannot be built.
     pub fn new() -> anyhow::Result<Self> {
         let es_host: Vec<String> = env::var("ES_DB_URL")
             .expect("[EsRepositoryPub::new] 'ES_DB_URL' must be set")
@@ -24,8 +58,15 @@ impl EsRepositoryPub {
             .map(|s| s.to_string())
             .collect();
 
-        let es_id: String = env::var("ES_ID").expect("[EsRepositoryPub::new] 'ES_ID' must be set");
-        let es_pw: String = env::var("ES_PW").expect("[EsRepositoryPub::new] 'ES_PW' must be set");
+        let es_id: String = env::var("ES_ID")
+            .inspect_err(|e| {
+                error!("[EsRepositoryPub::new] 'ES_ID' must be set: {:#}", e);
+            })?;
+        
+        let es_pw: String = env::var("ES_PW")
+            .inspect_err(|e| {
+                error!("[EsRepositoryPub::new] 'ES_PW' must be set: {:#}", e);
+            })?;
 
         let cluster_urls: Vec<Url> = es_host
             .iter()

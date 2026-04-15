@@ -18,12 +18,18 @@ pub struct GraphApiServiceImpl {
 }
 
 impl GraphApiServiceImpl {
-    pub fn new() -> Self {
-        let graph_api_url: String = env::var("GRAPH_API_URL").expect(
-            "[ENV file read Error][GraphApiServiceImpl -> new()] 'GRAPH_API_URL' must be set",
-        );
-
-        Self { graph_api_url }
+    /// Creates a new `GraphApiServiceImpl` by reading the graph API URL from the environment.
+    ///
+    /// # Returns
+    ///
+    /// Returns a new `GraphApiServiceImpl` instance.
+    pub fn new() -> anyhow::Result<Self> {
+        let graph_api_url: String = env::var("GRAPH_API_URL")
+            .inspect_err(|e| {
+                error!("[GraphApiServiceImpl::new] 'GRAPH_API_URL' must be set: {:#}", e);
+            })?;
+            
+        Ok(Self { graph_api_url })
     }
 }
 
@@ -82,11 +88,19 @@ impl GraphApiService for GraphApiServiceImpl {
         Ok(resp_body)
     }
 
+    /// Calls the Python API to draw a pie chart for consumption categories.
+    ///
     /// # Arguments
-    /// * `to_python_graph_circle` -
+    ///
+    /// * `to_python_graph_circle` - Data transfer object containing category and percentage information for the pie chart
     ///
     /// # Returns
-    /// * Result<String, anyhow::Error>
+    ///
+    /// Returns `Ok(String)` containing the generated image file path on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP request to the Python API fails.
     async fn call_python_matplot_consume_type(
         &self,
         to_python_graph_circle: &ToPythonGraphCircle,

@@ -19,6 +19,7 @@ pub trait MysqlRepository {
         active_model: spent_detail::ActiveModel,
     ) -> anyhow::Result<i64>;
 
+    #[allow(dead_code)]
     /// Inserts multiple [`spent_detail::ActiveModel`] records one by one within a single
     /// transaction and returns the auto-incremented `spent_idx` assigned by the database
     /// for each record.
@@ -70,13 +71,27 @@ pub struct MysqlRepositoryImpl {
 }
 
 impl MysqlRepositoryImpl {
+    /// Creates a new `MysqlRepositoryImpl` by reading the database URL from environment variables and establishing a connection.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(MysqlRepositoryImpl)` on successful database connection.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `DATABASE_URL` environment variable is not set or the connection fails.
     pub async fn new() -> anyhow::Result<Self> {
         let db_url: String = env::var("DATABASE_URL")
-            .expect("[MysqlRepositoryImpl::new] DATABASE_URL must be set in .env");
+            .inspect_err(|e| {
+                error!("[MysqlRepositoryImpl::new] DATABASE_URL must be set: {:#}", e);
+            })?;
+            //.expect("[MysqlRepositoryImpl::new] DATABASE_URL must be set in .env");
 
         let db_conn: DatabaseConnection = Database::connect(db_url)
             .await
-            .expect("[MysqlRepositoryImpl::new] Database connection failed");
+            .inspect_err(|e| {
+                error!("[MysqlRepositoryImpl::new] Database connection failed.: {:#}", e);
+            })?;
 
         Ok(Self { db_conn })
     }
@@ -84,6 +99,19 @@ impl MysqlRepositoryImpl {
 
 #[async_trait]
 impl MysqlRepository for MysqlRepositoryImpl {
+    /// Inserts a single `spent_detail` record within a transaction and returns the generated primary key.
+    ///
+    /// # Arguments
+    ///
+    /// * `active_model` - The SeaORM active model representing the record to insert
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(i64)` with the auto-incremented `spent_idx` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if beginning, executing, or committing the transaction fails.
     async fn insert_spent_detail_with_transaction(
         &self,
         active_model: spent_detail::ActiveModel,
@@ -110,6 +138,19 @@ impl MysqlRepository for MysqlRepositoryImpl {
         Ok(insert_result.last_insert_id)
     }
 
+    /// Inserts multiple `spent_detail` records sequentially within a single transaction, returning all generated primary keys.
+    ///
+    /// # Arguments
+    ///
+    /// * `active_models` - Vector of SeaORM active models to insert in order
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Vec<i64>)` with `spent_idx` values in the same order as `active_models`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any insert or the transaction commit fails; the entire transaction is rolled back.
     async fn insert_spent_details_with_transaction(
         &self,
         active_models: Vec<spent_detail::ActiveModel>,
@@ -162,6 +203,15 @@ impl MysqlRepository for MysqlRepositoryImpl {
         Ok(inserted_ids)
     }
 
+    /// Deletes a `spent_detail` row identified by `spent_idx` within a transaction.
+    ///
+    /// # Arguments
+    ///
+    /// * `spent_idx` - The primary key of the record to delete
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if beginning, executing the delete, or committing the transaction fails.
     async fn delete_spent_detail_with_transaction(&self, spent_idx: i64) -> anyhow::Result<()> {
         let txn: DatabaseTransaction = self
             .db_conn

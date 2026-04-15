@@ -2,6 +2,17 @@ use crate::common::*;
 
 #[async_trait]
 pub trait KafkaRepository {
+    /// Serializes a JSON payload and sends it as a Kafka message to the specified topic.
+    ///
+    /// # Arguments
+    ///
+    /// * `topic` - The Kafka topic name to send the message to
+    /// * `key` - Optional partition key for the message
+    /// * `payload` - The JSON value to serialize and send as the message body
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization or the Kafka delivery fails.
     async fn send_message(
         &self,
         topic: &str,
@@ -16,6 +27,15 @@ pub struct KafkaRepositoryImpl {
 }
 
 impl KafkaRepositoryImpl {
+    /// Creates a new `KafkaRepositoryImpl` by reading broker and security settings from environment variables.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(KafkaRepositoryImpl)` on successful producer creation.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if required environment variables are missing or the Kafka producer cannot be created.
     pub fn new() -> anyhow::Result<Self> {
         let kafka_brokers: String = env::var("KAFKA_BROKERS")
             .expect("[KafkaRepositoryImpl::new] 'KAFKA_BROKERS' must be set");

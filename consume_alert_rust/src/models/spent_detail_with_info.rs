@@ -17,6 +17,15 @@ pub struct SpentDetailWithInfo {
 }
 
 impl SpentDetailWithInfo {
+    /// Converts this `SpentDetailWithInfo` into a `SpentDetailByProduce` payload for Kafka production.
+    ///
+    /// # Arguments
+    ///
+    /// * `indexing_type` - Whether this is an insert or delete operation
+    ///
+    /// # Returns
+    ///
+    /// Returns a `SpentDetailByProduce` instance ready for Kafka production.
     pub fn to_spent_detail_by_produce(&self, indexing_type: IndexingType) -> SpentDetailByProduce {
         SpentDetailByProduce::new(
             self.spent_idx,

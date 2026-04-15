@@ -19,6 +19,19 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {}
 
 #[async_trait]
 impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceImpl<R> {
+    /// Converts a `SpentDetail` domain model and inserts it into the database within a transaction.
+    ///
+    /// # Arguments
+    ///
+    /// * `spent_detail` - The spending record to persist
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(i64)` containing the auto-incremented `spent_idx` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the conversion to ActiveModel fails or the database transaction fails.
     async fn insert_prodt_detail_with_transaction(
         &self,
         spent_detail: &SpentDetail,
@@ -32,6 +45,19 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
             .await
     }
 
+    /// Converts multiple `SpentDetail` records and inserts them sequentially within a single transaction.
+    ///
+    /// # Arguments
+    ///
+    /// * `spent_details` - Slice of spending records to persist in order
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Vec<i64>)` containing the auto-incremented `spent_idx` values in insertion order.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any conversion or database operation fails; the transaction is rolled back.
     async fn insert_prodt_details_with_transaction(
         &self,
         spent_details: &[SpentDetail],
@@ -63,6 +89,20 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
             .await
     }
 
+    /// Checks whether a Telegram room exists for the given token and user ID, returning the user sequence if found.
+    ///
+    /// # Arguments
+    ///
+    /// * `room_token` - The Telegram room token to match
+    /// * `user_id` - The Telegram user ID to match
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Some(i64))` with the `user_seq` if a matching record is found, or `Ok(None)` otherwise.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     async fn exists_telegram_room_by_token_and_id(
         &self,
         room_token: &str,
@@ -84,6 +124,20 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         Ok(result.map(|user| user.user_seq))
     }
 
+    /// Retrieves the room sequence number for a Telegram room identified by token and user sequence.
+    ///
+    /// # Arguments
+    ///
+    /// * `room_token` - The Telegram room token to match
+    /// * `user_seq` - The user sequence number to match
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Some(i64))` with the `room_seq` if found, or `Ok(None)` if no match exists.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     async fn get_telegram_room_seq_by_token_and_userseq(
         &self,
         room_token: &str,
@@ -104,6 +158,19 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         Ok(result.map(|room| room.room_seq))
     }
 
+    /// Retrieves the user ID string for the given user sequence number.
+    ///
+    /// # Arguments
+    ///
+    /// * `user_seq` - The unique sequence number identifying the user
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Some(String))` with the user ID if found, or `Ok(None)` if no record exists.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     async fn get_user_id_by_seq(&self, user_seq: i64) -> anyhow::Result<Option<String>> {
         let result: Option<users::Model> = users::Entity::find()
             .filter(users::Column::UserSeq.eq(user_seq))
@@ -119,6 +186,20 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         Ok(result.map(|user| user.user_id))
     }
 
+    /// Retrieves the most recently inserted `spent_idx` for the given user and room.
+    ///
+    /// # Arguments
+    ///
+    /// * `user_seq` - The unique sequence number identifying the user
+    /// * `room_seq` - The unique sequence number identifying the Telegram room
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Some(i64))` with the latest `spent_idx`, or `Ok(None)` if no records exist.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     async fn get_latest_spent_idx(
         &self,
         user_seq: i64,
@@ -140,6 +221,19 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         Ok(result.map(|row| row.spent_idx))
     }
 
+    /// Retrieves a spending record joined with keyword type and user information by its primary key.
+    ///
+    /// # Arguments
+    ///
+    /// * `spent_idx` - The primary key of the spending record
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Some(SpentDetailWithInfo))` if found, or `Ok(None)` if no record exists.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     async fn get_spent_detail_with_info(
         &self,
         spent_idx: i64,
@@ -175,12 +269,35 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         Ok(result)
     }
 
+    /// Deletes the spending record identified by `spent_idx` within a database transaction.
+    ///
+    /// # Arguments
+    ///
+    /// * `spent_idx` - The primary key of the record to delete
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database transaction fails; the deletion is rolled back.
     async fn delete_spent_detail_with_transaction(&self, spent_idx: i64) -> anyhow::Result<()> {
         self.db_conn
             .delete_spent_detail_with_transaction(spent_idx)
             .await
     }
 
+    /// Retrieves the payment methods registered by the specified user, optionally filtering by default flag.
+    ///
+    /// # Arguments
+    ///
+    /// * `user_seq` - The unique sequence number identifying the user
+    /// * `is_default` - If `true`, returns only the default payment method; otherwise returns all
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Vec<UserPaymentMethods>)` with the matching payment methods.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
     async fn get_user_payment_methods(
         &self,
         user_seq: i64,

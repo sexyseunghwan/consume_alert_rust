@@ -25,6 +25,15 @@ pub struct SpentDetail {
 }
 
 impl SpentDetail {
+    /// Converts this `SpentDetail` domain model into a SeaORM `ActiveModel` for database insertion.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(spent_detail::ActiveModel)` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any field conversion fails.
     pub fn convert_spent_detail_to_active_model(
         &self,
     ) -> anyhow::Result<spent_detail::ActiveModel> {
@@ -34,7 +43,7 @@ impl SpentDetail {
         Ok(ActiveModel {
             spent_idx: NotSet,
             spent_name: Set(self.spent_name.clone()),
-            spent_money: Set(self.spent_money as i32),
+            spent_money: Set(self.spent_money),
             spent_at: Set(spent_at_naive),
             should_index: Set(self.should_index),
             created_at: Set(now),
@@ -49,6 +58,20 @@ impl SpentDetail {
         })
     }
 
+    /// Converts this `SpentDetail` into a `SpentDetailByProduce` payload for Kafka message production.
+    ///
+    /// # Arguments
+    ///
+    /// * `spent_idx` - The database-assigned primary key of the inserted record
+    /// * `consume_keyword_type` - The human-readable consumption category name
+    /// * `room_seq` - The Telegram room sequence number
+    /// * `indexing_type` - Whether this is an insert or delete operation
+    /// * `user_id` - The user ID string
+    ///
+    /// # Returns
+    ///
+    /// Returns a `SpentDetailByProduce` instance ready for Kafka production.
+    #[allow(dead_code)]
     pub fn convert_to_spent_detail_by_produce(
         &self,
         spent_idx: i64,
@@ -62,7 +85,7 @@ impl SpentDetail {
         SpentDetailByProduce::new(
             spent_idx,
             self.spent_name.clone(),
-            self.spent_money as i32,
+            self.spent_money,
             self.spent_at.with_timezone(&Utc),
             now,
             self.user_seq,
@@ -75,6 +98,19 @@ impl SpentDetail {
         )
     }
 
+    /// Converts this `SpentDetail` into a `SpentDetailView` for Telegram message display.
+    ///
+    /// # Arguments
+    ///
+    /// * `spent_type` - The resolved consumption category information
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(SpentDetailView)` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the view construction fails.
     pub fn convert_spent_detail_to_view(
         &self,
         spent_type: &ConsumingIndexProdtType,

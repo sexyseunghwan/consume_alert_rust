@@ -10,6 +10,17 @@ pub struct RedisServiceImpl<R: RedisRepository> {
 
 #[async_trait]
 impl<R: RedisRepository + Send + Sync> RedisService for RedisServiceImpl<R> {
+    /// Stores a string value in Redis, optionally with a TTL expiration.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The Redis key to set
+    /// * `value` - The string value to store
+    /// * `ttl_seconds` - Optional time-to-live in seconds; if `None`, the key has no expiration
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the Redis operation fails.
     async fn set_string(
         &self,
         key: &str,
@@ -22,6 +33,19 @@ impl<R: RedisRepository + Send + Sync> RedisService for RedisServiceImpl<R> {
         }
     }
 
+    /// Retrieves a string value from Redis by key.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The Redis key to look up
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Some(String))` if the key exists, or `Ok(None)` if it does not.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the Redis operation fails.
     async fn get_string(&self, key: &str) -> anyhow::Result<Option<String>> {
         self.redis_conn.get(key).await
     }

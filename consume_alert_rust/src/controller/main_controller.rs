@@ -19,7 +19,6 @@ use crate::models::consume_result_by_type::*;
 use crate::models::per_datetime::*;
 use crate::models::spent_detail::*;
 use crate::models::spent_detail_by_es::*;
-use crate::models::spent_detail_by_installment::*;
 use crate::models::spent_detail_by_produce::*;
 use crate::models::spent_detail_to_kafka::*;
 use crate::models::spent_detail_with_info::*;
@@ -60,6 +59,21 @@ impl<
         R: RedisService,
     > MainController<G, E, M, T, P, KP, R>
 {
+    /// Creates a new `MainController` wiring all service dependencies together.
+    ///
+    /// # Arguments
+    ///
+    /// * `graph_api_service` - Service for calling the Python graph API
+    /// * `elastic_query_service` - Service for querying Elasticsearch
+    /// * `mysql_query_service` - Service for querying MySQL
+    /// * `tele_bot_service` - Service for sending Telegram messages
+    /// * `process_service` - Service for business-logic processing
+    /// * `producer_service` - Service for producing Kafka messages
+    /// * `redis_service` - Service for Redis cache operations
+    ///
+    /// # Returns
+    ///
+    /// Returns a new `MainController` instance.
     pub fn new(
         graph_api_service: Arc<G>,
         elastic_query_service: Arc<E>,
@@ -85,6 +99,7 @@ impl<
     /// Resolves `user_id` via Redis cache, falling back to MySQL on a miss.
     ///
     /// Returns `Ok(None)` when no user row exists for the given `user_seq`.
+    #[allow(dead_code)]
     async fn resolve_user_id(
         &self,
         redis_key: &str,
@@ -191,6 +206,19 @@ impl<
         Ok(seq_opt)
     }
 
+    /// Determines the consumption category for the given spending name via Elasticsearch.
+    ///
+    /// # Arguments
+    ///
+    /// * `spend_name` - The name or description of the spending item to classify
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(ConsumingIndexProdtType)` with the matched category on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the Elasticsearch query fails.
     async fn resolve_spend_type(
         &self,
         spend_name: &str,
@@ -243,19 +271,18 @@ impl<
             }
         };
 
-        let redis_user_id_key: String = format!("{}:{}", app_config.redis_user_id_key(), user_seq);
-
-        let user_id: String = match self.resolve_user_id(&redis_user_id_key, user_seq).await? {
-            Some(id) => id,
-            None => {
-                self.tele_bot_service
-                    .send_message_confirm(
-                        "The token is invalid or you are not an authorized user.\nPlease contact the administrator.",
-                    )
-                    .await?;
-                return Ok(());
-            }
-        };
+        // let redis_user_id_key: String = format!("{}:{}", app_config.redis_user_id_key(), user_seq);
+        // let _user_id: String = match self.resolve_user_id(&redis_user_id_key, user_seq).await? {
+        //     Some(id) => id,
+        //     None => {
+        //         self.tele_bot_service
+        //             .send_message_confirm(
+        //                 "The token is invalid or you are not an authorized user.\nPlease contact the administrator.",
+        //             )
+        //             .await?;
+        //         return Ok(());
+        //     }
+        // };
 
         let room_seq: i64 = match self
             .resolve_room_seq(&redis_room_key, &telegram_token, user_seq)
@@ -304,7 +331,11 @@ impl<
     /// Splits the raw command text (skipping the 2-char command prefix) by `delimiter`.
     fn preprocess_string(&self, delimiter: &str) -> Vec<String> {
         let args: String = self.tele_bot_service.get_input_text();
-        args[2..]
+
+        args
+            .chars()
+            .skip(2)
+            .collect::<String>()
             .split(delimiter)
             .map(|s| s.trim().to_string())
             .collect()
@@ -473,7 +504,7 @@ impl<
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption] Failed to get user payment methods: {:#}", e);
             })?
-            .get(0) {
+            .first() {
                 Some(default_payment_method) => default_payment_method.clone(),
                 None => {
                     self.tele_bot_service
@@ -612,7 +643,7 @@ impl<
                     e
                 );
             })?;
-
+        
         let spent_idx: i64 = self
             .mysql_query_service
             .insert_prodt_detail_with_transaction(&spent_detail)
@@ -777,7 +808,7 @@ impl<
 
     /// `ctr YYYY.MM.DD-YYYY.MM.DD` — Shows consumption summary for a custom date range.
     async fn command_consumption_per_term(&self, room_seq: i64) -> anyhow::Result<()> {
-        let args = self.preprocess_string(" ");
+        let args: Vec<String> = self.preprocess_string(" ");
 
         let permon_datetime = match args.len() {
             2 if args.get(1).is_some_and(|d| {

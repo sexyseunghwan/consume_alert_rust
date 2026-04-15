@@ -121,6 +121,16 @@ pub fn validate_date_format(date_str: &str, format: &str) -> Result<bool, anyhow
     Ok(re.is_match(date_str))
 }
 
+/// Formats a `DateTime<Utc>` value as a KST (Korea Standard Time) string using the given format pattern.
+///
+/// # Arguments
+///
+/// * `dt` - The UTC datetime to convert and format
+/// * `format` - The `strftime`-style format string (e.g., `"%Y-%m-%dT%H:%M"`)
+///
+/// # Returns
+///
+/// Returns the formatted KST datetime string.
 pub fn format_kst_datetime(dt: DateTime<Utc>, format: &str) -> String {
     let kst: DateTime<chrono_tz::Tz> = dt.with_timezone(&Seoul);
     kst.format(format).to_string()

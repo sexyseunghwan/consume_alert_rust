@@ -156,7 +156,15 @@ async fn main() {
 
     /* Shared services — wrapped in Arc so each bot task can clone cheaply. */
     let redis_service: Arc<AppRedisService> = Arc::new(AppRedisService::new(redis_conn));
-    let graph_api_service: Arc<GraphApiServiceImpl> = Arc::new(GraphApiServiceImpl::new());
+    let graph_api_service: GraphApiServiceImpl = match GraphApiServiceImpl::new() {
+        Ok(graph_api_service) => graph_api_service,
+        Err(e) => {
+            error!("[main] graph_api_service: {:#}", e);
+            panic!("[main] graph_api_service: {:#}", e)
+        }
+    };
+    let arc_graph_api_service: Arc<GraphApiServiceImpl> = Arc::new(graph_api_service);
+    
     let elastic_query_service: Arc<AppElasticService> =
         Arc::new(AppElasticService::new(elastic_conn));
     let mysql_query_service: Arc<AppMysqlService> = Arc::new(AppMysqlService::new(mysql_conn));
@@ -180,7 +188,7 @@ async fn main() {
     for bot in bots {
         let handle = tokio::spawn({
             /* Clone Arc pointers — cheap, no data is copied. */
-            let graph_api_service: Arc<GraphApiServiceImpl> = Arc::clone(&graph_api_service);
+            let graph_api_service: Arc<GraphApiServiceImpl> = Arc::clone(&arc_graph_api_service);
             let elastic_query_service: Arc<AppElasticService> = Arc::clone(&elastic_query_service);
             let mysql_query_service: Arc<AppMysqlService> = Arc::clone(&mysql_query_service);
             let process_service: Arc<ProcessServiceImpl> = Arc::clone(&process_service);

@@ -12,6 +12,11 @@ pub struct SpentDetailView {
 }
 
 impl SpentDetailView {
+    /// Formats the spending detail as a Telegram-friendly message string.
+    ///
+    /// # Returns
+    ///
+    /// Returns a formatted string containing the spending name, amount, time, and category.
     pub fn to_telegram_string(&self) -> String {
         format!(
             "사용처: \"{}\"\n사용한 현금: \"{}\"\n사용시간: \"{}\"\n소비타입: \"{}\"",
@@ -24,6 +29,15 @@ impl SpentDetailView {
 }
 
 impl fmt::Display for SpentDetailView {
+    /// Formats the `SpentDetailView` using the Telegram message string representation.
+    ///
+    /// # Arguments
+    ///
+    /// * `f` - The formatter to write into
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the write operation fails.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_telegram_string())
     }

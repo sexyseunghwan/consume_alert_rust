@@ -72,8 +72,44 @@ pub fn get_elastic_conn() -> Arc<EsMultiRepositoryPub> {
 
 #[async_trait]
 pub trait EsMultiRepository {
+    /// Executes an Elasticsearch search query against the given index and returns the raw JSON response.
+    ///
+    /// # Arguments
+    ///
+    /// * `es_query` - The Elasticsearch query DSL as a JSON value
+    /// * `index_name` - The name of the index to search
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Value)` with the raw Elasticsearch response body on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP request fails or the response indicates a non-success status.
     async fn get_search_query(&self, es_query: &Value, index_name: &str) -> Result<Value, anyhow::Error>;
+
+    /// Indexes a JSON document into the specified Elasticsearch index.
+    ///
+    /// # Arguments
+    ///
+    /// * `document` - The JSON document to index
+    /// * `index_name` - The name of the index to write to
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP request fails or the response indicates a non-success status.
     async fn post_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error>;
+
+    /// Deletes a document identified by `doc_id` from the specified Elasticsearch index.
+    ///
+    /// # Arguments
+    ///
+    /// * `doc_id` - The document ID to delete
+    /// * `index_name` - The name of the index containing the document
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP request fails or the response indicates a non-success status.
     async fn delete_query(&self, doc_id: &str, index_name: &str) -> Result<(), anyhow::Error>;
 }
 
