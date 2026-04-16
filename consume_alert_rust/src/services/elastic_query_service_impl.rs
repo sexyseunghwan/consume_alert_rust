@@ -123,6 +123,11 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
             for consume_type in results {
                 let keyword_weight: f64 = *consume_type.source().keyword_weight() as f64;
                 let score: f64 = *consume_type.score() * -1.0 * keyword_weight;
+
+                if !score.is_finite() {
+                    return Err(anyhow!("[ElasticQueryServiceImpl::get_consume_type_judgement]"))
+                }
+
                 let score_i64: i64 = score as i64;
                 let keyword: &str = consume_type.source.consume_keyword();
 

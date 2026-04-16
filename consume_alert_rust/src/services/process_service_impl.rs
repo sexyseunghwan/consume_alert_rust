@@ -54,11 +54,11 @@ impl ProcessServiceImpl {
         &self,
         consume_price_vec: &[String],
         idx: usize,
-    ) -> Result<i32, anyhow::Error> {
-        let consume_price: i32 = consume_price_vec
+    ) -> Result<i64, anyhow::Error> {
+        let consume_price: i64 = consume_price_vec
             .get(idx)
             .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_prodt_money()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed.", idx))?
-            .parse::<i32>()?;
+            .parse::<i64>()?;
 
         Ok(consume_price)
     }
@@ -132,14 +132,14 @@ impl ProcessServiceImpl {
     fn get_calculate_pie_infos_from_category(
         &self,
         total_cost: f64,
-        type_map: &HashMap<String, i32>,
+        type_map: &HashMap<String, i64>,
     ) -> Result<Vec<ConsumeResultByType>, anyhow::Error> {
         let consume_result_by_types : Vec<ConsumeResultByType> = type_map
             .iter()
             .filter(|(_, value)| **value > 0)
             .map(|(key, value)| {
                 let prodt_type: String = key.to_string();
-                let prodt_cost: i32 = *value;
+                let prodt_cost: i64 = *value;
 
                 let prodt_per: f64 = (prodt_cost as f64 / total_cost) * 100.0;
                 let prodt_per_rounded: f64 = (prodt_per * 10.0).round() / 10.0; /* Round to the second decimal place */
@@ -178,7 +178,7 @@ impl ProcessServiceImpl {
 
         let card_name: String = split_args_vec
             .first()
-            .ok_or_else(|| anyhow!("[NH Card] Price field (index 0) not found"))?
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 0) not found"))?
             .replace("승인", "");
 
         let payment_method_id: i64 = user_payment_methods
@@ -187,7 +187,7 @@ impl ProcessServiceImpl {
             .map(|elem| *elem.payment_method_id())
             .ok_or_else(|| {
                 anyhow!(
-                    "[NH Card] No matching payment method found for card_name: {}",
+                    "[ProcessServiceImpl::process_samsung_card] No matching payment method found for card_name: {}",
                     card_name
                 )
             })?;
@@ -195,15 +195,15 @@ impl ProcessServiceImpl {
         // Extract price information
         let price_str: &str = split_args_vec
             .get(2)
-            .ok_or_else(|| anyhow!("[NH Card] Price field (index 2) not found"))?;
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 2) not found"))?;
         let consume_price_vec: Vec<String> =
             self.get_string_vector_by_replace(price_str, &split_val)?;
-        let spent_money: i32 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
+        let spent_money: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
 
         // Extract time information
         let time_str: &str = split_args_vec
             .get(3)
-            .ok_or_else(|| anyhow!("[NH Card] Time field (index 3) not found"))?;
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Time field (index 3) not found"))?;
         let consume_time_vec: Vec<String> =
             time_str.split(" ").map(|s| s.trim().to_string()).collect();
         let spent_at: DateTime<Local> = self.get_consume_datetime_local(&consume_time_vec)?;
@@ -211,7 +211,7 @@ impl ProcessServiceImpl {
         // Extract product name
         let spent_name: String = split_args_vec
             .get(4)
-            .ok_or_else(|| anyhow!("[NH Card] Product name field (index 4) not found"))?
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Product name field (index 4) not found"))?
             .to_string();
 
         let spent_detail: SpentDetail = SpentDetail::new(
@@ -256,7 +256,7 @@ impl ProcessServiceImpl {
 
         let card_name: &str = split_args_vec
             .first()
-            .ok_or_else(|| anyhow!("[NH Card] Price field (index 0) not found"))?;
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 0) not found"))?;
 
         let payment_method_id: i64 = user_payment_methods
             .iter()
@@ -264,7 +264,7 @@ impl ProcessServiceImpl {
             .map(|elem| *elem.payment_method_id())
             .ok_or_else(|| {
                 anyhow!(
-                    "[NH Card] No matching payment method found for card_name: {}",
+                    "[ProcessServiceImpl::process_samsung_card] No matching payment method found for card_name: {}",
                     card_name
                 )
             })?;
@@ -272,21 +272,21 @@ impl ProcessServiceImpl {
         // Extract price and payment type
         let price_str = split_args_vec
             .get(1)
-            .ok_or_else(|| anyhow!("[Samsung Card] Price field (index 1) not found"))?;
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 1) not found"))?;
         let consume_price_vec: Vec<String> =
             self.get_string_vector_by_replace(price_str, &split_val)?;
-        let spent_money: i32 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
+        let spent_money: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
 
         // Extract time and product name
         let time_str = split_args_vec
             .get(2)
-            .ok_or_else(|| anyhow!("[Samsung Card] Time field (index 2) not found"))?;
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Time field (index 2) not found"))?;
         let consume_time_vec: Vec<String> = time_str.split(" ").map(|s| s.to_string()).collect();
         let spent_at: DateTime<Local> = self.get_consume_datetime_local(&consume_time_vec)?;
 
         let spent_name: String = consume_time_vec
             .get(2)
-            .ok_or_else(|| anyhow!("[Samsung Card] Product name not found in time field"))?
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Product name not found in time field"))?
             .to_string();
 
         let spent_detail: SpentDetail = SpentDetail::new(
@@ -377,10 +377,10 @@ impl ProcessService for ProcessServiceImpl {
         let mut spent_detail_vec: Vec<SpentDetail> = Vec::new();
 
         if *spent_detail_by_installment.installment() > 0 {
-            let spent_money: i32 = *spent_detail.spent_money();
-            let spent_money_ceil: i32 = (spent_money as f32
-                / *spent_detail_by_installment.installment() as f32)
-                .ceil() as i32;
+            let spent_money: i64 = *spent_detail.spent_money();
+            let spent_money_ceil: i64 = (spent_money as f64
+                / *spent_detail_by_installment.installment() as f64)
+                .ceil() as i64;
 
             for idx in 0..*spent_detail_by_installment.installment() {
                 let mut spent_detail_clone: SpentDetail = spent_detail.clone();
@@ -447,13 +447,13 @@ impl ProcessService for ProcessServiceImpl {
             spent_details.source_list();
         let total_cost: f64 = *spent_details.agg_result();
 
-        let mut cost_map: HashMap<String, i32> =
+        let mut cost_map: HashMap<String, i64> =
             spent_inner_details
                 .iter()
                 .fold(HashMap::new(), |mut acc, spent_detail| {
                     let detail: &SpentDetailByEs = spent_detail.source();
                     let prodt_type: String = detail.consume_keyword_type().to_string();
-                    let prodt_money: i32 = detail.spent_money;
+                    let prodt_money: i64 = detail.spent_money;
 
                     acc.entry(prodt_type)
                         .and_modify(|value| *value += prodt_money)

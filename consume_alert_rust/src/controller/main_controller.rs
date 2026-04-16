@@ -19,7 +19,6 @@ use crate::models::consume_result_by_type::*;
 use crate::models::per_datetime::*;
 use crate::models::spent_detail::*;
 use crate::models::spent_detail_by_es::*;
-use crate::models::spent_detail_by_produce::*;
 use crate::models::spent_detail_to_kafka::*;
 use crate::models::spent_detail_with_info::*;
 use crate::models::to_python_graph_circle::*;
@@ -332,8 +331,7 @@ impl<
     fn preprocess_string(&self, delimiter: &str) -> Vec<String> {
         let args: String = self.tele_bot_service.get_input_text();
 
-        args
-            .chars()
+        args.chars()
             .skip(2)
             .collect::<String>()
             .split(delimiter)
@@ -472,7 +470,7 @@ impl<
         }
 
         let spent_name: String = args[0].clone();
-        let spent_money: i32 = match get_parsed_value_from_vector(&args, 1) {
+        let spent_money: i64 = match get_parsed_value_from_vector(&args, 1) {
             Ok(cash) => cash,
             Err(e) => {
                 self.tele_bot_service
@@ -481,7 +479,7 @@ impl<
                     )
                     .await?;
                 return Err(anyhow!(
-                    "[main_controller::command_consumptio] Non-numeric cash parameter: {:#}", 
+                    "[main_controller::command_consumptio] Non-numeric cash parameter: {:#}",
                     e
                 ));
             }
@@ -526,7 +524,7 @@ impl<
             0,
             spent_type.consume_keyword_type_id,
             room_seq,
-            default_payment_method.payment_method_id
+            default_payment_method.payment_method_id,
         );
 
         let spent_detail_view: SpentDetailView = spent_detail
@@ -548,7 +546,7 @@ impl<
                     e
                 );
             })?;
-        
+
         let utc_now: DateTime<Utc> = Utc::now();
 
         let produce_payload: SpentDetailToKafka =
@@ -557,7 +555,11 @@ impl<
         let partition_key: String = spent_idx.to_string();
 
         self.producer_service
-            .produce_object_to_topic(produce_topic, &produce_payload, Some(partition_key.as_str()))
+            .produce_object_to_topic(
+                produce_topic,
+                &produce_payload,
+                Some(partition_key.as_str()),
+            )
             .await
             .inspect_err(|e| {
                 error!(
@@ -622,7 +624,7 @@ impl<
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption_auto] {:#}", e);
             })?;
-        
+
         // Clone the primary name to release the immutable borrow before iter_mut below.
         let primary_name: String = spent_detail.spent_name().to_string();
 
@@ -643,7 +645,7 @@ impl<
                     e
                 );
             })?;
-        
+
         let spent_idx: i64 = self
             .mysql_query_service
             .insert_prodt_detail_with_transaction(&spent_detail)
@@ -697,12 +699,12 @@ impl<
             return Ok(());
         }
 
-        let spent_idx: i64 = match self
+        let latest_spent_detail: SpentDetailWithInfo = match self
             .mysql_query_service
-            .get_latest_spent_idx(user_seq, room_seq)
+            .get_latest_spent_detail(user_seq, room_seq)
             .await?
         {
-            Some(idx) => idx,
+            Some(latest_spent_detail) => latest_spent_detail,
             None => {
                 self.tele_bot_service
                     .send_message_confirm("No expenses to delete.")
@@ -711,27 +713,9 @@ impl<
             }
         };
 
-        let spent_detail_info: SpentDetailWithInfo = match self
-            .mysql_query_service
-            .get_spent_detail_with_info(spent_idx)
-            .await?
-        {
-            Some(detail_info) => detail_info,
-            None => {
-                self.tele_bot_service
-                    .send_message_confirm("No detail records to delete.")
-                    .await?;
-                return Ok(());
-            }
-        };
+        let spent_idx: i64 = latest_spent_detail.spent_idx;
 
-        let produce_spent_detail_info: SpentDetailByProduce =
-            spent_detail_info.to_spent_detail_by_produce(IndexingType::Delete);
-
-        self.producer_service
-            .produce_object_to_topic(produce_topic, &produce_spent_detail_info, None)
-            .await
-            .context("[command_delete_recent_consumption] Failed to produce Kafka message")?;
+        let spent_detail_view: SpentDetailView = latest_spent_detail.convert_to_view();
 
         match self
             .mysql_query_service
@@ -743,6 +727,24 @@ impl<
                     "[command_delete_recent_consumption] latest spent_idx={} (user_seq={}, room_seq={})",
                     spent_idx, user_seq, room_seq
                 );
+
+                self.tele_bot_service
+                    .send_message_confirm(&spent_detail_view.to_telegram_string_to_delete())
+                    .await?;
+
+                let utc_now: DateTime<Utc> = Utc::now();
+
+                let produce_payload: SpentDetailToKafka =
+                    SpentDetailToKafka::new(spent_idx, String::from("D"), utc_now);
+
+                let partition_key: String = spent_idx.to_string();
+
+                self.producer_service
+                    .produce_object_to_topic(produce_topic, &produce_payload, Some(partition_key.as_str()))
+                    .await
+                    .inspect_err(|e| {
+                        error!("[main_controller::command_consumption_auto] Failed to produce Kafka message: {:#}", e);
+                    })?;
             }
             Err(e) => {
                 error!("[command_delete_recent_consumption] Failed delete SPENT_DETAIL information-{}: {:#}", spent_idx, e)

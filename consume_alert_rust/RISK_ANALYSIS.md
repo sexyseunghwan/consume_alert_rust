@@ -89,7 +89,7 @@
 
 ---
 
-### [src/controller/main_controller.rs:724-746] 삭제 흐름에서 Kafka 전송 성공 후 DB 삭제 실패 시 데이터 불일치
+### [src/controller/main_controller.rs:724-746] 삭제 흐름에서 Kafka 전송 성공 후 DB 삭제 실패 시 데이터 불일치(OK) 
 
 - **위험 유형**: 데이터 정합성
 - **코드**:
@@ -121,7 +121,7 @@
 
 ---
 
-### [src/services/process_service_impl.rs:380-383] `i32` 나눗셈에서 오버플로우 가능성
+### [src/services/process_service_impl.rs:380-383] `i32` 나눗셈에서 오버플로우 가능성(OK) 
 
 - **위험 유형**: 데이터 정합성/오버플로우
 - **코드**:
@@ -140,7 +140,7 @@
 
 ---
 
-### [src/services/telebot_service_impl.rs:84-89] `thread::sleep`을 async 컨텍스트에서 사용
+### [src/services/telebot_service_impl.rs:84-89] `thread::sleep`을 async 컨텍스트에서 사용(OK) 
 
 - **위험 유형**: 동시성/비동기 위험
 - **코드**:
@@ -156,7 +156,7 @@
 
 ---
 
-### [src/utils_modules/time_utils.rs:63-64] 월 계산 로직의 음수 모듈로 버그
+### [src/utils_modules/time_utils.rs:63-64] 월 계산 로직의 음수 모듈로 버그(OK)
 
 - **위험 유형**: 데이터 정합성/비즈니스 로직
 - **코드**:
@@ -175,7 +175,7 @@
 
 ## Medium
 
-### [src/services/process_service_impl.rs:258-259] Samsung 카드 오류 메시지에 NH 카드 레이블 혼용
+### [src/services/process_service_impl.rs:258-259] Samsung 카드 오류 메시지에 NH 카드 레이블 혼용(OK)
 
 - **위험 유형**: 데이터 정합성/버그
 - **코드**:

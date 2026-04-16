@@ -58,15 +58,13 @@ impl EsRepositoryPub {
             .map(|s| s.to_string())
             .collect();
 
-        let es_id: String = env::var("ES_ID")
-            .inspect_err(|e| {
-                error!("[EsRepositoryPub::new] 'ES_ID' must be set: {:#}", e);
-            })?;
-        
-        let es_pw: String = env::var("ES_PW")
-            .inspect_err(|e| {
-                error!("[EsRepositoryPub::new] 'ES_PW' must be set: {:#}", e);
-            })?;
+        let es_id: String = env::var("ES_ID").inspect_err(|e| {
+            error!("[EsRepositoryPub::new] 'ES_ID' must be set: {:#}", e);
+        })?;
+
+        let es_pw: String = env::var("ES_PW").inspect_err(|e| {
+            error!("[EsRepositoryPub::new] 'ES_PW' must be set: {:#}", e);
+        })?;
 
         let cluster_urls: Vec<Url> = es_host
             .iter()

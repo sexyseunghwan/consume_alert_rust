@@ -221,6 +221,58 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         Ok(result.map(|row| row.spent_idx))
     }
 
+    /// Retrieves the most recently inserted `SpentDetailWithInfo` for the given user and room.
+    ///
+    /// # Arguments
+    ///
+    /// * `user_seq` - The unique sequence number identifying the user
+    /// * `room_seq` - The unique sequence number identifying the Telegram room
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Some(SpentDetailWithInfo))` with the latest record, or `Ok(None)` if no records exist.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    async fn get_latest_spent_detail(
+        &self,
+        user_seq: i64,
+        room_seq: i64,
+    ) -> anyhow::Result<Option<SpentDetailWithInfo>> {
+        let result: Option<SpentDetailWithInfo> = spent_detail::Entity::find()
+            .select_only()
+            .column(spent_detail::Column::SpentIdx)
+            .column(spent_detail::Column::SpentName)
+            .column(spent_detail::Column::SpentMoney)
+            .column(spent_detail::Column::SpentAt)
+            .column(spent_detail::Column::CreatedAt)
+            .column(spent_detail::Column::UserSeq)
+            .column(spent_detail::Column::ConsumeKeywordTypeId)
+            .column(common_consume_keyword_type::Column::ConsumeKeywordType)
+            .column(spent_detail::Column::RoomSeq)
+            .column(users::Column::UserId)
+            .join(
+                JoinType::InnerJoin,
+                spent_detail::Relation::CommonConsumeKeywordType.def(),
+            )
+            .join(JoinType::InnerJoin, spent_detail::Relation::Users.def())
+            .filter(spent_detail::Column::UserSeq.eq(user_seq))
+            .filter(spent_detail::Column::RoomSeq.eq(room_seq))
+            .order_by_desc(spent_detail::Column::SpentIdx)
+            .into_model::<SpentDetailWithInfo>()
+            .one(self.db_conn.get_connection())
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "[MysqlQueryServiceImpl::get_latest_spent_detail] Failed to query: {:?}",
+                    e
+                )
+            })?;
+
+        Ok(result)
+    }
+
     /// Retrieves a spending record joined with keyword type and user information by its primary key.
     ///
     /// # Arguments

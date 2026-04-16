@@ -5,7 +5,7 @@ use crate::views::spent_detail_view::*;
 use crate::entity::spent_detail;
 use crate::entity::spent_detail::ActiveModel;
 
-use crate::models::{consume_index_prodt_type::*, spent_detail_by_produce::*};
+use crate::models::consume_index_prodt_type::*;
 
 use crate::enums::indexing_type::*;
 
@@ -14,7 +14,7 @@ use crate::enums::indexing_type::*;
 #[getset(get = "pub", set = "pub")]
 pub struct SpentDetail {
     pub spent_name: String,
-    pub spent_money: i32,
+    pub spent_money: i64,
     pub spent_at: DateTime<Local>,
     pub should_index: i8,
     pub user_seq: i64,
@@ -56,46 +56,6 @@ impl SpentDetail {
             room_seq: Set(self.room_seq),
             payment_method_id: Set(self.payment_method_id),
         })
-    }
-
-    /// Converts this `SpentDetail` into a `SpentDetailByProduce` payload for Kafka message production.
-    ///
-    /// # Arguments
-    ///
-    /// * `spent_idx` - The database-assigned primary key of the inserted record
-    /// * `consume_keyword_type` - The human-readable consumption category name
-    /// * `room_seq` - The Telegram room sequence number
-    /// * `indexing_type` - Whether this is an insert or delete operation
-    /// * `user_id` - The user ID string
-    ///
-    /// # Returns
-    ///
-    /// Returns a `SpentDetailByProduce` instance ready for Kafka production.
-    #[allow(dead_code)]
-    pub fn convert_to_spent_detail_by_produce(
-        &self,
-        spent_idx: i64,
-        consume_keyword_type: &str,
-        room_seq: i64,
-        indexing_type: IndexingType,
-        user_id: &str,
-    ) -> SpentDetailByProduce {
-        let now: DateTime<Utc> = Utc::now();
-
-        SpentDetailByProduce::new(
-            spent_idx,
-            self.spent_name.clone(),
-            self.spent_money,
-            self.spent_at.with_timezone(&Utc),
-            now,
-            self.user_seq,
-            self.consume_keyword_type_id,
-            consume_keyword_type.to_string(),
-            room_seq,
-            indexing_type,
-            now,
-            user_id.to_string(),
-        )
     }
 
     /// Converts this `SpentDetail` into a `SpentDetailView` for Telegram message display.

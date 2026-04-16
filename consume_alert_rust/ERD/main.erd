@@ -4,8 +4,8 @@
   "settings": {
     "width": 2000,
     "height": 2000,
-    "scrollTop": -613,
-    "scrollLeft": 0,
+    "scrollTop": -84,
+    "scrollLeft": -588,
     "zoomLevel": 1,
     "show": 431,
     "database": 4,
@@ -791,7 +791,7 @@
         "tableId": "v8sOSTW35AHqxr4xHMWzq",
         "name": "spent_money",
         "comment": "지출금",
-        "dataType": "INT",
+        "dataType": "BIGINT",
         "default": "",
         "options": 8,
         "ui": {
@@ -802,7 +802,7 @@
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1768268985633,
+          "updateAt": 1776323847020,
           "createAt": 1768268720933
         }
       },

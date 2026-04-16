@@ -83,7 +83,7 @@ impl TelebotServiceImpl {
                 }
                 Err(e) => {
                     error!("{:?}", e);
-                    thread::sleep(retry_delay);
+                    tokio::time::sleep(retry_delay).await;
                     attempts += 1;
                 }
             }

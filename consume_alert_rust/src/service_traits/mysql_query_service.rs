@@ -32,6 +32,11 @@ pub trait MysqlQueryService {
         user_seq: i64,
         room_seq: i64,
     ) -> anyhow::Result<Option<i64>>;
+    async fn get_latest_spent_detail(
+        &self,
+        user_seq: i64,
+        room_seq: i64,
+    ) -> anyhow::Result<Option<SpentDetailWithInfo>>;
     async fn get_spent_detail_with_info(
         &self,
         spent_idx: i64,
@@ -40,6 +45,6 @@ pub trait MysqlQueryService {
     async fn get_user_payment_methods(
         &self,
         user_seq: i64,
-        is_default: bool
+        is_default: bool,
     ) -> anyhow::Result<Vec<UserPaymentMethods>>;
 }

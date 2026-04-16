@@ -55,7 +55,41 @@ pub fn get_naivedate(year: i32, month: u32, date: u32) -> Result<DateTime<Utc>, 
 }
 
 /// Returns a `DateTime<Utc>` that is `add_month` months after/before `dt`.
+///
+/// Uses [`chrono::Months`] and `checked_add_months`/`checked_sub_months` to avoid
+/// the truncating-division bug present in the old implementation when `add_month` is negative.
+/// When the resulting month has fewer days than the source day, the day is clamped to the
+/// last valid day of that month (chrono's built-in behaviour).
+///
+/// # Arguments
+///
+/// * `dt` - The base UTC datetime
+/// * `add_month` - Number of months to add (negative value subtracts months)
+///
+/// # Returns
+///
+/// Returns `Ok(DateTime<Utc>)` on success, or an error if the resulting date is out of range.
 pub fn get_add_month_from_naivedate(
+    dt: DateTime<Utc>,
+    add_month: i32,
+) -> Result<DateTime<Utc>, anyhow::Error> {
+    let naive_date: NaiveDate = dt.date_naive();
+    let result_date: NaiveDate = if add_month >= 0 {
+        naive_date
+            .checked_add_months(Months::new(add_month as u32))
+            .ok_or_else(|| anyhow!("[time_utils::get_add_month_from_naivedate] Date overflow when adding {} months to {:?}", add_month, naive_date))?
+    } else {
+        naive_date
+            .checked_sub_months(Months::new((-add_month) as u32))
+            .ok_or_else(|| anyhow!("[time_utils::get_add_month_from_naivedate] Date underflow when subtracting {} months from {:?}", -add_month, naive_date))?
+    };
+    
+    Ok(result_date.and_time(NaiveTime::MIN).and_utc())
+}
+
+#[allow(dead_code)]
+/// Returns a `DateTime<Utc>` that is `add_month` months after/before `dt`.
+pub fn get_add_month_from_naivedate_old(
     dt: DateTime<Utc>,
     add_month: i32,
 ) -> Result<DateTime<Utc>, anyhow::Error> {

@@ -8,7 +8,6 @@ pub mod score_manager;
 pub mod spent_detail;
 pub mod spent_detail_by_es;
 pub mod spent_detail_by_installment;
-pub mod spent_detail_by_produce;
 pub mod spent_detail_to_kafka;
 pub mod spent_detail_with_info;
 pub mod to_python_graph_circle;

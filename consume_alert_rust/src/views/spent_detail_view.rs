@@ -26,6 +26,27 @@ impl SpentDetailView {
             self.consume_keyword_type_nm,
         )
     }
+
+    /// Formats the spending detail as a Telegram-friendly deletion message string.
+    ///
+    /// # Returns
+    ///
+    /// Returns a formatted string containing the spending name, amount, time, category, and the current KST deletion time.
+    pub fn to_telegram_string_to_delete(&self) -> String {
+        let deleted_at: String = Utc::now()
+            .with_timezone(&Seoul)
+            .format("%Y-%m-%dT%H:%M")
+            .to_string();
+
+        format!(
+            "[삭제된 결제 정보]\n사용처: \"{}\"\n사용한 현금: \"{}\"\n사용시간: \"{}\"\n소비타입: \"{}\"\n삭제시각: \"{}\"",
+            self.spent_name,
+            self.spent_money,
+            self.spent_at.format("%Y-%m-%dT%H:%M"),
+            self.consume_keyword_type_nm,
+            deleted_at,
+        )
+    }
 }
 
 impl fmt::Display for SpentDetailView {

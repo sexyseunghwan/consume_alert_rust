@@ -24,11 +24,13 @@ impl GraphApiServiceImpl {
     ///
     /// Returns a new `GraphApiServiceImpl` instance.
     pub fn new() -> anyhow::Result<Self> {
-        let graph_api_url: String = env::var("GRAPH_API_URL")
-            .inspect_err(|e| {
-                error!("[GraphApiServiceImpl::new] 'GRAPH_API_URL' must be set: {:#}", e);
-            })?;
-            
+        let graph_api_url: String = env::var("GRAPH_API_URL").inspect_err(|e| {
+            error!(
+                "[GraphApiServiceImpl::new] 'GRAPH_API_URL' must be set: {:#}",
+                e
+            );
+        })?;
+
         Ok(Self { graph_api_url })
     }
 }

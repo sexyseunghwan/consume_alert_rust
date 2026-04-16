@@ -164,7 +164,7 @@ async fn main() {
         }
     };
     let arc_graph_api_service: Arc<GraphApiServiceImpl> = Arc::new(graph_api_service);
-    
+
     let elastic_query_service: Arc<AppElasticService> =
         Arc::new(AppElasticService::new(elastic_conn));
     let mysql_query_service: Arc<AppMysqlService> = Arc::new(AppMysqlService::new(mysql_conn));

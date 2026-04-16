@@ -81,17 +81,20 @@ impl MysqlRepositoryImpl {
     ///
     /// Returns an error if the `DATABASE_URL` environment variable is not set or the connection fails.
     pub async fn new() -> anyhow::Result<Self> {
-        let db_url: String = env::var("DATABASE_URL")
-            .inspect_err(|e| {
-                error!("[MysqlRepositoryImpl::new] DATABASE_URL must be set: {:#}", e);
-            })?;
-            //.expect("[MysqlRepositoryImpl::new] DATABASE_URL must be set in .env");
+        let db_url: String = env::var("DATABASE_URL").inspect_err(|e| {
+            error!(
+                "[MysqlRepositoryImpl::new] DATABASE_URL must be set: {:#}",
+                e
+            );
+        })?;
+        //.expect("[MysqlRepositoryImpl::new] DATABASE_URL must be set in .env");
 
-        let db_conn: DatabaseConnection = Database::connect(db_url)
-            .await
-            .inspect_err(|e| {
-                error!("[MysqlRepositoryImpl::new] Database connection failed.: {:#}", e);
-            })?;
+        let db_conn: DatabaseConnection = Database::connect(db_url).await.inspect_err(|e| {
+            error!(
+                "[MysqlRepositoryImpl::new] Database connection failed.: {:#}",
+                e
+            );
+        })?;
 
         Ok(Self { db_conn })
     }

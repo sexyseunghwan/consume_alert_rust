@@ -16,7 +16,7 @@ pub struct SpentDetailByEs {
     pub spent_name: String,
 
     /// Amount spent
-    pub spent_money: i32,
+    pub spent_money: i64,
 
     /// Date and time of the spending
     pub spent_at: DateTime<Utc>,
