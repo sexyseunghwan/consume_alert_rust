@@ -57,8 +57,12 @@ impl RedisRepositoryImpl {
     /// # Returns
     /// * `Result<Self, anyhow::Error>` - New instance or error
     pub async fn new() -> anyhow::Result<Self> {
-        let redis_url: String = env::var("REDIS_URL")
-            .context("[RedisRepositoryImpl::new] ‘REDIS_URL’ cannot be found.")?;
+        let redis_url: String = env::var("REDIS_URL").inspect_err(|e| {
+            error!(
+                "[RedisRepositoryImpl::new] 'REDIS_URL' cannot be found: {:#}",
+                e
+            )
+        })?;
 
         // Check if the URL contains multiple nodes (cluster mode)
         let conn: RedisConnectionType = if redis_url.contains(',') {

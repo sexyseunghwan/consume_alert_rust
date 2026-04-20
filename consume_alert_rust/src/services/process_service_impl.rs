@@ -461,7 +461,7 @@ impl ProcessService for ProcessServiceImpl {
                     acc
                 });
 
-        cost_map.retain(|_, v| *v >= 0);
+        cost_map.retain(|_, v| *v > 0);
 
         let mut consume_result_by_types: Vec<ConsumeResultByType> =
             self.get_calculate_pie_infos_from_category(total_cost, &cost_map)?;

@@ -7,12 +7,14 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable",            
+            "name": "Debug consume_alert_rust (CodeLLDB)",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=consume_alert_rust",
-                    "--package=consume_alert_rust"
+                    "--bin",
+                    "consume_alert_rust",
+                    "--package",
+                    "consume_alert_rust"
                 ],
                 "filter": {
                     "name": "consume_alert_rust",
@@ -20,7 +22,13 @@
                 }
             },
             "args": [],
-            "cwd": "${workspaceFolder}/target/debug"
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "RUST_BACKTRACE": "1"
+            },
+            "sourceLanguages": [
+                "rust"
+            ]
         }
     ]
 }

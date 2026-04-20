@@ -1,9 +1,9 @@
 use crate::common::*;
-use crate::enums::indexing_type::IndexingType;
 //use crate::models::spent_detail_by_produce::SpentDetailByProduce;
 use crate::views::spent_detail_view::SpentDetailView;
 
 #[derive(Debug, Clone, FromQueryResult)]
+#[allow(dead_code)]
 pub struct SpentDetailWithInfo {
     pub spent_idx: i64,
     pub spent_name: String,

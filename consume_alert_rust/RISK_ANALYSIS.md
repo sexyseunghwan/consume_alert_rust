@@ -197,7 +197,7 @@
 
 ---
 
-### [src/services/elastic_query_service_impl.rs:124-126] 점수 계산에서 음수 곱셈 후 `i64` 변환
+### [src/services/elastic_query_service_impl.rs:124-126] 점수 계산에서 음수 곱셈 후 `i64` 변환(OK)
 
 - **위험 유형**: 데이터 정합성
 - **코드**:
@@ -216,7 +216,7 @@
 
 ---
 
-### [src/models/to_python_graph_line.rs:54+65-69] `i32` 누적 합산 오버플로우
+### [src/models/to_python_graph_line.rs:54+65-69] `i32` 누적 합산 오버플로우(OK)
 
 - **위험 유형**: 데이터 정합성/오버플로우
 - **코드**:
@@ -237,7 +237,7 @@
 
 ---
 
-### [src/services/telebot_service_impl.rs:161-163] `pop()` 3번 호출로 문자 제거 시 멀티바이트 문자 경계 오류
+### [src/services/telebot_service_impl.rs:161-163] `pop()` 3번 호출로 문자 제거 시 멀티바이트 문자 경계 오류(OK)
 
 - **위험 유형**: 패닉/데이터 손상
 - **코드**:
@@ -258,7 +258,7 @@
 
 ---
 
-### [src/repository/kafka_repository.rs:41] `KAFKA_BROKERS` 환경변수 누락 시 `expect()` 패닉
+### [src/repository/kafka_repository.rs:41] `KAFKA_BROKERS` 환경변수 누락 시 `expect()` 패닉(OK)
 
 - **위험 유형**: 패닉/크래시
 - **코드**:
@@ -307,7 +307,7 @@
 
 ---
 
-### [src/services/graph_api_service_impl.rs:59-63] HTTP 오류 응답 본문 미포함
+### [src/services/graph_api_service_impl.rs:59-63] HTTP 오류 응답 본문 미포함(OK)
 
 - **위험 유형**: 에러 처리 누락
 - **코드**:
@@ -327,9 +327,11 @@
   Err(anyhow!("[Error][post_api()] Request for '{}' failed. Status: {}, Body: {}", &post_uri, status, error_body))
   ```
 
+
+
 ---
 
-### [src/services/process_service_impl.rs:464] `cost_map.retain(|_, v| *v >= 0)` — 0원 항목 포함
+### [src/services/process_service_impl.rs:464] `cost_map.retain(|_, v| *v >= 0)` — 0원 항목 포함 (OK)
 
 - **위험 유형**: 데이터 정합성/비즈니스 로직
 - **코드**:
@@ -340,20 +342,3 @@
 - **권장 수정**: `total_cost == 0.0` 인 경우를 early return으로 처리하고, retain 조건을 `> 0`으로 통일한다.
 
 ---
-
-### [src/controller/main_controller.rs:897-900] 주 계산에서 날짜 오버플로우 미처리
-
-- **위험 유형**: 패닉/데이터 손실
-- **코드**:
-  ```rust
-  let days_to_monday: i64 = Weekday::Mon.num_days_from_monday() as i64
-      - today.weekday().num_days_from_monday() as i64;
-  let monday: DateTime<Utc> = today + chrono::Duration::days(days_to_monday);
-  let date_end: DateTime<Utc> = monday + chrono::Duration::days(6);
-  ```
-- **이유**: `chrono::Duration::days()` 덧셈은 날짜가 `chrono` 지원 범위를 벗어나면 패닉을 발생시킨다. `days_to_monday`가 음수일 수 있어 과거로 이동하는 정상적인 케이스이지만, 극단적으로 큰 값이 들어올 경우(이론상 환경 이슈 등)의 안전장치가 없다. 또한 `today`가 이미 월요일인 경우 `days_to_monday = 0`이므로 정상이지만, 로직 의도가 "현재 주의 월요일"인지 "다음 주의 월요일"인지 주석이 없어 불명확하다.
-- **권장 수정**: `checked_add_signed()`를 사용하여 오버플로우를 명시적으로 처리한다.
-  ```rust
-  let monday: DateTime<Utc> = today.checked_add_signed(chrono::Duration::days(days_to_monday))
-      .ok_or_else(|| anyhow!("[command_consumption_per_week] Date overflow"))?;
-  ```

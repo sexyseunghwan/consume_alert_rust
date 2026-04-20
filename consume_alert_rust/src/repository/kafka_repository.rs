@@ -38,7 +38,9 @@ impl KafkaRepositoryImpl {
     /// Returns an error if required environment variables are missing or the Kafka producer cannot be created.
     pub fn new() -> anyhow::Result<Self> {
         let kafka_brokers: String = env::var("KAFKA_BROKERS")
-            .expect("[KafkaRepositoryImpl::new] 'KAFKA_BROKERS' must be set");
+            .inspect_err(|e| {
+                error!("[KafkaRepositoryImpl::new] 'KAFKA_BROKERS' must be set: {:#}", e);
+            })?;
 
         let security_protocol: String =
             env::var("KAFKA_SECURITY_PROTOCOL").unwrap_or_else(|_| "PLAINTEXT".to_string());

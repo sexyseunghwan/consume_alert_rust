@@ -97,21 +97,6 @@ pub trait TelebotService {
     /// Returns the input text as a `String`.
     fn get_input_text(&self) -> String;
 
-    /// Serializes a struct and sends its field values as a Telegram message.
-    ///
-    /// # Arguments
-    ///
-    /// * `obj_struct` - A serializable struct to format and send
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if serialization or sending fails.
-    #[allow(dead_code)]
-    async fn send_message_struct_info<T: Serialize + Sync>(
-        &self,
-        obj_struct: &T,
-    ) -> Result<(), anyhow::Error>;
-
     // async fn send_message_struct_list<T: Serialize + Sync>(
     //     &self,
     //     obj_list: &[T],

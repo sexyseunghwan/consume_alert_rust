@@ -100,7 +100,12 @@ impl TelebotServiceImpl {
         self.bot
             .send_message(self.chat_id, msg)
             .await
-            .context("[Telebot Error][tele_bot_send_msg()] Failed to send command response.")?;
+            .inspect_err(|e| {
+                error!(
+                    "[Telebot Error][tele_bot_send_msg()] Failed to send command response: {:#}",
+                    e
+                )
+            })?;
 
         Ok(())
     }
@@ -111,150 +116,19 @@ impl TelebotServiceImpl {
         self.bot
             .send_photo(self.chat_id, photo)
             .await
-            .context("Telebot Error][tele_bot_send_photo()] Failed to send Photo.")?;
+            .inspect_err(|e| {
+                error!(
+                    "[Telebot Error][tele_bot_send_photo()] Failed to send Photo: {:#}",
+                    e
+                )
+            })?;
 
         Ok(())
-    }
-
-    #[doc = "Convert a serializable object to formatted string"]
-    /// # Arguments
-    /// * `obj_struct` - Serializable object
-    /// * `header` - Optional header to prepend (e.g., "===== Object 1 =====")
-    ///
-    /// # Returns
-    /// * Result<String, anyhow::Error> - Formatted string representation
-    #[allow(dead_code)]
-    fn format_struct_to_string<T: Serialize>(
-        &self,
-        obj_struct: &T,
-        header: Option<&str>,
-    ) -> Result<String, anyhow::Error> {
-        let obj_val: Value = serde_json::to_value(obj_struct).context(
-            "[TelebotServiceImpl::format_struct_to_string] Failed to serialize struct to JSON",
-        )?;
-
-        if let Some(obj) = obj_val.as_object() {
-            let mut result_string: String = String::new();
-
-            // Add header if provided
-            if let Some(h) = header {
-                result_string.push_str(h);
-                result_string.push('\n');
-            }
-
-            for (key, value) in obj {
-                let value_str: String = match value {
-                    Value::Number(num) => {
-                        if let Some(n) = num.as_i64() {
-                            n.to_formatted_string(&Locale::ko)
-                        } else {
-                            value.to_string()
-                        }
-                    }
-                    _ => value.to_string(),
-                };
-
-                result_string.push_str(&format!("{}: {}, \n", key, value_str));
-            }
-
-            // Remove trailing ", \n"
-            if !result_string.is_empty() {
-                for _n in 0..3 {
-                    result_string.pop();
-                }
-            }
-
-            Ok(result_string)
-        } else {
-            Err(anyhow!(
-                "[TelebotServiceImpl::format_struct_to_string] Parsed JSON is not an object"
-            ))
-        }
     }
 }
 
 #[async_trait]
 impl TelebotService for TelebotServiceImpl {
-    #[doc = "This async function serializes a generic struct into a formatted string"]
-    /// # Arguments
-    /// * obj_struct - Distinguishing characters
-    ///
-    /// # Returns
-    /// * Result<(), anyhow::Error>
-    async fn send_message_struct_info<T: Serialize + Sync>(
-        &self,
-        obj_struct: &T,
-    ) -> Result<(), anyhow::Error> {
-        let formatted_string: String = self.format_struct_to_string(obj_struct, None)?;
-        self.send_message_confirm(&formatted_string).await?;
-        Ok(())
-    }
-
-    // #[doc = "Send multiple struct info messages in parallel"]
-    // /// # Arguments
-    // /// * obj_list - List of serializable objects
-    // ///
-    // /// # Returns
-    // /// * Result<(), anyhow::Error>
-    // async fn send_message_struct_list<T: Serialize + Sync>(
-    //     &self,
-    //     obj_list: &[T],
-    // ) -> Result<(), anyhow::Error> {
-
-    //     if obj_list.is_empty() {
-    //         warn!("[TelebotServiceImpl::send_message_struct_list] Empty list provided");
-    //         return Ok(());
-    //     }
-
-    //     info!(
-    //         "[TelebotServiceImpl::send_message_struct_list] Processing {} objects",
-    //         obj_list.len()
-    //     );
-
-    //     // Process each object using the common formatting function
-    //     let mut formatted_messages: Vec<String> = Vec::new();
-
-    //     for (idx, obj_struct) in obj_list.iter().enumerate() {
-    //         let header: String = format!("===== Object {} =====", idx + 1);
-    //         let formatted_string: String =
-    //             self.format_struct_to_string(obj_struct, Some(&header))?;
-    //         formatted_messages.push(formatted_string);
-    //     }
-
-    //     // Send all messages using futures::join_all for parallel execution
-    //     use futures::future::join_all;
-
-    //     let send_futures: Vec<_> = formatted_messages
-    //         .iter()
-    //         .map(|msg| self.send_message_confirm(msg))
-    //         .collect();
-
-    //     let results: Vec<std::result::Result<(), anyhow::Error>> = join_all(send_futures).await;
-
-    //     // Check if any failed
-    //     for (idx, result) in results.into_iter().enumerate() {
-    //         if let Err(e) = result {
-    //             error!(
-    //                 "[TelebotServiceImpl::send_message_struct_list] Failed to send message for object {}: {:?}",
-    //                 idx + 1,
-    //                 e
-    //             );
-    //             return Err(anyhow!(
-    //                 "Failed to send message for object {}: {}",
-    //                 idx + 1,
-    //                 e
-    //             ));
-    //         }
-    //     }
-
-    //     info!(
-    //         "[TelebotServiceImpl::send_message_struct_list] Successfully sent {} messages",
-    //         obj_list.len()
-    //     );
-
-    //     Ok(())
-    // }
-
     #[doc = "Retry sending messages"]
     async fn send_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error> {
         self.try_send_operation(|| self.tele_bot_send_msg(msg), 6, Duration::from_secs(40))
@@ -345,7 +219,7 @@ impl TelebotService for TelebotServiceImpl {
                 |item| {
 
                     let kor_time: String = format_kst_datetime(item.source.spent_at, "%Y-%m-%dT%H:%M");
-                    
+
                     format!(
                         "name : {}\ndate : {}\ncost : {}\ntype: {}\n",
                         item.source.spent_name,

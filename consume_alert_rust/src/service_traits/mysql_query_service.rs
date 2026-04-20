@@ -27,6 +27,7 @@ pub trait MysqlQueryService {
     ) -> anyhow::Result<Option<i64>>;
     #[allow(dead_code)]
     async fn get_user_id_by_seq(&self, user_seq: i64) -> anyhow::Result<Option<String>>;
+    #[allow(dead_code)]
     async fn get_latest_spent_idx(
         &self,
         user_seq: i64,
@@ -37,6 +38,7 @@ pub trait MysqlQueryService {
         user_seq: i64,
         room_seq: i64,
     ) -> anyhow::Result<Option<SpentDetailWithInfo>>;
+    #[allow(dead_code)]
     async fn get_spent_detail_with_info(
         &self,
         spent_idx: i64,

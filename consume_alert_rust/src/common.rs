@@ -7,7 +7,6 @@ pub use std::{
     path::Path,
     str::FromStr,
     sync::Arc,
-    thread,
     time::Duration,
 };
 
@@ -38,7 +37,7 @@ pub use elasticsearch::{
     DeleteParts, Elasticsearch, SearchParts,
 };
 
-pub use anyhow::{anyhow, Context, Result};
+pub use anyhow::{anyhow, Result};
 
 pub use derive_new::new;
 pub use getset::{Getters, Setters};

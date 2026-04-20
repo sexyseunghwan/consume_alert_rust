@@ -25,7 +25,7 @@ use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
 use crate::models::user_payment_methods::*;
 
-use crate::enums::{indexing_type::*, range_operator::*};
+use crate::enums::range_operator::*;
 
 use crate::config::AppConfig;
 use crate::views::spent_detail_view::SpentDetailView;
@@ -108,7 +108,7 @@ impl<
             .redis_service
             .get_string(redis_key)
             .await
-            .context("[resolve_user_id] Redis read failed")?
+            .inspect_err(|e| error!("[resolve_user_id] Redis read failed: {:#}", e))?
         {
             return Ok(Some(cached));
         }
@@ -117,13 +117,13 @@ impl<
             .mysql_query_service
             .get_user_id_by_seq(user_seq)
             .await
-            .context("[resolve_user_id] MySQL query failed")?;
+            .inspect_err(|e| error!("[resolve_user_id] MySQL query failed: {:#}", e))?;
 
         if let Some(ref user_id) = user_id_opt {
             self.redis_service
                 .set_string(redis_key, user_id, None)
                 .await
-                .context("[resolve_user_id] Redis write failed")?;
+                .inspect_err(|e| error!("[resolve_user_id] Redis write failed: {:#}", e))?;
         }
 
         Ok(user_id_opt)
@@ -142,26 +142,27 @@ impl<
             .redis_service
             .get_string(redis_key)
             .await
-            .context("[resolve_user_seq] Redis read failed")?
+            .inspect_err(|e| error!("[resolve_user_seq] Redis read failed: {:#}", e))?
         {
-            return Ok(Some(
-                cached
-                    .parse::<i64>()
-                    .context("[resolve_user_seq] Failed to parse cached user_seq")?,
-            ));
+            return Ok(Some(cached.parse::<i64>().inspect_err(|e| {
+                error!(
+                    "[resolve_user_seq] Failed to parse cached user_seq: {:#}",
+                    e
+                )
+            })?));
         }
 
         let seq_opt: Option<i64> = self
             .mysql_query_service
             .exists_telegram_room_by_token_and_id(telegram_token, telegram_user_id)
             .await
-            .context("[resolve_user_seq] MySQL query failed")?;
+            .inspect_err(|e| error!("[resolve_user_seq] MySQL query failed: {:#}", e))?;
 
         if let Some(seq) = seq_opt {
             self.redis_service
                 .set_string(redis_key, &seq.to_string(), None)
                 .await
-                .context("[resolve_user_seq] Redis write failed")?;
+                .inspect_err(|e| error!("[resolve_user_seq] Redis write failed: {:#}", e))?;
         }
 
         Ok(seq_opt)
@@ -180,26 +181,27 @@ impl<
             .redis_service
             .get_string(redis_key)
             .await
-            .context("[resolve_room_seq] Redis read failed")?
+            .inspect_err(|e| error!("[resolve_room_seq] Redis read failed: {:#}", e))?
         {
-            return Ok(Some(
-                cached
-                    .parse::<i64>()
-                    .context("[resolve_room_seq] Failed to parse cached room_seq")?,
-            ));
+            return Ok(Some(cached.parse::<i64>().inspect_err(|e| {
+                error!(
+                    "[resolve_room_seq] Failed to parse cached room_seq: {:#}",
+                    e
+                )
+            })?));
         }
 
         let seq_opt = self
             .mysql_query_service
             .get_telegram_room_seq_by_token_and_userseq(telegram_token, user_seq)
             .await
-            .context("[resolve_room_seq] MySQL query failed")?;
+            .inspect_err(|e| error!("[resolve_room_seq] MySQL query failed: {:#}", e))?;
 
         if let Some(seq) = seq_opt {
             self.redis_service
                 .set_string(redis_key, &seq.to_string(), None)
                 .await
-                .context("[resolve_room_seq] Redis write failed")?;
+                .inspect_err(|e| error!("[resolve_room_seq] Redis write failed: {:#}", e))?;
         }
 
         Ok(seq_opt)
@@ -226,7 +228,12 @@ impl<
             .elastic_query_service
             .get_consume_type_judgement(spend_name)
             .await
-            .context("[MainController::resolve_spend_type] Elasticsearch query failed")?;
+            .inspect_err(|e| {
+                error!(
+                    "[MainController::resolve_spend_type] Elasticsearch query failed: {:#}",
+                    e
+                )
+            })?;
 
         Ok(spent_type)
     }
@@ -269,19 +276,6 @@ impl<
                 return Ok(());
             }
         };
-
-        // let redis_user_id_key: String = format!("{}:{}", app_config.redis_user_id_key(), user_seq);
-        // let _user_id: String = match self.resolve_user_id(&redis_user_id_key, user_seq).await? {
-        //     Some(id) => id,
-        //     None => {
-        //         self.tele_bot_service
-        //             .send_message_confirm(
-        //                 "The token is invalid or you are not an authorized user.\nPlease contact the administrator.",
-        //             )
-        //             .await?;
-        //         return Ok(());
-        //     }
-        // };
 
         let room_seq: i64 = match self
             .resolve_room_seq(&redis_room_key, &telegram_token, user_seq)
@@ -820,9 +814,33 @@ impl<
             {
                 let parts: Vec<&str> = args[1].split('-').collect();
                 let start_date: DateTime<Utc> = parse_date_as_utc_datetime(parts[0], "%Y.%m.%d")
-                    .context("[command_consumption_per_term] Invalid start date format")?;
+                    .inspect_err(|e| {
+                        error!(
+                            "[command_consumption_per_term] Invalid start date format: {:#}",
+                            e
+                        )
+                    })?;
                 let end_date: DateTime<Utc> = parse_date_as_utc_datetime(parts[1], "%Y.%m.%d")
-                    .context("[command_consumption_per_term] Invalid end date format")?;
+                    .inspect_err(|e| {
+                        error!(
+                            "[command_consumption_per_term] Invalid end date format: {:#}",
+                            e
+                        )
+                    })?;
+
+                if start_date > end_date {
+                    self.tele_bot_service
+                        .send_message_confirm(
+                            "Invalid date range. The start date must be earlier than or equal to the end date.\nEX) ctr 2023.07.07-2023.08.01",
+                        )
+                        .await?;
+                    return Err(anyhow!(
+                        "[command_consumption_per_term] Invalid date range: start_date({}) > end_date({})",
+                        start_date.format("%Y.%m.%d"),
+                        end_date.format("%Y.%m.%d")
+                    ));
+                }
+
                 self.process_service
                     .get_nmonth_to_current_date(start_date, end_date, -1)?
             }
@@ -865,7 +883,9 @@ impl<
             }) =>
             {
                 let date: DateTime<Utc> = parse_date_as_utc_datetime(&args[1], "%Y.%m.%d")
-                    .context("[command_consumption_per_day] Invalid date format")?;
+                    .inspect_err(|e| {
+                        error!("[command_consumption_per_day] Invalid date format: {:#}", e)
+                    })?;
                 self.process_service
                     .get_nday_to_current_date(date, date, -1)?
             }
@@ -1004,7 +1024,12 @@ impl<
             {
                 let ref_date: DateTime<Utc> =
                     parse_date_as_utc_datetime(&format!("{}.01", args[1]), "%Y.%m.%d")
-                        .context("[command_consumption_per_salary] Invalid date format")?;
+                        .inspect_err(|e| {
+                            error!(
+                                "[command_consumption_per_salary] Invalid date format: {:#}",
+                                e
+                            )
+                        })?;
                 let cur_date_end: DateTime<Utc> =
                     get_naivedate(ref_date.year(), ref_date.month(), 25)?;
                 let cur_date_start: DateTime<Utc> = get_add_month_from_naivedate(cur_date_end, -1)?;

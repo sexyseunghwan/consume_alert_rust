@@ -38,7 +38,12 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
     ) -> anyhow::Result<i64> {
         let active_model: spent_detail::ActiveModel = spent_detail
             .convert_spent_detail_to_active_model()
-            .context("[insert_prodt_detail_with_transaction] Failed to convert to ActiveModel")?;
+            .inspect_err(|e| {
+                error!(
+                    "[insert_prodt_detail_with_transaction] Failed to convert to ActiveModel: {:#}",
+                    e
+                )
+            })?;
 
         self.db_conn
             .insert_spent_detail_with_transaction(active_model)

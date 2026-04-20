@@ -123,20 +123,33 @@ impl MysqlRepository for MysqlRepositoryImpl {
             .db_conn
             .begin()
             .await
-            .context("[MysqlRepositoryImpl::insert_spent_detail_with_transaction] Failed to begin transaction")?;
+            .inspect_err(|e| {
+                error!(
+                    "[MysqlRepositoryImpl::insert_spent_detail_with_transaction] Failed to begin transaction: {:#}",
+                    e
+                )
+            })?;
 
         let insert_result: InsertResult<spent_detail::ActiveModel> = spent_detail::Entity::insert(
             active_model,
         )
         .exec(&txn)
         .await
-        .context(
-            "[MysqlRepositoryImpl::insert_spent_detail_with_transaction] Failed to insert record",
-        )?;
+        .inspect_err(|e| {
+            error!(
+                "[MysqlRepositoryImpl::insert_spent_detail_with_transaction] Failed to insert record: {:#}",
+                e
+            )
+        })?;
 
         txn.commit()
             .await
-            .context("[MysqlRepositoryImpl::insert_spent_detail_with_transaction] Failed to commit transaction")?;
+            .inspect_err(|e| {
+                error!(
+                    "[MysqlRepositoryImpl::insert_spent_detail_with_transaction] Failed to commit transaction: {:#}",
+                    e
+                )
+            })?;
 
         Ok(insert_result.last_insert_id)
     }
