@@ -9,3 +9,4 @@ pub mod spent_group_info;
 pub mod telegram_room;
 pub mod user_payment_methods;
 pub mod users;
+pub mod agg_group;

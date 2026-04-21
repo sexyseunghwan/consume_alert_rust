@@ -151,7 +151,7 @@ impl<
                 )
             })?));
         }
-
+        
         let seq_opt: Option<i64> = self
             .mysql_query_service
             .exists_telegram_room_by_token_and_id(telegram_token, telegram_user_id)
@@ -191,7 +191,7 @@ impl<
             })?));
         }
 
-        let seq_opt = self
+        let seq_opt: Option<i64> = self
             .mysql_query_service
             .get_telegram_room_seq_by_token_and_userseq(telegram_token, user_seq)
             .await
@@ -203,7 +203,7 @@ impl<
                 .await
                 .inspect_err(|e| error!("[resolve_room_seq] Redis write failed: {:#}", e))?;
         }
-
+        
         Ok(seq_opt)
     }
 

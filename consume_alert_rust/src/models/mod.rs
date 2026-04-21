@@ -13,3 +13,4 @@ pub mod spent_detail_with_info;
 pub mod to_python_graph_circle;
 pub mod to_python_graph_line;
 pub mod user_payment_methods;
+pub mod agg_group;
