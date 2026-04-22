@@ -65,7 +65,7 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2026-03-03 Seunghwan Shin       # [v.4.0.0] Code Refactorubg and Feature Enhancement.
               2026-03-05 Seunghwan Shin       # [v.4.0.1] Fix an issue where the conusme category type was not retrieved correctly.
               2026-03-14 Seunghwan Shin       # [v.4.1.0] Exclude aggregation results where the sum of a specific expense type is 0.
-              2026-04-03 Seunghwan Shin       # [v.4.2.0] asd
+              2026-04-21 Seunghwan Shin       # [v.4.2.0] Split main_controller.rs into mod.rs, command_consume.rs, and command_query.rs. Added English doc comments to all functions.
 */
 mod common;
 use common::*;
