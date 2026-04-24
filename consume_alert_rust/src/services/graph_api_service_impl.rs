@@ -61,7 +61,12 @@ impl GraphApiService for GraphApiServiceImpl {
         } else {
             let status: reqwest::StatusCode = res.status();
             let error_body: String = res.text().await.unwrap_or_default();
-            Err(anyhow!("[GraphApiServiceImpl::post_api] Request for '{}' failed. Status: {}, Body: {}", &post_uri, status, error_body))
+            Err(anyhow!(
+                "[GraphApiServiceImpl::post_api] Request for '{}' failed. Status: {}, Body: {}",
+                &post_uri,
+                status,
+                error_body
+            ))
         }
     }
 

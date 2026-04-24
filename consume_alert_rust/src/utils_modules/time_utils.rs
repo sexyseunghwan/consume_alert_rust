@@ -83,7 +83,7 @@ pub fn get_add_month_from_naivedate(
             .checked_sub_months(Months::new((-add_month) as u32))
             .ok_or_else(|| anyhow!("[time_utils::get_add_month_from_naivedate] Date underflow when subtracting {} months from {:?}", -add_month, naive_date))?
     };
-    
+
     Ok(result_date.and_time(NaiveTime::MIN).and_utc())
 }
 

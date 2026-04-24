@@ -1,5 +1,6 @@
 use crate::common::*;
 
+use crate::service_traits::cache_service::*;
 use crate::service_traits::elastic_query_service::*;
 use crate::service_traits::graph_api_service::*;
 use crate::service_traits::mysql_query_service::*;
@@ -18,6 +19,8 @@ use crate::utils_modules::io_utils::*;
 
 use crate::views::spent_detail_view::SpentDetailView;
 
+use crate::AppConfig;
+
 use super::MainController;
 
 impl<
@@ -28,7 +31,8 @@ impl<
         P: ProcessService,
         KP: ProducerService,
         R: RedisService,
-    > MainController<G, E, M, T, P, KP, R>
+        C: CacheService,
+    > MainController<G, E, M, T, P, KP, R, C>
 {
     /// Records a single consumption entry manually from the `c <name>:<amount>` command.
     ///
@@ -49,11 +53,16 @@ impl<
     ///
     /// Returns an error if input parsing, the Elasticsearch query, the MySQL transaction,
     /// the Kafka produce, or the Telegram send fails.
+    // pub(super) async fn command_consumption(
+    //     &self,
+    //     user_seq: i64,
+    //     produce_topic: &str,
+    //     room_seq: i64,
+    // ) -> anyhow::Result<()> {
     pub(super) async fn command_consumption(
         &self,
-        user_seq: i64,
-        produce_topic: &str,
-        room_seq: i64,
+        telegram_token: &str,
+        telegram_user_id: &str,
     ) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(":");
 
@@ -68,7 +77,15 @@ impl<
                 self.tele_bot_service.get_input_text()
             ));
         }
+        
+        let user_seq: i64 = self
+            .resolve_user_seq(telegram_token, telegram_user_id)
+            .await?;
 
+        let room_seq: i64 = self
+            .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
+            .await?;
+        
         let spent_name: String = args[0].clone();
         let spent_money: i64 = match get_parsed_value_from_vector(&args, 1) {
             Ok(cash) => cash,
@@ -84,7 +101,7 @@ impl<
                 ));
             }
         };
-
+        
         let spent_type: ConsumingIndexProdtType = self
             .resolve_spend_type(&spent_name)
             .await
@@ -153,6 +170,8 @@ impl<
             SpentDetailToKafka::new(spent_idx, String::from("I"), utc_now);
 
         let partition_key: String = spent_idx.to_string();
+        let app_config: &AppConfig = AppConfig::global();
+        let produce_topic: &str = &app_config.produce_topic;
 
         self.producer_service
             .produce_object_to_topic(
@@ -295,7 +314,7 @@ impl<
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption_auto] Failed to send Telegram message: {:#}", e);
             })?;
-        
+
         Ok(())
     }
 

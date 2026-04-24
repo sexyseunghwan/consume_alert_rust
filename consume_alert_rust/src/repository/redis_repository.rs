@@ -134,7 +134,7 @@ impl RedisRepository for RedisRepositoryImpl {
     async fn get(&self, key: &str) -> anyhow::Result<Option<String>> {
         match &self.conn {
             RedisConnectionType::Single(conn) => {
-                let mut conn = conn.clone();
+                let mut conn: MultiplexedConnection = conn.clone();
                 let result: Option<String> = conn.get(key).await.map_err(|e: RedisError| {
                     anyhow!(
                         "[RedisRepositoryImpl::get] Failed to get key '{}': {:?}",

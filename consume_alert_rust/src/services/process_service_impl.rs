@@ -178,7 +178,11 @@ impl ProcessServiceImpl {
 
         let card_name: String = split_args_vec
             .first()
-            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 0) not found"))?
+            .ok_or_else(|| {
+                anyhow!(
+                    "[ProcessServiceImpl::process_samsung_card] Price field (index 0) not found"
+                )
+            })?
             .replace("승인", "");
 
         let payment_method_id: i64 = user_payment_methods
@@ -193,17 +197,17 @@ impl ProcessServiceImpl {
             })?;
 
         // Extract price information
-        let price_str: &str = split_args_vec
-            .get(2)
-            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 2) not found"))?;
+        let price_str: &str = split_args_vec.get(2).ok_or_else(|| {
+            anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 2) not found")
+        })?;
         let consume_price_vec: Vec<String> =
             self.get_string_vector_by_replace(price_str, &split_val)?;
         let spent_money: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
 
         // Extract time information
-        let time_str: &str = split_args_vec
-            .get(3)
-            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Time field (index 3) not found"))?;
+        let time_str: &str = split_args_vec.get(3).ok_or_else(|| {
+            anyhow!("[ProcessServiceImpl::process_samsung_card] Time field (index 3) not found")
+        })?;
         let consume_time_vec: Vec<String> =
             time_str.split(" ").map(|s| s.trim().to_string()).collect();
         let spent_at: DateTime<Local> = self.get_consume_datetime_local(&consume_time_vec)?;
@@ -254,9 +258,9 @@ impl ProcessServiceImpl {
     ) -> anyhow::Result<SpentDetail> {
         let split_val: Vec<&str> = vec![",", "원"];
 
-        let card_name: &str = split_args_vec
-            .first()
-            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 0) not found"))?;
+        let card_name: &str = split_args_vec.first().ok_or_else(|| {
+            anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 0) not found")
+        })?;
 
         let payment_method_id: i64 = user_payment_methods
             .iter()
@@ -270,17 +274,17 @@ impl ProcessServiceImpl {
             })?;
 
         // Extract price and payment type
-        let price_str = split_args_vec
-            .get(1)
-            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 1) not found"))?;
+        let price_str = split_args_vec.get(1).ok_or_else(|| {
+            anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 1) not found")
+        })?;
         let consume_price_vec: Vec<String> =
             self.get_string_vector_by_replace(price_str, &split_val)?;
         let spent_money: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
 
         // Extract time and product name
-        let time_str = split_args_vec
-            .get(2)
-            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Time field (index 2) not found"))?;
+        let time_str = split_args_vec.get(2).ok_or_else(|| {
+            anyhow!("[ProcessServiceImpl::process_samsung_card] Time field (index 2) not found")
+        })?;
         let consume_time_vec: Vec<String> = time_str.split(" ").map(|s| s.to_string()).collect();
         let spent_at: DateTime<Local> = self.get_consume_datetime_local(&consume_time_vec)?;
 

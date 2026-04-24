@@ -7,7 +7,6 @@ use crate::entity::spent_detail::ActiveModel;
 
 use crate::models::consume_index_prodt_type::*;
 
-
 #[allow(clippy::too_many_arguments)]
 #[derive(Debug, Serialize, Deserialize, Clone, Getters, Setters, new)]
 #[getset(get = "pub", set = "pub")]

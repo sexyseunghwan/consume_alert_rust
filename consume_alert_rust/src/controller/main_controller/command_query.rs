@@ -1,5 +1,6 @@
 use crate::common::*;
 
+use crate::service_traits::cache_service::*;
 use crate::service_traits::elastic_query_service::*;
 use crate::service_traits::graph_api_service::*;
 use crate::service_traits::mysql_query_service::*;
@@ -24,7 +25,8 @@ impl<
         P: ProcessService,
         KP: ProducerService,
         R: RedisService,
-    > MainController<G, E, M, T, P, KP, R>
+        C: CacheService,
+    > MainController<G, E, M, T, P, KP, R, C>
 {
     /// Shows the monthly consumption summary for the given room (`cm [YYYY.MM]`).
     ///
@@ -370,6 +372,68 @@ impl<
     ///
     /// Returns an error if the date argument is invalid, or if any downstream service call fails.
     pub async fn command_consumption_per_salary(&self, room_seq: i64) -> anyhow::Result<()> {
+        let args: Vec<String> = self.preprocess_string(" ");
+
+        let permon_datetime: PerDatetime = match args.len() {
+            1 => {
+                let today: DateTime<Utc> = get_current_kor_naivedate();
+                let (year, month, day) = (today.year(), today.month(), today.day());
+                let cur_date_start: DateTime<Utc> = if day < 25 {
+                    get_add_month_from_naivedate(get_naivedate(year, month, 25)?, -1)?
+                } else {
+                    get_naivedate(year, month, 25)?
+                };
+                let cur_date_end: DateTime<Utc> = if day < 25 {
+                    get_naivedate(year, month, 25)?
+                } else {
+                    get_add_month_from_naivedate(get_naivedate(year, month, 25)?, 1)?
+                };
+                self.process_service
+                    .get_nmonth_to_current_date(cur_date_start, cur_date_end, -1)?
+            }
+            2 if args
+                .get(1)
+                .is_some_and(|d| validate_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)) =>
+            {
+                let ref_date: DateTime<Utc> =
+                    parse_date_as_utc_datetime(&format!("{}.01", args[1]), "%Y.%m.%d")
+                        .inspect_err(|e| {
+                            error!(
+                                "[command_consumption_per_salary] Invalid date format: {:#}",
+                                e
+                            )
+                        })?;
+                let cur_date_end: DateTime<Utc> =
+                    get_naivedate(ref_date.year(), ref_date.month(), 25)?;
+                let cur_date_start: DateTime<Utc> = get_add_month_from_naivedate(cur_date_end, -1)?;
+                self.process_service
+                    .get_nmonth_to_current_date(cur_date_start, cur_date_end, -1)?
+            }
+            _ => {
+                self.tele_bot_service
+                    .send_message_confirm(
+                        "There is a problem with the parameter you entered. Please check again.\nEX) cs or cs 2023.11",
+                    )
+                    .await?;
+                return Err(anyhow!(
+                    "[command_consumption_per_salary] Invalid parameter: {:?}",
+                    self.tele_bot_service.get_input_text()
+                ));
+            }
+        };
+
+        self.common_process_python_double(
+            &CONSUME_DETAIL,
+            permon_datetime,
+            RangeOperator::GreaterThanOrEqual,
+            RangeOperator::LessThan,
+            room_seq,
+            true,
+        )
+        .await
+    }
+
+    pub async fn command_consumption_per_salary_group(&self, room_seq: i64) -> anyhow::Result<()> {
         let args: Vec<String> = self.preprocess_string(" ");
 
         let permon_datetime: PerDatetime = match args.len() {

@@ -87,7 +87,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                 }
             }
         });
-        
+
         let response_body: Value = self
             .elastic_conn
             .get_search_query(&es_query, &CONSUME_TYPE)
@@ -125,9 +125,9 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                 let score: f64 = *consume_type.score() * -1.0 * keyword_weight;
 
                 if !score.is_finite() {
-                    return Err(anyhow!("[ElasticQueryServiceImpl::get_consume_type_judgement] Invalid score value: {}", score))
+                    return Err(anyhow!("[ElasticQueryServiceImpl::get_consume_type_judgement] Invalid score value: {}", score));
                 }
-                
+
                 let score_i64: i64 = score as i64;
                 let keyword: &str = consume_type.source.consume_keyword();
 

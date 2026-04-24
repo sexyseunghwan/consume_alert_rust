@@ -83,9 +83,9 @@ mod schema;
 mod services;
 
 use services::{
-    elastic_query_service_impl::*, graph_api_service_impl::*, mysql_query_service_impl::*,
-    process_service_impl::*, producer_service_impl::*, redis_service_impl::*,
-    telebot_service_impl::*,
+    cache_service_impl::*, elastic_query_service_impl::*, graph_api_service_impl::*,
+    mysql_query_service_impl::*, process_service_impl::*, producer_service_impl::*,
+    redis_service_impl::*, telebot_service_impl::*,
 };
 
 mod controller;
@@ -108,6 +108,7 @@ type AppRedisService = RedisServiceImpl<RedisRepositoryImpl>;
 type AppElasticService = ElasticQueryServiceImpl<EsRepositoryPub>;
 type AppMysqlService = MysqlQueryServiceImpl<MysqlRepositoryImpl>;
 type AppProducerService = ProducerServiceImpl<KafkaRepositoryImpl>;
+type AppCacheService = CacheServiceImpl<AppRedisService, AppMysqlService>;
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 #[tokio::main]
@@ -171,6 +172,11 @@ async fn main() {
     let process_service: Arc<ProcessServiceImpl> = Arc::new(ProcessServiceImpl::new());
     let producer_service: Arc<AppProducerService> = Arc::new(AppProducerService::new(kafka_conn));
 
+    let cache_service: Arc<AppCacheService> = Arc::new(AppCacheService::new(
+        Arc::clone(&redis_service),
+        Arc::clone(&mysql_query_service),
+    ));
+
     /* Build one Bot per token listed in BOT_TOKENS.
      * Each bot runs its own independent teloxide::repl loop in a separate
      * tokio task, but all bots share the same service instances via Arc. */
@@ -194,6 +200,7 @@ async fn main() {
             let process_service: Arc<ProcessServiceImpl> = Arc::clone(&process_service);
             let producer_service: Arc<AppProducerService> = Arc::clone(&producer_service);
             let redis_service: Arc<AppRedisService> = Arc::clone(&redis_service);
+            let cache_service: Arc<AppCacheService> = Arc::clone(&cache_service);
 
             async move {
                 info!(
@@ -214,20 +221,12 @@ async fn main() {
                     let process_service: Arc<ProcessServiceImpl> = Arc::clone(&process_service);
                     let producer_service: Arc<AppProducerService> = Arc::clone(&producer_service);
                     let redis_service: Arc<AppRedisService> = Arc::clone(&redis_service);
+                    let cache_service: Arc<AppCacheService> = Arc::clone(&cache_service);
 
                     async move {
                         let tele_bot_service: TelebotServiceImpl =
                             TelebotServiceImpl::new(bot, message);
-                        #[allow(clippy::type_complexity)]
-                        let main_controller: MainController<
-                            GraphApiServiceImpl,
-                            ElasticQueryServiceImpl<EsRepositoryPub>,
-                            MysqlQueryServiceImpl<MysqlRepositoryImpl>,
-                            TelebotServiceImpl,
-                            ProcessServiceImpl,
-                            ProducerServiceImpl<KafkaRepositoryImpl>,
-                            RedisServiceImpl<RedisRepositoryImpl>,
-                        > = MainController::new(
+                        let main_controller = MainController::new(
                             graph_api_service,
                             elastic_query_service,
                             mysql_query_service,
@@ -235,6 +234,7 @@ async fn main() {
                             process_service,
                             producer_service,
                             redis_service,
+                            cache_service,
                         );
 
                         match main_controller.main_call_function().await {

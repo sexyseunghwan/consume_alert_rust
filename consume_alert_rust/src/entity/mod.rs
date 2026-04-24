@@ -2,6 +2,7 @@
 
 pub mod prelude;
 
+pub mod agg_group;
 pub mod common_consume_keyword_type;
 pub mod common_consume_prodt_keyword;
 pub mod spent_detail;
@@ -9,4 +10,3 @@ pub mod spent_group_info;
 pub mod telegram_room;
 pub mod user_payment_methods;
 pub mod users;
-pub mod agg_group;

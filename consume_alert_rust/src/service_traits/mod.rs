@@ -1,3 +1,4 @@
+pub mod cache_service;
 pub mod elastic_query_service;
 pub mod graph_api_service;
 pub mod mysql_query_service;
