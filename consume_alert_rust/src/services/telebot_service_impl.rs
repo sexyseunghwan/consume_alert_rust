@@ -28,7 +28,7 @@ impl TelebotServiceImpl {
     /// # Returns
     /// * Self
     pub fn new(bot: Arc<Bot>, message: Message) -> Self {
-        let app_config: &AppConfig = AppConfig::global();
+        let app_config: &AppConfig = AppConfig::get_global();
         let user_id: &str = &app_config.user_id;
 
         let input_text: String = match message.text() {
@@ -96,13 +96,13 @@ impl TelebotServiceImpl {
     }
 
     #[doc = "Send message via Telegram Bot"]
-    async fn tele_bot_send_msg(&self, msg: &str) -> Result<(), anyhow::Error> {
+    async fn tele_bot_input_msg(&self, msg: &str) -> Result<(), anyhow::Error> {
         self.bot
             .send_message(self.chat_id, msg)
             .await
             .inspect_err(|e| {
                 error!(
-                    "[Telebot Error][tele_bot_send_msg()] Failed to send command response: {:#}",
+                    "[Telebot Error][tele_bot_input_msg()] Failed to send command response: {:#}",
                     e
                 )
             })?;
@@ -111,14 +111,14 @@ impl TelebotServiceImpl {
     }
 
     #[doc = "tele_bot_send_photo"]
-    async fn tele_bot_send_photo(&self, image_path: &str) -> Result<(), anyhow::Error> {
+    async fn tele_bot_input_photo(&self, image_path: &str) -> Result<(), anyhow::Error> {
         let photo: InputFile = InputFile::file(Path::new(image_path));
         self.bot
             .send_photo(self.chat_id, photo)
             .await
             .inspect_err(|e| {
                 error!(
-                    "[Telebot Error][tele_bot_send_photo()] Failed to send Photo: {:#}",
+                    "[Telebot Error][tele_bot_input_photo()] Failed to send Photo: {:#}",
                     e
                 )
             })?;
@@ -130,8 +130,8 @@ impl TelebotServiceImpl {
 #[async_trait]
 impl TelebotService for TelebotServiceImpl {
     #[doc = "Retry sending messages"]
-    async fn send_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error> {
-        self.try_send_operation(|| self.tele_bot_send_msg(msg), 6, Duration::from_secs(40))
+    async fn input_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error> {
+        self.try_send_operation(|| self.tele_bot_input_msg(msg), 6, Duration::from_secs(40))
             .await
     }
 
@@ -141,10 +141,10 @@ impl TelebotService for TelebotServiceImpl {
     ///
     /// # Returns
     /// * Result<(), anyhow::Error>
-    async fn send_photo_confirm(&self, image_path_vec: &[String]) -> Result<(), anyhow::Error> {
+    async fn input_photo_confirm(&self, image_path_vec: &[String]) -> Result<(), anyhow::Error> {
         for image_path in image_path_vec {
             self.try_send_operation(
-                || self.tele_bot_send_photo(image_path),
+                || self.tele_bot_input_photo(image_path),
                 6,
                 Duration::from_secs(40),
             )
@@ -155,7 +155,7 @@ impl TelebotService for TelebotServiceImpl {
     }
 
     #[doc = "Functions that send messages related to consumption details"]
-    async fn send_consumption_message<'life1, 'life2, 'msg, T>(
+    async fn input_consumption_message<'life1, 'life2, 'msg, T>(
         &self,
         items: &'life1 [T],
         message_builder: fn(&'life2 T) -> String,
@@ -172,7 +172,7 @@ impl TelebotService for TelebotServiceImpl {
         let loop_cnt: usize = items_len.div_ceil(cnt);
 
         if empty_flag {
-            self.send_message_confirm(empty_msg).await?;
+            self.input_message_confirm(empty_msg).await?;
         } else {
             for idx in 0..loop_cnt {
                 let mut send_text: String = String::new();
@@ -187,7 +187,7 @@ impl TelebotService for TelebotServiceImpl {
                     send_text.push_str(&message_builder(item));
                 }
 
-                self.send_message_confirm(&send_text).await?;
+                self.input_message_confirm(&send_text).await?;
             }
         }
 
@@ -201,7 +201,7 @@ impl TelebotService for TelebotServiceImpl {
     ///
     /// # Returns
     /// * Result<(), anyhow::Error>
-    async fn send_message_consume_split(
+    async fn input_message_consume_split(
         &self,
         to_python_graph_line: &ToPythonGraphLine,
         spent_detail_list: &[DocumentWithId<SpentDetailByEs>],
@@ -214,11 +214,11 @@ impl TelebotService for TelebotServiceImpl {
         let empty_flag: bool = spent_detail_list.is_empty();
 
         self
-            .send_consumption_message(
+            .input_consumption_message(
                 spent_detail_list,
                 |item| {
 
-                    let kor_time: String = format_kst_datetime(item.source.spent_at, "%Y-%m-%dT%H:%M");
+                    let kor_time: String = to_kst_datetime_format(item.source.spent_at, "%Y-%m-%dT%H:%M");
 
                     format!(
                         "name : {}\ndate : {}\ncost : {}\ntype: {}\n",
@@ -242,7 +242,7 @@ impl TelebotService for TelebotServiceImpl {
     ///
     /// # Returns
     /// * Result<(), anyhow::Error>
-    async fn send_message_consume_info_by_typelist(
+    async fn input_message_consume_info_by_typelist(
         &self,
         type_consume_info: &[ConsumeResultByType],
         start_dt: DateTime<Utc>,
@@ -254,7 +254,7 @@ impl TelebotService for TelebotServiceImpl {
         let start_str = start_dt.format("%Y-%m-%d");
         let end_str = end_dt.format("%Y-%m-%d");
 
-        self.send_consumption_message(type_consume_info, |item| {
+        self.input_consumption_message(type_consume_info, |item| {
             format!(
                 "category name : {}\ncost : {}\ncost(%) : {}%\n",
                 item.consume_prodt_type(),

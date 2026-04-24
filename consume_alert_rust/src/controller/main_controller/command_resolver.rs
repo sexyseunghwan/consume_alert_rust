@@ -10,15 +10,7 @@ use crate::service_traits::redis_service::*;
 use crate::service_traits::telebot_service::*;
 
 use crate::models::consume_index_prodt_type::*;
-use crate::models::per_datetime::*;
-use crate::models::spent_detail::*;
-use crate::models::spent_detail_to_kafka::*;
-use crate::models::spent_detail_with_info::*;
-use crate::models::user_payment_methods::*;
 
-use crate::configuration::elasitc_index_name::*;
-use crate::enums::range_operator::*;
-use crate::utils_modules::time_utils::*;
 
 use super::MainController;
 
@@ -52,7 +44,7 @@ impl<
     ) -> anyhow::Result<ConsumingIndexProdtType> {
         let spent_type: ConsumingIndexProdtType = self
             .elastic_query_service
-            .get_consume_type_judgement(spend_name)
+            .find_consume_type_judgement(spend_name)
             .await
             .inspect_err(|e| {
                 error!(
@@ -64,6 +56,23 @@ impl<
         Ok(spent_type)
     }
 
+    /// Resolves the internal user sequence for the current Telegram caller.
+    ///
+    /// Looks up the user through `cache_service` using the bot token and Telegram user id.
+    /// When no match is found, sends an unauthorised-user message to Telegram and returns an error.
+    ///
+    /// # Arguments
+    ///
+    /// * `telegram_token` - Telegram bot token identifying the bot instance
+    /// * `telegram_user_id` - Telegram user id identifying the caller
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(i64)` containing the resolved internal `user_seq`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the cache lookup fails or if the caller is not authorised.
     pub(super) async fn resolve_user_seq(
         &self,
         telegram_token: &str,
@@ -77,7 +86,7 @@ impl<
             Some(seq) => Ok(seq),
             None => {
                 self.tele_bot_service
-                    .send_message_confirm(
+                    .input_message_confirm(
                         "The token is invalid or you are not an authorized user.\nPlease contact the administrator.",
                     )
                     .await?;
@@ -90,6 +99,25 @@ impl<
         }
     }
 
+    /// Resolves the Telegram room sequence for an authorised caller.
+    ///
+    /// Looks up the room through `cache_service` using the resolved `user_seq` together with
+    /// the bot token and Telegram user id. When no room mapping is found, sends an
+    /// unauthorised-user message to Telegram and returns an error.
+    ///
+    /// # Arguments
+    ///
+    /// * `user_seq` - Internal user sequence already resolved for the caller
+    /// * `telegram_token` - Telegram bot token identifying the bot instance
+    /// * `telegram_user_id` - Telegram user id identifying the caller
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(i64)` containing the resolved internal `room_seq`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the cache lookup fails or if the caller is not authorised for a room.
     pub(super) async fn resolve_telegram_room_seq(
         &self,
         user_seq: i64,
@@ -104,7 +132,7 @@ impl<
             Some(seq) => Ok(seq),
             None => {
                 self.tele_bot_service
-                    .send_message_confirm(
+                    .input_message_confirm(
                         "The token is invalid or you are not an authorized user.\nPlease contact the administrator.",
                     )
                     .await?;

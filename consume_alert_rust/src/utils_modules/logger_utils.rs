@@ -1,7 +1,7 @@
 use crate::common::*;
 
 #[doc = "Function responsible for logging"]
-pub fn set_global_logger() {
+pub fn initialize_global_logger() {
     let log_directory = "logs"; /* Directory to store log files */
     let file_prefix = ""; /* Prefixes for log files */
 
@@ -18,13 +18,13 @@ pub fn set_global_logger() {
             Naming::Timestamps,        /* Use timestamps for file names */
             Cleanup::KeepLogFiles(10), /* Maintain up to 10 log files */
         )
-        .format_for_files(custom_format)
+        .format_for_files(to_custom_format)
         .start()
         .unwrap_or_else(|e| panic!("Logger initialization failed: {}", e));
 }
 
 #[doc = "Custom Log Format Function"]
-fn custom_format(
+fn to_custom_format(
     w: &mut dyn Write,
     now: &mut flexi_logger::DeferredNow,
     record: &Record,
@@ -63,7 +63,7 @@ fn custom_format(
 // }
 
 #[doc = "Function that writes the error history to a file and sends it to kafka"]
-pub async fn errork(err: anyhow::Error) {
+pub async fn input_error_log(err: anyhow::Error) {
     error!("{:?}", err);
     //logging_kafka(&err.to_string()).await;
 }

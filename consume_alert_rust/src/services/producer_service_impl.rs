@@ -22,7 +22,7 @@ where
     ///
     /// # Returns
     /// * `Result<(), anyhow::Error>` - Ok if message sent successfully
-    async fn produce_object_to_topic<T>(
+    async fn input_object_to_topic<T>(
         &self,
         topic: &str,
         object: &T,
@@ -34,24 +34,24 @@ where
         // Serialize object to JSON Value
         let json_value: Value = serde_json::to_value(object).map_err(|e| {
             anyhow!(
-                "[ProducerServiceImpl::produce_object_to_topic] Failed to serialize object: {:?}",
+                "[ProducerServiceImpl::input_object_to_topic] Failed to serialize object: {:?}",
                 e
             )
         })?;
 
         // Send message
         self.kafka_conn
-            .send_message(topic, key, &json_value)
+            .input_message(topic, key, &json_value)
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[ProducerServiceImpl::produce_object_to_topic] Failed to send message: {:?}",
+                    "[ProducerServiceImpl::input_object_to_topic] Failed to send message: {:?}",
                     e
                 )
             })?;
 
         info!(
-            "[ProducerServiceImpl::produce_object_to_topic] Successfully sent message to topic: {}",
+            "[ProducerServiceImpl::input_object_to_topic] Successfully sent message to topic: {}",
             topic
         );
 
@@ -68,7 +68,7 @@ where
     ///
     /// # Returns
     /// * `Result<(), anyhow::Error>` - Ok if all messages sent successfully
-    async fn produce_objects_to_topic<T, F>(
+    async fn input_objects_to_topic<T, F>(
         &self,
         topic: &str,
         objects: &[T],
@@ -91,7 +91,7 @@ where
             // Serialize object to JSON Value
             let json_value: Value = serde_json::to_value(obj).map_err(|e| {
                 anyhow!(
-                    "[ProducerServiceImpl::produce_objects_to_topic] Failed to serialize object at index {}: {:?}",
+                    "[ProducerServiceImpl::input_objects_to_topic] Failed to serialize object at index {}: {:?}",
                     idx,
                     e
                 )
@@ -103,18 +103,18 @@ where
             // Send message
             match self
                 .kafka_conn
-                .send_message(topic, key.as_deref(), &json_value)
+                .input_message(topic, key.as_deref(), &json_value)
                 .await
             {
                 Ok(_) => {
                     success_count += 1;
                     if success_count % 100 == 0 {
-                        info!("[ProducerServiceImpl::produce_objects_to_topic] Sent {} messages to {}", success_count, topic);
+                        info!("[ProducerServiceImpl::input_objects_to_topic] Sent {} messages to {}", success_count, topic);
                     }
                 }
                 Err(e) => {
                     error!(
-                        "[ProducerServiceImpl::produce_objects_to_topic] Failed to send object at index {}: {:?}",
+                        "[ProducerServiceImpl::input_objects_to_topic] Failed to send object at index {}: {:?}",
                         idx, e
                     );
                     return Err(anyhow!("Failed to send object at index {}: {}", idx, e));
@@ -123,7 +123,7 @@ where
         }
 
         info!(
-            "[ProducerServiceImpl::produce_objects_to_topic] Completed producing {} objects to topic: {}",
+            "[ProducerServiceImpl::input_objects_to_topic] Completed producing {} objects to topic: {}",
             success_count, topic
         );
 

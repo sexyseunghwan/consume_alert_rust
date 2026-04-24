@@ -4,7 +4,7 @@ use crate::common::*;
 #[async_trait]
 pub trait RedisService {
     /// Set a simple string value (non-JSON)
-    async fn set_string(
+    async fn input_string(
         &self,
         key: &str,
         value: &str,
@@ -12,5 +12,5 @@ pub trait RedisService {
     ) -> anyhow::Result<()>;
 
     /// Get a simple string value (non-JSON)
-    async fn get_string(&self, key: &str) -> anyhow::Result<Option<String>>;
+    async fn find_string(&self, key: &str) -> anyhow::Result<Option<String>>;
 }

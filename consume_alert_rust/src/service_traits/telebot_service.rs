@@ -16,7 +16,7 @@ pub trait TelebotService {
     /// # Errors
     ///
     /// Returns an error if all retry attempts fail.
-    async fn send_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error>;
+    async fn input_message_confirm(&self, msg: &str) -> Result<(), anyhow::Error>;
 
     /// Sends one or more photos to the Telegram chat, retrying each on failure.
     ///
@@ -27,7 +27,7 @@ pub trait TelebotService {
     /// # Errors
     ///
     /// Returns an error if any photo fails to send after all retries.
-    async fn send_photo_confirm(&self, image_path_vec: &[String]) -> Result<(), anyhow::Error>;
+    async fn input_photo_confirm(&self, image_path_vec: &[String]) -> Result<(), anyhow::Error>;
 
     /// Sends a list of items as formatted Telegram messages, paginating every 10 items.
     ///
@@ -42,7 +42,7 @@ pub trait TelebotService {
     /// # Errors
     ///
     /// Returns an error if sending any message fails.
-    async fn send_consumption_message<'life1, 'life2, 'msg, T>(
+    async fn input_consumption_message<'life1, 'life2, 'msg, T>(
         &self,
         items: &'life1 [T],
         message_builder: fn(&'life2 T) -> String,
@@ -64,7 +64,7 @@ pub trait TelebotService {
     /// # Errors
     ///
     /// Returns an error if sending any message fails.
-    async fn send_message_consume_split(
+    async fn input_message_consume_split(
         &self,
         to_python_graph_line: &ToPythonGraphLine,
         spent_detail_list: &[DocumentWithId<SpentDetailByEs>],
@@ -82,7 +82,7 @@ pub trait TelebotService {
     /// # Errors
     ///
     /// Returns an error if sending any message fails.
-    async fn send_message_consume_info_by_typelist(
+    async fn input_message_consume_info_by_typelist(
         &self,
         type_consume_info: &[ConsumeResultByType],
         start_dt: DateTime<Utc>,

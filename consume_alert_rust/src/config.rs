@@ -56,7 +56,7 @@ impl AppConfig {
     /// let config = AppConfig::global();
     /// println!("Consume topic: {}", config.produce_topic);
     /// ```
-    pub fn init() -> Result<(), String> {
+    pub fn initialize() -> Result<(), String> {
         dotenv::dotenv().ok();
 
         let config: AppConfig = AppConfig {
@@ -109,7 +109,7 @@ impl AppConfig {
     /// let config = AppConfig::global();
     /// println!("Topic: {}", config.consume_topic);
     /// ```
-    pub fn global() -> &'static AppConfig {
+    pub fn get_global() -> &'static AppConfig {
         APP_CONFIG
             .get()
             .expect("AppConfig not initialized. Call AppConfig::init() first.")
@@ -121,7 +121,7 @@ impl AppConfig {
     /// # Returns
     /// * `Option<&'static AppConfig>` - Some if initialized, None otherwise
     #[allow(dead_code)]
-    pub fn try_global() -> Option<&'static AppConfig> {
+    pub fn get_global_option() -> Option<&'static AppConfig> {
         APP_CONFIG.get()
     }
 }
@@ -133,11 +133,11 @@ mod tests {
     #[test]
     fn test_config_access() {
         // Note: This test requires .env file to be present
-        if AppConfig::try_global().is_none() {
-            let _ = AppConfig::init();
+        if AppConfig::get_global_option().is_none() {
+            let _ = AppConfig::initialize();
         }
 
-        let config: &AppConfig = AppConfig::global();
+        let config: &AppConfig = AppConfig::get_global();
         assert!(!config.produce_topic.is_empty());
         assert!(!config.kafka_brokers.is_empty());
     }

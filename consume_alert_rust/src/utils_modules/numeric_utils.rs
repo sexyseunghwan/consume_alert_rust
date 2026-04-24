@@ -4,6 +4,6 @@ pub fn is_numeric(s: &str) -> bool {
 }
 
 #[doc = "Functions that convert strings into numbers"]
-pub fn convert_numeric(s: &str) -> i64 {
+pub fn to_numeric(s: &str) -> i64 {
     s.parse::<i64>().unwrap_or(0)
 }

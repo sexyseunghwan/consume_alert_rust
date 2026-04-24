@@ -34,41 +34,37 @@ impl<
         C: CacheService,
     > MainController<G, E, M, T, P, KP, R, C>
 {
-    /// Records a single consumption entry manually from the `c <name>:<amount>` command.
+    /// Records a manual consumption entry from the `c` command (`c item:amount`).
     ///
-    /// Parses the name and amount from the input, classifies the spend type via Elasticsearch,
-    /// persists the record to MySQL within a transaction, and publishes an insert event to Kafka.
+    /// Validates the command format and amount, resolves the caller and room,
+    /// classifies the spending item, loads the user's default payment method,
+    /// persists the entry to MySQL, publishes an insert event to Kafka,
+    /// and sends a formatted confirmation message to Telegram.
     ///
     /// # Arguments
     ///
-    /// * `user_seq` - The authenticated user's sequence number
-    /// * `produce_topic` - The Kafka topic to publish the insert event to
-    /// * `room_seq` - The Telegram room sequence number used to scope the record
+    /// * `telegram_token` - Telegram bot token used to resolve the caller
+    /// * `telegram_user_id` - Telegram user id used to resolve the caller and room
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` after the record is saved and the confirmation message is sent.
+    /// Returns `Ok(())` after the entry is saved and the confirmation is sent.
     ///
     /// # Errors
     ///
-    /// Returns an error if input parsing, the Elasticsearch query, the MySQL transaction,
-    /// the Kafka produce, or the Telegram send fails.
-    // pub(super) async fn command_consumption(
-    //     &self,
-    //     user_seq: i64,
-    //     produce_topic: &str,
-    //     room_seq: i64,
-    // ) -> anyhow::Result<()> {
+    /// Returns an error if the parameter format is invalid, the amount is not numeric,
+    /// the caller is unauthorised, no default payment method exists,
+    /// or any downstream lookup, persistence, Kafka, or Telegram step fails.
     pub(super) async fn command_consumption(
         &self,
         telegram_token: &str,
         telegram_user_id: &str,
     ) -> anyhow::Result<()> {
-        let args: Vec<String> = self.preprocess_string(":");
+        let args: Vec<String> = self.to_preprocessed_tokens(":");
 
         if args.len() != 2 {
             self.tele_bot_service
-                .send_message_confirm(
+                .input_message_confirm(
                     "There is a problem with the parameter you entered. Please check again.\nEX) c snack:15000",
                 )
                 .await?;
@@ -87,11 +83,11 @@ impl<
             .await?;
         
         let spent_name: String = args[0].clone();
-        let spent_money: i64 = match get_parsed_value_from_vector(&args, 1) {
+        let spent_money: i64 = match find_parsed_value_from_vector(&args, 1) {
             Ok(cash) => cash,
             Err(e) => {
                 self.tele_bot_service
-                    .send_message_confirm(
+                    .input_message_confirm(
                         "The second parameter must be numeric.\nEX) c snack:15000",
                     )
                     .await?;
@@ -114,7 +110,7 @@ impl<
 
         let default_payment_method: UserPaymentMethods = match self
             .mysql_query_service
-            .get_user_payment_methods(user_seq, true)
+            .find_user_payment_methods(user_seq, true)
             .await
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption] Failed to get user payment methods: {:#}", e);
@@ -123,7 +119,7 @@ impl<
                 Some(default_payment_method) => default_payment_method.clone(),
                 None => {
                     self.tele_bot_service
-                    .send_message_confirm(
+                    .input_message_confirm(
                         "Default payment method does not exist. \n
                         Please register a default payment method.",
                     )
@@ -145,7 +141,7 @@ impl<
         );
 
         let spent_detail_view: SpentDetailView = spent_detail
-            .convert_spent_detail_to_view(&spent_type)
+            .to_spent_detail_view(&spent_type)
             .inspect_err(|e| {
                 error!(
                     "[main_controller::command_consumption] Failed to build view: {:#}",
@@ -155,7 +151,7 @@ impl<
 
         let spent_idx: i64 = self
             .mysql_query_service
-            .insert_prodt_detail_with_transaction(&spent_detail)
+            .input_prodt_detail_with_transaction(&spent_detail)
             .await
             .inspect_err(|e| {
                 error!(
@@ -170,11 +166,11 @@ impl<
             SpentDetailToKafka::new(spent_idx, String::from("I"), utc_now);
 
         let partition_key: String = spent_idx.to_string();
-        let app_config: &AppConfig = AppConfig::global();
+        let app_config: &AppConfig = AppConfig::get_global();
         let produce_topic: &str = &app_config.produce_topic;
 
         self.producer_service
-            .produce_object_to_topic(
+            .input_object_to_topic(
                 produce_topic,
                 &produce_payload,
                 Some(partition_key.as_str()),
@@ -188,7 +184,7 @@ impl<
             })?;
 
         self.tele_bot_service
-            .send_message_confirm(&spent_detail_view.to_telegram_string())
+            .input_message_confirm(&spent_detail_view.to_telegram_string())
             .await
             .inspect_err(|e| {
                 error!(
@@ -200,36 +196,35 @@ impl<
         Ok(())
     }
 
-    /// Auto-detects and records a consumption entry from a card-payment notification message.
+    /// Attempts to parse free-form or multi-line text as a consumption entry.
     ///
-    /// Strips bracket-enclosed tokens (e.g. bank prefixes) from the raw input, then delegates
-    /// to the process service to extract spend details. Classifies the spend type via
-    /// Elasticsearch, persists the record to MySQL within a transaction, and publishes an
-    /// insert event to Kafka. Silently returns `Ok(())` if the message is not a payment notice.
+    /// Removes bracketed metadata fragments such as `[...]`, drops blank lines, resolves the
+    /// caller and room, lets `process_service` infer the structured spending data,
+    /// classifies the primary spending name, persists the entry to MySQL,
+    /// publishes an insert event to Kafka, and sends a confirmation to Telegram.
+    /// Returns early with `Ok(())` when no usable lines remain after preprocessing.
     ///
     /// # Arguments
     ///
-    /// * `user_seq` - The authenticated user's sequence number
-    /// * `produce_topic` - The Kafka topic to publish the insert event to
-    /// * `room_seq` - The Telegram room sequence number used to scope the record
+    /// * `telegram_token` - Telegram bot token used to resolve the caller
+    /// * `telegram_user_id` - Telegram user id used to resolve the caller and room
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` after the record is saved and the confirmation message is sent,
-    /// or immediately if the input does not resemble a card-payment notification.
+    /// Returns `Ok(())` after the parsed entry is saved and the confirmation is sent.
     ///
     /// # Errors
     ///
-    /// Returns an error if the process filter, Elasticsearch query, MySQL transaction,
-    /// Kafka produce, or Telegram send fails.
+    /// Returns an error if preprocessing fails, the caller is unauthorised,
+    /// payment methods cannot be loaded, the text cannot be converted into a valid entry,
+    /// or any downstream persistence, Kafka, or Telegram step fails.
     pub async fn command_consumption_auto(
         &self,
-        user_seq: i64,
-        produce_topic: &str,
-        room_seq: i64,
+        telegram_token: &str,
+        telegram_user_id: &str,
     ) -> anyhow::Result<()> {
         let args: String = self.tele_bot_service.get_input_text();
-
+        
         let bracket_re: Regex = Regex::new(r"\[.*?\]\n?").map_err(|e| {
             anyhow!(
                 "[main_controller::command_consumption_auto] Bad regex: {:?}",
@@ -248,9 +243,17 @@ impl<
             return Ok(());
         }
 
+        let user_seq: i64 = self
+            .resolve_user_seq(telegram_token, telegram_user_id)
+            .await?;
+
+        let room_seq: i64 = self
+            .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
+            .await?;
+
         let user_payment_methods: Vec<UserPaymentMethods> = self
             .mysql_query_service
-            .get_user_payment_methods(user_seq, false)
+            .find_user_payment_methods(user_seq, false)
             .await
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption_auto] Failed to get user payment methods: {:#}", e);
@@ -258,7 +261,7 @@ impl<
 
         let mut spent_detail: SpentDetail = self
             .process_service
-            .process_by_consume_filter(&lines, user_seq, room_seq, user_payment_methods)
+            .modify_by_consume_filter(&lines, user_seq, room_seq, user_payment_methods)
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption_auto] {:#}", e);
             })?;
@@ -275,7 +278,7 @@ impl<
         spent_detail.set_consume_keyword_type_id(spent_type.consume_keyword_type_id);
 
         let spent_detail_view: SpentDetailView = spent_detail
-            .convert_spent_detail_to_view(&spent_type)
+            .to_spent_detail_view(&spent_type)
             .inspect_err(|e| {
                 error!(
                     "[main_controller::command_consumption_auto] Failed to build view: {:#}",
@@ -285,7 +288,7 @@ impl<
 
         let spent_idx: i64 = self
             .mysql_query_service
-            .insert_prodt_detail_with_transaction(&spent_detail)
+            .input_prodt_detail_with_transaction(&spent_detail)
             .await
             .inspect_err(|e| {
                 error!(
@@ -300,16 +303,19 @@ impl<
             SpentDetailToKafka::new(spent_idx, String::from("I"), utc_now);
 
         let partition_key: String = spent_idx.to_string();
+        
+        let app_config: &AppConfig = AppConfig::get_global();
+        let produce_topic: &str = app_config.produce_topic();
 
         self.producer_service
-            .produce_object_to_topic(produce_topic, &produce_payload, Some(partition_key.as_str()))
+            .input_object_to_topic(produce_topic, &produce_payload, Some(partition_key.as_str()))
             .await
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption_auto] Failed to produce Kafka message: {:#}", e);
             })?;
 
         self.tele_bot_service
-            .send_message_confirm(&spent_detail_view.to_telegram_string())
+            .input_message_confirm(&spent_detail_view.to_telegram_string())
             .await
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption_auto] Failed to send Telegram message: {:#}", e);
@@ -318,52 +324,61 @@ impl<
         Ok(())
     }
 
-    /// Deletes the most recently recorded consumption entry for the given user and room (`cd`).
+    /// Deletes the most recently recorded consumption entry for the caller's room (`cd`).
     ///
-    /// Fetches the latest `SpentDetail` from MySQL, removes it within a transaction, sends a
-    /// deletion confirmation to Telegram, and publishes a delete event to Kafka.
-    /// Returns early with `Ok(())` if there are no records to delete or the parameter count is wrong.
+    /// Validates that no extra arguments were supplied, resolves the caller and room,
+    /// loads the latest spending record from MySQL, removes it inside a transaction,
+    /// sends a deletion confirmation to Telegram, and publishes a delete event to Kafka.
+    /// Returns early with `Ok(())` if the command format is wrong or there is no record to delete.
+    /// If the delete transaction itself fails, the error is logged and the function still returns `Ok(())`.
     ///
     /// # Arguments
     ///
-    /// * `produce_topic` - The Kafka topic to publish the delete event to
-    /// * `user_seq` - The authenticated user's sequence number
-    /// * `room_seq` - The Telegram room sequence number used to scope the query
+    /// * `telegram_token` - Telegram bot token used to resolve the caller
+    /// * `telegram_user_id` - Telegram user id used to resolve the caller and room
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` after the record is deleted and the confirmation message is sent.
+    /// Returns `Ok(())` after the delete flow completes, or after an early no-op exit.
     ///
     /// # Errors
     ///
-    /// Returns an error if the MySQL query, the delete transaction, the Kafka produce,
-    /// or the Telegram send fails.
+    /// Returns an error if authorisation or latest-record lookup fails,
+    /// or if any Telegram/Kafka notification step fails.
+    /// Delete transaction failures are logged and not propagated.
     pub(super) async fn command_delete_recent_consumption(
         &self,
-        produce_topic: &str,
-        user_seq: i64,
-        room_seq: i64,
+        telegram_token: &str,
+        telegram_user_id: &str,
     ) -> anyhow::Result<()> {
-        let args: Vec<String> = self.preprocess_string(" ");
+        let args: Vec<String> = self.to_preprocessed_tokens(" ");
 
         if args.len() != 1 {
             self.tele_bot_service
-                .send_message_confirm(
+                .input_message_confirm(
                     "There is a problem with the parameter you entered. Please check again.\nEX) cd",
                 )
                 .await?;
             return Ok(());
         }
 
+        let user_seq: i64 = self
+            .resolve_user_seq(telegram_token, telegram_user_id)
+            .await?;
+
+        let room_seq: i64 = self
+            .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
+            .await?;
+
         let latest_spent_detail: SpentDetailWithInfo = match self
             .mysql_query_service
-            .get_latest_spent_detail(user_seq, room_seq)
+            .find_latest_spent_detail(user_seq, room_seq)
             .await?
         {
             Some(latest_spent_detail) => latest_spent_detail,
             None => {
                 self.tele_bot_service
-                    .send_message_confirm("No expenses to delete.")
+                    .input_message_confirm("No expenses to delete.")
                     .await?;
                 return Ok(());
             }
@@ -371,7 +386,7 @@ impl<
 
         let spent_idx: i64 = latest_spent_detail.spent_idx;
 
-        let spent_detail_view: SpentDetailView = latest_spent_detail.convert_to_view();
+        let spent_detail_view: SpentDetailView = latest_spent_detail.to_spent_detail_view();
 
         match self
             .mysql_query_service
@@ -383,9 +398,9 @@ impl<
                     "[command_delete_recent_consumption] latest spent_idx={} (user_seq={}, room_seq={})",
                     spent_idx, user_seq, room_seq
                 );
-
+                
                 self.tele_bot_service
-                    .send_message_confirm(&spent_detail_view.to_telegram_string_to_delete())
+                    .input_message_confirm(&spent_detail_view.to_telegram_string_to_delete())
                     .await?;
 
                 let utc_now: DateTime<Utc> = Utc::now();
@@ -395,8 +410,11 @@ impl<
 
                 let partition_key: String = spent_idx.to_string();
 
+                let app_config: &AppConfig = AppConfig::get_global();
+                let produce_topic: &str = app_config.produce_topic();
+
                 self.producer_service
-                    .produce_object_to_topic(produce_topic, &produce_payload, Some(partition_key.as_str()))
+                    .input_object_to_topic(produce_topic, &produce_payload, Some(partition_key.as_str()))
                     .await
                     .inspect_err(|e| {
                         error!("[main_controller::command_consumption_auto] Failed to produce Kafka message: {:#}", e);

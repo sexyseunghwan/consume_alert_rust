@@ -117,11 +117,11 @@ async fn main() {
     dotenv().ok();
 
     /* Initiate Logger */
-    set_global_logger();
+    initialize_global_logger();
     info!("Consume Alert Program Start");
 
     /* Initialize global configuration */
-    AppConfig::init().expect("Failed to initialize AppConfig");
+    AppConfig::initialize().expect("Failed to initialize AppConfig");
 
     let elastic_conn: EsRepositoryPub = match EsRepositoryPub::new() {
         Ok(elastic_conn) => elastic_conn,
@@ -180,7 +180,7 @@ async fn main() {
     /* Build one Bot per token listed in BOT_TOKENS.
      * Each bot runs its own independent teloxide::repl loop in a separate
      * tokio task, but all bots share the same service instances via Arc. */
-    let app_config: &AppConfig = AppConfig::global();
+    let app_config: &AppConfig = AppConfig::get_global();
     let bots: Vec<Arc<Bot>> = app_config
         .bot_tokens()
         .iter()
@@ -242,7 +242,7 @@ async fn main() {
                                 info!("respond success.");
                             }
                             Err(e) => {
-                                errork(e).await;
+                                input_error_log(e).await;
                             }
                         };
 

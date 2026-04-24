@@ -14,7 +14,7 @@ pub trait MysqlRepository {
     ///
     /// * `Ok(i64)` - The `spent_idx` assigned to the inserted row.
     /// * `Err`     - The transaction is rolled back and the error is propagated.
-    async fn insert_spent_detail_with_transaction(
+    async fn input_spent_detail_with_transaction(
         &self,
         active_model: spent_detail::ActiveModel,
     ) -> anyhow::Result<i64>;
@@ -46,7 +46,7 @@ pub trait MysqlRepository {
     /// * `Ok(Vec<i64>)` - Auto-incremented `spent_idx` values, one per input record,
     ///   in insertion order.
     /// * `Err` - The transaction is rolled back and the error is propagated.
-    async fn insert_spent_details_with_transaction(
+    async fn input_spent_details_with_transaction(
         &self,
         active_models: Vec<spent_detail::ActiveModel>,
     ) -> anyhow::Result<Vec<i64>>;
@@ -115,7 +115,7 @@ impl MysqlRepository for MysqlRepositoryImpl {
     /// # Errors
     ///
     /// Returns an error if beginning, executing, or committing the transaction fails.
-    async fn insert_spent_detail_with_transaction(
+    async fn input_spent_detail_with_transaction(
         &self,
         active_model: spent_detail::ActiveModel,
     ) -> anyhow::Result<i64> {
@@ -125,7 +125,7 @@ impl MysqlRepository for MysqlRepositoryImpl {
             .await
             .inspect_err(|e| {
                 error!(
-                    "[MysqlRepositoryImpl::insert_spent_detail_with_transaction] Failed to begin transaction: {:#}",
+                    "[MysqlRepositoryImpl::input_spent_detail_with_transaction] Failed to begin transaction: {:#}",
                     e
                 )
             })?;
@@ -137,7 +137,7 @@ impl MysqlRepository for MysqlRepositoryImpl {
         .await
         .inspect_err(|e| {
             error!(
-                "[MysqlRepositoryImpl::insert_spent_detail_with_transaction] Failed to insert record: {:#}",
+                "[MysqlRepositoryImpl::input_spent_detail_with_transaction] Failed to insert record: {:#}",
                 e
             )
         })?;
@@ -146,7 +146,7 @@ impl MysqlRepository for MysqlRepositoryImpl {
             .await
             .inspect_err(|e| {
                 error!(
-                    "[MysqlRepositoryImpl::insert_spent_detail_with_transaction] Failed to commit transaction: {:#}",
+                    "[MysqlRepositoryImpl::input_spent_detail_with_transaction] Failed to commit transaction: {:#}",
                     e
                 )
             })?;
@@ -167,7 +167,7 @@ impl MysqlRepository for MysqlRepositoryImpl {
     /// # Errors
     ///
     /// Returns an error if any insert or the transaction commit fails; the entire transaction is rolled back.
-    async fn insert_spent_details_with_transaction(
+    async fn input_spent_details_with_transaction(
         &self,
         active_models: Vec<spent_detail::ActiveModel>,
     ) -> anyhow::Result<Vec<i64>> {
@@ -182,7 +182,7 @@ impl MysqlRepository for MysqlRepositoryImpl {
             .begin()
             .await
             .map_err(|e| anyhow!(
-                "[MysqlRepositoryImpl::insert_spent_details_with_transaction] Failed to begin transaction: {:?}",
+                "[MysqlRepositoryImpl::input_spent_details_with_transaction] Failed to begin transaction: {:?}",
                 e
             ))?;
 
@@ -197,7 +197,7 @@ impl MysqlRepository for MysqlRepositoryImpl {
                     .await
                     .map_err(|e| {
                         anyhow!(
-                            "[MysqlRepositoryImpl::insert_spent_details_with_transaction] \
+                            "[MysqlRepositoryImpl::input_spent_details_with_transaction] \
                          Failed to insert record at position {}: {:?}",
                             position,
                             e
@@ -212,7 +212,7 @@ impl MysqlRepository for MysqlRepositoryImpl {
         txn.commit()
             .await
             .map_err(|e| anyhow!(
-                "[MysqlRepositoryImpl::insert_spent_details_with_transaction] Failed to commit transaction: {:?}",
+                "[MysqlRepositoryImpl::input_spent_details_with_transaction] Failed to commit transaction: {:?}",
                 e
             ))?;
 

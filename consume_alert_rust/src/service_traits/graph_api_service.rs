@@ -19,7 +19,7 @@ pub trait GraphApiService {
     /// # Errors
     ///
     /// Returns an error if the HTTP request fails or the response indicates an error status.
-    async fn post_api<T: Serialize + Send>(
+    async fn input_api<T: Serialize + Send>(
         &self,
         uri: &str,
         to_python_graph: T,
@@ -39,7 +39,7 @@ pub trait GraphApiService {
     /// # Errors
     ///
     /// Returns an error if the HTTP request to the Python API fails.
-    async fn call_python_matplot_consume_detail_double(
+    async fn find_python_matplot_consume_detail_double(
         &self,
         cur_python_graph_info: &ToPythonGraphLine,
         versus_python_graph_info: &ToPythonGraphLine,
@@ -58,7 +58,7 @@ pub trait GraphApiService {
     /// # Errors
     ///
     /// Returns an error if the HTTP request to the Python API fails.
-    async fn call_python_matplot_consume_type(
+    async fn find_python_matplot_consume_type(
         &self,
         to_python_graph_circle: &ToPythonGraphCircle,
     ) -> Result<String, anyhow::Error>;

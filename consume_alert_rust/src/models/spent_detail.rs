@@ -32,7 +32,7 @@ impl SpentDetail {
     /// # Errors
     ///
     /// Returns an error if any field conversion fails.
-    pub fn convert_spent_detail_to_active_model(
+    pub fn to_active_model(
         &self,
     ) -> anyhow::Result<spent_detail::ActiveModel> {
         let spent_at_naive: NaiveDateTime = self.spent_at.naive_utc();
@@ -69,7 +69,7 @@ impl SpentDetail {
     /// # Errors
     ///
     /// Returns an error if the view construction fails.
-    pub fn convert_spent_detail_to_view(
+    pub fn to_spent_detail_view(
         &self,
         spent_type: &ConsumingIndexProdtType,
     ) -> anyhow::Result<SpentDetailView> {

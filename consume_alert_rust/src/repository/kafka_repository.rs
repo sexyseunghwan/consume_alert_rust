@@ -13,7 +13,7 @@ pub trait KafkaRepository {
     /// # Errors
     ///
     /// Returns an error if serialization or the Kafka delivery fails.
-    async fn send_message(
+    async fn input_message(
         &self,
         topic: &str,
         key: Option<&str>,
@@ -87,7 +87,7 @@ impl KafkaRepositoryImpl {
 #[async_trait]
 impl KafkaRepository for KafkaRepositoryImpl {
     #[doc = "Function that sends JSON message to Kafka topic"]
-    async fn send_message(
+    async fn input_message(
         &self,
         topic: &str,
         key: Option<&str>,
@@ -95,7 +95,7 @@ impl KafkaRepository for KafkaRepositoryImpl {
     ) -> anyhow::Result<()> {
         let payload_str: String = serde_json::to_string(payload).map_err(|e| {
             anyhow!(
-                "[KafkaRepositoryImpl::send_message] Failed to serialize payload: {:?}",
+                "[KafkaRepositoryImpl::input_message] Failed to serialize payload: {:?}",
                 e
             )
         })?;
@@ -110,14 +110,14 @@ impl KafkaRepository for KafkaRepositoryImpl {
         match self.producer.send(record, Duration::from_secs(30)).await {
             Ok(delivery) => {
                 info!(
-                    "[KafkaRepositoryImpl::send_message] Message sent to topic: {}, partition: {}, offset: {}",
+                    "[KafkaRepositoryImpl::input_message] Message sent to topic: {}, partition: {}, offset: {}",
                     topic, delivery.partition, delivery.offset
                 );
                 Ok(())
             }
             Err((e, _)) => {
                 let error_message: String = format!(
-                    "[KafkaRepositoryImpl::send_message] Failed to send message to topic {}: {:?}",
+                    "[KafkaRepositoryImpl::input_message] Failed to send message to topic {}: {:?}",
                     topic, e
                 );
                 Err(anyhow!(error_message))

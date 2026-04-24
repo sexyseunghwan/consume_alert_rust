@@ -21,7 +21,7 @@ where
         telegram_token: &str,
         telegram_user_id: &str,
     ) -> anyhow::Result<Option<i64>> {
-        let app_config: &AppConfig = AppConfig::global();
+        let app_config: &AppConfig = AppConfig::get_global();
 
         let redis_key: String = format!(
             "{}:{}:{}",
@@ -32,7 +32,7 @@ where
 
         if let Some(cached) = self
             .redis_service
-            .get_string(&redis_key)
+            .find_string(&redis_key)
             .await
             .inspect_err(|e| error!("[resolve_user_seq] Redis read failed: {:#}", e))?
         {
@@ -46,13 +46,13 @@ where
 
         let seq_opt: Option<i64> = self
             .mysql_query_service
-            .exists_telegram_room_by_token_and_id(telegram_token, telegram_user_id)
+            .has_telegram_room_by_token_and_id(telegram_token, telegram_user_id)
             .await
             .inspect_err(|e| error!("[resolve_user_seq] MySQL query failed: {:#}", e))?;
 
         if let Some(seq) = seq_opt {
             self.redis_service
-                .set_string(&redis_key, &seq.to_string(), None)
+                .input_string(&redis_key, &seq.to_string(), None)
                 .await
                 .inspect_err(|e| error!("[resolve_user_seq] Redis write failed: {:#}", e))?;
         }
@@ -66,7 +66,7 @@ where
         telegram_token: &str,
         telegram_user_id: &str,
     ) -> anyhow::Result<Option<i64>> {
-        let app_config: &AppConfig = AppConfig::global();
+        let app_config: &AppConfig = AppConfig::get_global();
 
         let redis_key: String = format!(
             "{}:{}:{}",
@@ -77,7 +77,7 @@ where
 
         if let Some(cached) = self
             .redis_service
-            .get_string(&redis_key)
+            .find_string(&redis_key)
             .await
             .inspect_err(|e| error!("[resolve_room_seq] Redis read failed: {:#}", e))?
         {
@@ -91,13 +91,13 @@ where
 
         let seq_opt: Option<i64> = self
             .mysql_query_service
-            .get_telegram_room_seq_by_token_and_userseq(telegram_token, user_seq)
+            .find_telegram_room_seq_by_token_and_userseq(telegram_token, user_seq)
             .await
             .inspect_err(|e| error!("[resolve_room_seq] MySQL query failed: {:#}", e))?;
 
         if let Some(seq) = seq_opt {
             self.redis_service
-                .set_string(&redis_key, &seq.to_string(), None)
+                .input_string(&redis_key, &seq.to_string(), None)
                 .await
                 .inspect_err(|e| error!("[resolve_room_seq] Redis write failed: {:#}", e))?;
         }
@@ -114,7 +114,7 @@ where
 // ) -> anyhow::Result<Option<String>> {
 //     if let Some(cached) = self
 //         .redis_service
-//         .get_string(redis_key)
+//         .find_string(redis_key)
 //         .await
 //         .inspect_err(|e| error!("[resolve_user_id] Redis read failed: {:#}", e))?
 //     {
@@ -129,7 +129,7 @@ where
 
 //     if let Some(ref user_id) = user_id_opt {
 //         self.redis_service
-//             .set_string(redis_key, user_id, None)
+//             .input_string(redis_key, user_id, None)
 //             .await
 //             .inspect_err(|e| error!("[resolve_user_id] Redis write failed: {:#}", e))?;
 //     }
@@ -156,7 +156,7 @@ where
 //     telegram_token: &str,
 //     telegram_user_id: &str,
 // ) -> anyhow::Result<Option<i64>> {
-//     let app_config: &AppConfig = AppConfig::global();
+//     let app_config: &AppConfig = AppConfig::get_global();
 
 //     let redis_key: String = format!(
 //         "{}:{}:{}",
@@ -167,7 +167,7 @@ where
 
 //     if let Some(cached) = self
 //         .redis_service
-//         .get_string(&redis_key)
+//         .find_string(&redis_key)
 //         .await
 //         .inspect_err(|e| error!("[resolve_user_seq] Redis read failed: {:#}", e))?
 //     {
@@ -181,13 +181,13 @@ where
 
 //     let seq_opt: Option<i64> = self
 //         .mysql_query_service
-//         .exists_telegram_room_by_token_and_id(telegram_token, telegram_user_id)
+//         .has_telegram_room_by_token_and_id(telegram_token, telegram_user_id)
 //         .await
 //         .inspect_err(|e| error!("[resolve_user_seq] MySQL query failed: {:#}", e))?;
 
 //     if let Some(seq) = seq_opt {
 //         self.redis_service
-//             .set_string(&redis_key, &seq.to_string(), None)
+//             .input_string(&redis_key, &seq.to_string(), None)
 //             .await
 //             .inspect_err(|e| error!("[resolve_user_seq] Redis write failed: {:#}", e))?;
 //     }
@@ -216,7 +216,7 @@ where
 //     telegram_token: &str,
 //     user_seq: i64,
 // ) -> anyhow::Result<Option<i64>> {
-//     let app_config: &AppConfig = AppConfig::global();
+//     let app_config: &AppConfig = AppConfig::get_global();
 
 //     let redis_key: String = format!(
 //         "{}:{}:{}",
@@ -227,7 +227,7 @@ where
 
 //     if let Some(cached) = self
 //         .redis_service
-//         .get_string(&redis_key)
+//         .find_string(&redis_key)
 //         .await
 //         .inspect_err(|e| error!("[resolve_room_seq] Redis read failed: {:#}", e))?
 //     {
@@ -241,13 +241,13 @@ where
 
 //     let seq_opt: Option<i64> = self
 //         .mysql_query_service
-//         .get_telegram_room_seq_by_token_and_userseq(telegram_token, user_seq)
+//         .find_telegram_room_seq_by_token_and_userseq(telegram_token, user_seq)
 //         .await
 //         .inspect_err(|e| error!("[resolve_room_seq] MySQL query failed: {:#}", e))?;
 
 //     if let Some(seq) = seq_opt {
 //         self.redis_service
-//             .set_string(&redis_key, &seq.to_string(), None)
+//             .input_string(&redis_key, &seq.to_string(), None)
 //             .await
 //             .inspect_err(|e| error!("[resolve_room_seq] Redis write failed: {:#}", e))?;
 //     }

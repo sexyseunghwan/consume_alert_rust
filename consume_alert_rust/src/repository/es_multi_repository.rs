@@ -86,7 +86,7 @@ pub trait EsMultiRepository {
     /// # Errors
     ///
     /// Returns an error if the HTTP request fails or the response indicates a non-success status.
-    async fn get_search_query(&self, es_query: &Value, index_name: &str) -> Result<Value, anyhow::Error>;
+    async fn find_search_query(&self, es_query: &Value, index_name: &str) -> Result<Value, anyhow::Error>;
 
     /// Indexes a JSON document into the specified Elasticsearch index.
     ///
@@ -98,7 +98,7 @@ pub trait EsMultiRepository {
     /// # Errors
     ///
     /// Returns an error if the HTTP request fails or the response indicates a non-success status.
-    async fn post_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error>;
+    async fn input_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error>;
 
     /// Deletes a document identified by `doc_id` from the specified Elasticsearch index.
     ///
@@ -125,7 +125,7 @@ impl EsMultiRepository for EsMultiRepositoryPub {
 
 
     #[doc = "Function that EXECUTES elasticsearch queries - search"]
-    async fn get_search_query(&self, es_query: &Value, index_name: &str) -> Result<Value, anyhow::Error> {
+    async fn find_search_query(&self, es_query: &Value, index_name: &str) -> Result<Value, anyhow::Error> {
         
         println!("self.es_conn: {:?}", self.es_conn);
 
@@ -143,13 +143,13 @@ impl EsMultiRepository for EsMultiRepositoryPub {
             Ok(response_body)
         } else {
             let error_body = response.text().await?;
-            Err(anyhow!("[Elasticsearch Error][node_search_query()] response status is failed: {:?}", error_body))
+            Err(anyhow!("[Elasticsearch Error][find_search_query()] response status is failed: {:?}", error_body))
         }
     }
     
 
     #[doc = "Function that EXECUTES elasticsearch queries - indexing"]
-    async fn post_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error> {
+    async fn input_query(&self, document: &Value, index_name: &str) -> Result<(), anyhow::Error> {
         
         let response = self
             .es_conn
@@ -161,7 +161,7 @@ impl EsMultiRepository for EsMultiRepositoryPub {
         if response.status_code().is_success() {
             Ok(())
         } else {
-            let error_message = format!("[Elasticsearch Error][node_post_query()] Failed to index document: Status Code: {}", response.status_code());
+            let error_message = format!("[Elasticsearch Error][input_query()] Failed to index document: Status Code: {}", response.status_code());
             Err(anyhow!(error_message))
         }
     }
@@ -178,7 +178,7 @@ impl EsMultiRepository for EsMultiRepositoryPub {
         if response.status_code().is_success() {
             Ok(())
         } else {
-            let error_message = format!("[Elasticsearch Error][node_delete_query()] Failed to delete document: Status Code: {}, Document ID: {}", response.status_code(), doc_id);
+            let error_message = format!("[Elasticsearch Error][delete_query()] Failed to delete document: Status Code: {}, Document ID: {}", response.status_code(), doc_id);
             Err(anyhow!(error_message))
         }
     }

@@ -16,7 +16,7 @@ pub trait RedisRepository {
     ///
     /// # Returns
     /// * `Result<Option<String>, anyhow::Error>` - The value if exists, None otherwise
-    async fn get(&self, key: &str) -> anyhow::Result<Option<String>>;
+    async fn find_value(&self, key: &str) -> anyhow::Result<Option<String>>;
 
     /// Set a key-value pair
     ///
@@ -26,7 +26,7 @@ pub trait RedisRepository {
     ///
     /// # Returns
     /// * `Result<(), anyhow::Error>` - Ok if set succeeds
-    async fn set(&self, key: &str, value: &str) -> anyhow::Result<()>;
+    async fn input_value(&self, key: &str, value: &str) -> anyhow::Result<()>;
 
     /// Set a key-value pair with expiration time
     ///
@@ -37,7 +37,7 @@ pub trait RedisRepository {
     ///
     /// # Returns
     /// * `Result<(), anyhow::Error>` - Ok if set succeeds
-    async fn set_ex(&self, key: &str, value: &str, seconds: u64) -> anyhow::Result<()>;
+    async fn input_value_ex(&self, key: &str, value: &str, seconds: u64) -> anyhow::Result<()>;
 }
 
 /// Redis repository implementation
@@ -131,13 +131,13 @@ impl RedisRepository for RedisRepositoryImpl {
     /// # Errors
     ///
     /// Returns an error if the Redis operation fails.
-    async fn get(&self, key: &str) -> anyhow::Result<Option<String>> {
+    async fn find_value(&self, key: &str) -> anyhow::Result<Option<String>> {
         match &self.conn {
             RedisConnectionType::Single(conn) => {
                 let mut conn: MultiplexedConnection = conn.clone();
                 let result: Option<String> = conn.get(key).await.map_err(|e: RedisError| {
                     anyhow!(
-                        "[RedisRepositoryImpl::get] Failed to get key '{}': {:?}",
+                        "[RedisRepositoryImpl::find_value] Failed to get key '{}': {:?}",
                         key,
                         e
                     )
@@ -148,7 +148,7 @@ impl RedisRepository for RedisRepositoryImpl {
                 let mut conn = conn.clone();
                 let result: Option<String> = conn.get(key).await.map_err(|e: RedisError| {
                     anyhow!(
-                        "[RedisRepositoryImpl::get] Failed to get key '{}': {:?}",
+                        "[RedisRepositoryImpl::find_value] Failed to get key '{}': {:?}",
                         key,
                         e
                     )
@@ -168,7 +168,7 @@ impl RedisRepository for RedisRepositoryImpl {
     /// # Errors
     ///
     /// Returns an error if the Redis operation fails.
-    async fn set(&self, key: &str, value: &str) -> anyhow::Result<()> {
+    async fn input_value(&self, key: &str, value: &str) -> anyhow::Result<()> {
         match &self.conn {
             RedisConnectionType::Single(conn) => {
                 let mut conn = conn.clone();
@@ -176,7 +176,7 @@ impl RedisRepository for RedisRepositoryImpl {
                     .await
                     .map_err(|e: RedisError| {
                         anyhow!(
-                            "[RedisRepositoryImpl::set] Failed to set key '{}': {:?}",
+                            "[RedisRepositoryImpl::input_value] Failed to set key '{}': {:?}",
                             key,
                             e
                         )
@@ -189,7 +189,7 @@ impl RedisRepository for RedisRepositoryImpl {
                     .await
                     .map_err(|e: RedisError| {
                         anyhow!(
-                            "[RedisRepositoryImpl::set] Failed to set key '{}': {:?}",
+                            "[RedisRepositoryImpl::input_value] Failed to set key '{}': {:?}",
                             key,
                             e
                         )
@@ -210,20 +210,20 @@ impl RedisRepository for RedisRepositoryImpl {
     /// # Errors
     ///
     /// Returns an error if the Redis operation fails.
-    async fn set_ex(&self, key: &str, value: &str, seconds: u64) -> anyhow::Result<()> {
+    async fn input_value_ex(&self, key: &str, value: &str, seconds: u64) -> anyhow::Result<()> {
         match &self.conn {
             RedisConnectionType::Single(conn) => {
                 let mut conn = conn.clone();
                 conn.set_ex::<_, _, ()>(key, value, seconds)
                     .await
-                    .map_err(|e: RedisError| anyhow!("[RedisRepositoryImpl::set_ex] Failed to set key '{}' with expiration: {:?}", key, e))?;
+                    .map_err(|e: RedisError| anyhow!("[RedisRepositoryImpl::input_value_ex] Failed to set key '{}' with expiration: {:?}", key, e))?;
                 Ok(())
             }
             RedisConnectionType::Cluster(conn) => {
                 let mut conn = conn.clone();
                 conn.set_ex::<_, _, ()>(key, value, seconds)
                     .await
-                    .map_err(|e: RedisError| anyhow!("[RedisRepositoryImpl::set_ex] Failed to set key '{}' with expiration: {:?}", key, e))?;
+                    .map_err(|e: RedisError| anyhow!("[RedisRepositoryImpl::input_value_ex] Failed to set key '{}' with expiration: {:?}", key, e))?;
                 Ok(())
             }
         }

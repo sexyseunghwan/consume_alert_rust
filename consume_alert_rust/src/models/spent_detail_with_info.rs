@@ -23,7 +23,7 @@ impl SpentDetailWithInfo {
     /// # Returns
     ///
     /// Returns a `SpentDetailView` built from the record's fields.
-    pub fn convert_to_view(&self) -> SpentDetailView {
+    pub fn to_spent_detail_view(&self) -> SpentDetailView {
         SpentDetailView {
             spent_name: self.spent_name.clone(),
             spent_money: self.spent_money.to_formatted_string(&Locale::en),

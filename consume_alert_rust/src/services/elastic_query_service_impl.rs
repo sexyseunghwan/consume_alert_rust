@@ -28,7 +28,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
     ///
     /// # Returns
     /// * Result<Vec<T>, anyhow::Error>
-    async fn get_query_result_vec<T: DeserializeOwned>(
+    async fn find_query_result_vec<T: DeserializeOwned>(
         &self,
         response_body: &Value,
     ) -> Result<Vec<DocumentWithId<T>>, anyhow::Error> {
@@ -36,20 +36,20 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
 
         let results: Vec<DocumentWithId<T>> = hits
             .as_array()
-            .ok_or_else(|| anyhow!("[Error][get_query_result_vec()] 'hits' field is not an array"))?
+            .ok_or_else(|| anyhow!("[Error][find_query_result_vec()] 'hits' field is not an array"))?
             .iter()
             .map(|hit| {
                 let id: &str = hit.get("_id").and_then(|id| id.as_str()).ok_or_else(|| {
-                    anyhow!("[Error][get_query_result_vec()] Missing '_id' field")
+                    anyhow!("[Error][find_query_result_vec()] Missing '_id' field")
                 })?;
 
                 let source: &Value = hit.get("_source").ok_or_else(|| {
-                    anyhow!("[Error][get_query_result_vec()] Missing '_source' field")
+                    anyhow!("[Error][find_query_result_vec()] Missing '_source' field")
                 })?;
 
                 let source: T = serde_json::from_value(source.clone()).map_err(|e| {
                     anyhow!(
-                        "[Error][get_query_result_vec()] Failed to deserialize source: {:?}",
+                        "[Error][find_query_result_vec()] Failed to deserialize source: {:?}",
                         e
                     )
                 })?;
@@ -76,7 +76,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
     ///
     /// # Returns
     /// * Result<ConsumingIndexProdtType, anyhow::Error>
-    async fn get_consume_type_judgement(
+    async fn find_consume_type_judgement(
         &self,
         prodt_name: &str,
     ) -> Result<ConsumingIndexProdtType, anyhow::Error> {
@@ -90,21 +90,21 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
 
         let response_body: Value = self
             .elastic_conn
-            .get_search_query(&es_query, &CONSUME_TYPE)
+            .find_search_query(&es_query, &CONSUME_TYPE)
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[ElasticQueryServiceImpl::get_consume_type_judgement] response_body: {:?}",
+                    "[ElasticQueryServiceImpl::find_consume_type_judgement] response_body: {:?}",
                     e
                 )
             })?;
 
         let results: Vec<DocumentWithId<ConsumingIndexProdtType>> = self
-            .get_query_result_vec(&response_body)
+            .find_query_result_vec(&response_body)
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[ElasticQueryServiceImpl::get_consume_type_judgement] results: {:?}",
+                    "[ElasticQueryServiceImpl::find_consume_type_judgement] results: {:?}",
                     e
                 )
             })?;
@@ -125,7 +125,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                 let score: f64 = *consume_type.score() * -1.0 * keyword_weight;
 
                 if !score.is_finite() {
-                    return Err(anyhow!("[ElasticQueryServiceImpl::get_consume_type_judgement] Invalid score value: {}", score));
+                    return Err(anyhow!("[ElasticQueryServiceImpl::find_consume_type_judgement] Invalid score value: {}", score));
                 }
 
                 let score_i64: i64 = score as i64;
@@ -134,14 +134,14 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                 /* Use the 'levenshtein' algorithm to determine word match */
                 let word_dist: usize = levenshtein(keyword, prodt_name);
                 let word_dist_i64: i64 = word_dist.try_into()?;
-                manager.insert(word_dist_i64 + score_i64, consume_type.source);
+                manager.input_data(word_dist_i64 + score_i64, consume_type.source);
             }
 
-            let score_data_keyword: ScoredData<ConsumingIndexProdtType> = match manager.pop_lowest()
+            let score_data_keyword: ScoredData<ConsumingIndexProdtType> = match manager.delete_lowest()
             {
                 Some(score_data_keyword) => score_data_keyword,
                 None => {
-                    return Err(anyhow!("[ElasticQueryServiceImpl::get_consume_type_judgement] The mapped data for variable 'score_data_keyword' does not exist."));
+                    return Err(anyhow!("[ElasticQueryServiceImpl::find_consume_type_judgement] The mapped data for variable 'score_data_keyword' does not exist."));
                 }
             };
 
@@ -157,7 +157,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
     ///
     /// # Returns
     /// * Result<String, anyhow::Error>
-    async fn get_info_orderby_cnt<T: DeserializeOwned>(
+    async fn find_info_orderby_cnt<T: DeserializeOwned>(
         &self,
         index_name: &str,
         order_by_field: &str,
@@ -175,10 +175,10 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
 
         let response_body: Value = self
             .elastic_conn
-            .get_search_query(&query, index_name)
+            .find_search_query(&query, index_name)
             .await?;
 
-        let res: Vec<DocumentWithId<T>> = self.get_query_result_vec(&response_body).await?;
+        let res: Vec<DocumentWithId<T>> = self.find_query_result_vec(&response_body).await?;
 
         Ok(res)
     }
@@ -197,7 +197,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
     /// # Returns
     /// * Result<AggResultSet<T>, anyhow::Error>
     #[allow(clippy::too_many_arguments)]
-    async fn get_info_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
+    async fn find_info_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
         &self,
         index_name: &str,
         range_field: &str,
@@ -220,8 +220,8 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                         {
                             "range": {
                                 range_field: {
-                                    start_op.as_str() : start_date.format("%Y-%m-%d").to_string(),
-                                    end_op.as_str() : end_date.format("%Y-%m-%d").to_string()
+                                    start_op.to_str() : start_date.format("%Y-%m-%d").to_string(),
+                                    end_op.to_str() : end_date.format("%Y-%m-%d").to_string()
                                 }
                             }
                         },
@@ -249,7 +249,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
 
         let response_body: Value = self
             .elastic_conn
-            .get_search_query(&query, index_name)
+            .find_search_query(&query, index_name)
             .await?;
 
         let agg_result: f64 = match &response_body["aggregations"]["aggs_result"]["value"].as_f64()
@@ -257,13 +257,13 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
             Some(agg_result) => *agg_result,
             None => {
                 return Err(anyhow!(
-                    "[Error][get_info_orderby_aggs_range()] 'agg_result' error"
+                    "[Error][find_info_orderby_aggs_range()] 'agg_result' error"
                 ))
             }
         };
 
         let consume_list: Vec<DocumentWithId<T>> =
-            self.get_query_result_vec(&response_body).await?;
+            self.find_query_result_vec(&response_body).await?;
 
         let result: AggResultSet<T> = AggResultSet::new(agg_result, consume_list);
 

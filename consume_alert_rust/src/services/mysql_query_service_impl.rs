@@ -32,21 +32,21 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
     /// # Errors
     ///
     /// Returns an error if the conversion to ActiveModel fails or the database transaction fails.
-    async fn insert_prodt_detail_with_transaction(
+    async fn input_prodt_detail_with_transaction(
         &self,
         spent_detail: &SpentDetail,
     ) -> anyhow::Result<i64> {
         let active_model: spent_detail::ActiveModel = spent_detail
-            .convert_spent_detail_to_active_model()
+            .to_active_model()
             .inspect_err(|e| {
                 error!(
-                    "[insert_prodt_detail_with_transaction] Failed to convert to ActiveModel: {:#}",
+                    "[input_prodt_detail_with_transaction] Failed to convert to ActiveModel: {:#}",
                     e
                 )
             })?;
 
         self.db_conn
-            .insert_spent_detail_with_transaction(active_model)
+            .input_spent_detail_with_transaction(active_model)
             .await
     }
 
@@ -63,7 +63,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
     /// # Errors
     ///
     /// Returns an error if any conversion or database operation fails; the transaction is rolled back.
-    async fn insert_prodt_details_with_transaction(
+    async fn input_prodt_details_with_transaction(
         &self,
         spent_details: &[SpentDetail],
     ) -> anyhow::Result<Vec<i64>> {
@@ -75,9 +75,9 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
 
         for (position, detail) in spent_details.iter().enumerate() {
             let active_model: spent_detail::ActiveModel =
-                detail.convert_spent_detail_to_active_model().map_err(|e| {
+                detail.to_active_model().map_err(|e| {
                     anyhow!(
-                        "[MysqlQueryServiceImpl::insert_prodt_details_with_transaction] \
+                        "[MysqlQueryServiceImpl::input_prodt_details_with_transaction] \
                      Failed to convert SpentDetail at position {} to ActiveModel: {:?}",
                         position,
                         e
@@ -90,7 +90,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         // Delegate to the repository, which inserts each record sequentially inside
         // one transaction and returns `spent_idx` values in the same order as `active_models`.
         self.db_conn
-            .insert_spent_details_with_transaction(active_models)
+            .input_spent_details_with_transaction(active_models)
             .await
     }
 
@@ -108,7 +108,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
     /// # Errors
     ///
     /// Returns an error if the database query fails.
-    async fn exists_telegram_room_by_token_and_id(
+    async fn has_telegram_room_by_token_and_id(
         &self,
         room_token: &str,
         user_id: &str,
@@ -121,7 +121,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[MysqlQueryServiceImpl::exists_telegram_room_by_token_and_id] Failed to query: {:?}",
+                    "[MysqlQueryServiceImpl::has_telegram_room_by_token_and_id] Failed to query: {:?}",
                     e
                 )
             })?;
@@ -143,7 +143,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
     /// # Errors
     ///
     /// Returns an error if the database query fails.
-    async fn get_telegram_room_seq_by_token_and_userseq(
+    async fn find_telegram_room_seq_by_token_and_userseq(
         &self,
         room_token: &str,
         user_seq: i64,
@@ -155,7 +155,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[MysqlQueryServiceImpl::get_telegram_room_seq_by_token_and_userseq] Failed to query: {:?}",
+                    "[MysqlQueryServiceImpl::find_telegram_room_seq_by_token_and_userseq] Failed to query: {:?}",
                     e
                 )
             })?;
@@ -176,14 +176,14 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
     /// # Errors
     ///
     /// Returns an error if the database query fails.
-    async fn get_user_id_by_seq(&self, user_seq: i64) -> anyhow::Result<Option<String>> {
+    async fn find_user_id_by_seq(&self, user_seq: i64) -> anyhow::Result<Option<String>> {
         let result: Option<users::Model> = users::Entity::find()
             .filter(users::Column::UserSeq.eq(user_seq))
             .one(self.db_conn.get_connection())
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[MysqlQueryServiceImpl::get_user_id_by_seq] Failed to query: {:?}",
+                    "[MysqlQueryServiceImpl::find_user_id_by_seq] Failed to query: {:?}",
                     e
                 )
             })?;
@@ -205,7 +205,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
     /// # Errors
     ///
     /// Returns an error if the database query fails.
-    async fn get_latest_spent_idx(
+    async fn find_latest_spent_idx(
         &self,
         user_seq: i64,
         room_seq: i64,
@@ -218,7 +218,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[MysqlQueryServiceImpl::get_latest_spent_idx] Failed to query: {:?}",
+                    "[MysqlQueryServiceImpl::find_latest_spent_idx] Failed to query: {:?}",
                     e
                 )
             })?;
@@ -240,7 +240,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
     /// # Errors
     ///
     /// Returns an error if the database query fails.
-    async fn get_latest_spent_detail(
+    async fn find_latest_spent_detail(
         &self,
         user_seq: i64,
         room_seq: i64,
@@ -270,7 +270,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[MysqlQueryServiceImpl::get_latest_spent_detail] Failed to query: {:?}",
+                    "[MysqlQueryServiceImpl::find_latest_spent_detail] Failed to query: {:?}",
                     e
                 )
             })?;
@@ -291,7 +291,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
     /// # Errors
     ///
     /// Returns an error if the database query fails.
-    async fn get_spent_detail_with_info(
+    async fn find_spent_detail_with_info(
         &self,
         spent_idx: i64,
     ) -> anyhow::Result<Option<SpentDetailWithInfo>> {
@@ -318,7 +318,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[MysqlQueryServiceImpl::get_spent_detail_with_info] Failed to query: {:?}",
+                    "[MysqlQueryServiceImpl::find_spent_detail_with_info] Failed to query: {:?}",
                     e
                 )
             })?;
@@ -355,7 +355,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
     /// # Errors
     ///
     /// Returns an error if the database query fails.
-    async fn get_user_payment_methods(
+    async fn find_user_payment_methods(
         &self,
         user_seq: i64,
         is_default: bool,
@@ -367,7 +367,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
             .await
             .map_err(|e| {
                 anyhow!(
-                    "[MysqlQueryServiceImpl::get_user_payment_methods] Failed to query: {:?}",
+                    "[MysqlQueryServiceImpl::find_user_payment_methods] Failed to query: {:?}",
                     e
                 )
             })?;

@@ -21,15 +21,15 @@ impl<R: RedisRepository + Send + Sync> RedisService for RedisServiceImpl<R> {
     /// # Errors
     ///
     /// Returns an error if the Redis operation fails.
-    async fn set_string(
+    async fn input_string(
         &self,
         key: &str,
         value: &str,
         ttl_seconds: Option<u64>,
     ) -> anyhow::Result<()> {
         match ttl_seconds {
-            Some(ttl) => self.redis_conn.set_ex(key, value, ttl).await,
-            None => self.redis_conn.set(key, value).await,
+            Some(ttl) => self.redis_conn.input_value_ex(key, value, ttl).await,
+            None => self.redis_conn.input_value(key, value).await,
         }
     }
 
@@ -46,7 +46,7 @@ impl<R: RedisRepository + Send + Sync> RedisService for RedisServiceImpl<R> {
     /// # Errors
     ///
     /// Returns an error if the Redis operation fails.
-    async fn get_string(&self, key: &str) -> anyhow::Result<Option<String>> {
-        self.redis_conn.get(key).await
+    async fn find_string(&self, key: &str) -> anyhow::Result<Option<String>> {
+        self.redis_conn.find_value(key).await
     }
 }

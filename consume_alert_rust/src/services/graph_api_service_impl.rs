@@ -44,7 +44,7 @@ impl GraphApiService for GraphApiServiceImpl {
     ///
     /// # Returns
     /// * Result<String, anyhow::Error>
-    async fn post_api<T: Serialize + Send>(
+    async fn input_api<T: Serialize + Send>(
         &self,
         uri: &str,
         to_python_graph: T,
@@ -62,7 +62,7 @@ impl GraphApiService for GraphApiServiceImpl {
             let status: reqwest::StatusCode = res.status();
             let error_body: String = res.text().await.unwrap_or_default();
             Err(anyhow!(
-                "[GraphApiServiceImpl::post_api] Request for '{}' failed. Status: {}, Body: {}",
+                "[GraphApiServiceImpl::input_api] Request for '{}' failed. Status: {}, Body: {}",
                 &post_uri,
                 status,
                 error_body
@@ -77,7 +77,7 @@ impl GraphApiService for GraphApiServiceImpl {
     ///
     /// # Returns
     /// * Result<String, anyhow::Error> -> image file name
-    async fn call_python_matplot_consume_detail_double(
+    async fn find_python_matplot_consume_detail_double(
         &self,
         cur_python_graph_info: &ToPythonGraphLine,
         versus_python_graph_info: &ToPythonGraphLine,
@@ -88,7 +88,7 @@ impl GraphApiService for GraphApiServiceImpl {
         ];
 
         let resp_body: String = self
-            .post_api("/api/consume_detail", python_graph_vec)
+            .input_api("/api/consume_detail", python_graph_vec)
             .await?;
 
         Ok(resp_body)
@@ -107,12 +107,12 @@ impl GraphApiService for GraphApiServiceImpl {
     /// # Errors
     ///
     /// Returns an error if the HTTP request to the Python API fails.
-    async fn call_python_matplot_consume_type(
+    async fn find_python_matplot_consume_type(
         &self,
         to_python_graph_circle: &ToPythonGraphCircle,
     ) -> Result<String, anyhow::Error> {
         let resp_body: String = self
-            .post_api("/api/category", to_python_graph_circle)
+            .input_api("/api/category", to_python_graph_circle)
             .await?;
         Ok(resp_body)
     }

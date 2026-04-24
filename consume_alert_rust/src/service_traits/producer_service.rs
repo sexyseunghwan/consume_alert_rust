@@ -13,7 +13,7 @@ pub trait ProducerService {
     /// # Errors
     ///
     /// Returns an error if serialization or the Kafka send fails.
-    async fn produce_object_to_topic<T>(
+    async fn input_object_to_topic<T>(
         &self,
         topic: &str,
         object: &T,
@@ -34,7 +34,7 @@ pub trait ProducerService {
     /// # Errors
     ///
     /// Returns an error if any serialization or Kafka send fails.
-    async fn produce_objects_to_topic<T, F>(
+    async fn input_objects_to_topic<T, F>(
         &self,
         topic: &str,
         objects: &[T],

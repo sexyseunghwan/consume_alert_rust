@@ -20,7 +20,7 @@ impl SpentDetailToKafka {
     ///
     /// Returns an error if the `indexing_type` string does not match any known variant.
     #[allow(dead_code)]
-    pub fn convert_indexing_type(&self) -> anyhow::Result<IndexingType> {
+    pub fn to_indexing_type(&self) -> anyhow::Result<IndexingType> {
         self.indexing_type
             .parse::<IndexingType>()
             .map_err(|e| anyhow::anyhow!(e))

@@ -25,7 +25,7 @@ impl ProcessServiceImpl {
     ///
     /// # Returns
     /// * Result<Vec<String>, anyhow::Error> - ex) ["289545", "일시불"]
-    fn get_string_vector_by_replace(
+    fn to_string_vector_by_replace(
         &self,
         intput_str: &str,
         replacements: &[&str],
@@ -50,14 +50,14 @@ impl ProcessServiceImpl {
     ///
     /// # Returns
     /// * Result<i64, anyhow::Error
-    fn get_consume_prodt_money(
+    fn find_consume_prodt_money(
         &self,
         consume_price_vec: &[String],
         idx: usize,
     ) -> Result<i64, anyhow::Error> {
         let consume_price: i64 = consume_price_vec
             .get(idx)
-            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_prodt_money()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed.", idx))?
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][find_consume_prodt_money()] Invalid index '{:?}' of 'consume_price_vec' vector was accessed.", idx))?
             .parse::<i64>()?;
 
         Ok(consume_price)
@@ -69,21 +69,21 @@ impl ProcessServiceImpl {
     ///
     /// # Returns
     /// * Result<DateTime<Local>, anyhow::Error>
-    fn get_consume_datetime_local(
+    fn to_consume_datetime_local(
         &self,
         consume_time_name_vec: &[String],
     ) -> Result<DateTime<Local>, anyhow::Error> {
         /* "11/25" */
         let parsed_date: &String = consume_time_name_vec
             .first()
-            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_datetime_local()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed.", 0))?;
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][to_consume_datetime_local()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed.", 0))?;
 
         /* "10:02" */
         let parsed_time: &String = consume_time_name_vec
             .get(1)
-            .ok_or_else(|| anyhow!("[Index Out Of Range Error][get_consume_datetime_local()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed.", 1))?;
+            .ok_or_else(|| anyhow!("[Index Out Of Range Error][to_consume_datetime_local()] Invalid index '{:?}' of 'consume_time_name_vec' vector was accessed.", 1))?;
 
-        let cur_year: i32 = get_current_kor_naivedate().year();
+        let cur_year: i32 = find_current_kor_naivedate().year();
         let formatted_date_str: String = format!("{}/{}", cur_year, parsed_date);
         let format_date: NaiveDate = NaiveDate::parse_from_str(&formatted_date_str, "%Y/%m/%d")?;
         let format_time: NaiveTime = NaiveTime::parse_from_str(parsed_time, "%H:%M")?;
@@ -95,7 +95,7 @@ impl ProcessServiceImpl {
             .single()
             .ok_or_else(|| {
                 anyhow!(
-                    "[Error][get_consume_datetime_local()] Failed to convert to DateTime<Local>"
+                    "[Error][to_consume_datetime_local()] Failed to convert to DateTime<Local>"
                 )
             })?
             .with_timezone(&Local);
@@ -129,7 +129,7 @@ impl ProcessServiceImpl {
     ///
     /// # Returns
     /// * Result<Vec<ConsumeResultByType>, anyhow::Error>
-    fn get_calculate_pie_infos_from_category(
+    fn find_calculate_pie_infos_from_category(
         &self,
         total_cost: f64,
         type_map: &HashMap<String, i64>,
@@ -167,7 +167,7 @@ impl ProcessServiceImpl {
     /// # Errors
     ///
     /// Returns an error if required fields are missing or the card alias cannot be matched.
-    fn process_nh_card(
+    fn modify_nh_card(
         &self,
         split_args_vec: &[String],
         user_seq: i64,
@@ -201,8 +201,8 @@ impl ProcessServiceImpl {
             anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 2) not found")
         })?;
         let consume_price_vec: Vec<String> =
-            self.get_string_vector_by_replace(price_str, &split_val)?;
-        let spent_money: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
+            self.to_string_vector_by_replace(price_str, &split_val)?;
+        let spent_money: i64 = self.find_consume_prodt_money(&consume_price_vec, 0)?;
 
         // Extract time information
         let time_str: &str = split_args_vec.get(3).ok_or_else(|| {
@@ -210,7 +210,7 @@ impl ProcessServiceImpl {
         })?;
         let consume_time_vec: Vec<String> =
             time_str.split(" ").map(|s| s.trim().to_string()).collect();
-        let spent_at: DateTime<Local> = self.get_consume_datetime_local(&consume_time_vec)?;
+        let spent_at: DateTime<Local> = self.to_consume_datetime_local(&consume_time_vec)?;
 
         // Extract product name
         let spent_name: String = split_args_vec
@@ -249,7 +249,7 @@ impl ProcessServiceImpl {
     /// # Errors
     ///
     /// Returns an error if required fields are missing or the card alias cannot be matched.
-    fn process_samsung_card(
+    fn modify_samsung_card(
         &self,
         split_args_vec: &[String],
         user_seq: i64,
@@ -278,15 +278,15 @@ impl ProcessServiceImpl {
             anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 1) not found")
         })?;
         let consume_price_vec: Vec<String> =
-            self.get_string_vector_by_replace(price_str, &split_val)?;
-        let spent_money: i64 = self.get_consume_prodt_money(&consume_price_vec, 0)?;
+            self.to_string_vector_by_replace(price_str, &split_val)?;
+        let spent_money: i64 = self.find_consume_prodt_money(&consume_price_vec, 0)?;
 
         // Extract time and product name
         let time_str = split_args_vec.get(2).ok_or_else(|| {
             anyhow!("[ProcessServiceImpl::process_samsung_card] Time field (index 2) not found")
         })?;
         let consume_time_vec: Vec<String> = time_str.split(" ").map(|s| s.to_string()).collect();
-        let spent_at: DateTime<Local> = self.get_consume_datetime_local(&consume_time_vec)?;
+        let spent_at: DateTime<Local> = self.to_consume_datetime_local(&consume_time_vec)?;
 
         let spent_name: String = consume_time_vec
             .get(2)
@@ -328,7 +328,7 @@ impl ProcessService for ProcessServiceImpl {
     ///
     /// Returns an error if the card company cannot be identified or parsing fails.
     // 새로운 버전
-    fn process_by_consume_filter(
+    fn modify_by_consume_filter(
         &self,
         split_args_vec: &[String],
         user_seq: i64,
@@ -353,17 +353,17 @@ impl ProcessService for ProcessServiceImpl {
         if card_company_nms.contains_key("nh") && consume_type.contains("nh") {
             let user_payment_methods: &Vec<UserPaymentMethods> = card_company_nms
                 .get("nh")
-                .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_by_consume_filter_v1] The word ‘NH’ does not exist in the HashMap."))?;
+                .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_by_consume_filter_v1] The word ‘NH’ does not exist in the HashMap."))?;
 
-            self.process_nh_card(split_args_vec, user_seq, room_seq, user_payment_methods)
+            self.modify_nh_card(split_args_vec, user_seq, room_seq, user_payment_methods)
         } else if card_company_nms.contains_key("삼성") && consume_type.contains("삼성") {
             let user_payment_methods: &Vec<UserPaymentMethods> = card_company_nms
                 .get("삼성")
-                .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_by_consume_filter_v1] The word ‘NH’ does not exist in the HashMap."))?;
+                .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_by_consume_filter_v1] The word ‘NH’ does not exist in the HashMap."))?;
 
-            self.process_samsung_card(split_args_vec, user_seq, room_seq, user_payment_methods)
+            self.modify_samsung_card(split_args_vec, user_seq, room_seq, user_payment_methods)
         } else {
-            Err(anyhow!("[Error][process_by_consume_filter_v1] Variable 'consume_type' contains an undefined string: {}", consume_type))
+            Err(anyhow!("[Error][modify_by_consume_filter_v1] Variable 'consume_type' contains an undefined string: {}", consume_type))
         }
     }
 
@@ -373,7 +373,7 @@ impl ProcessService for ProcessServiceImpl {
     ///
     /// # Returns
     /// * Result<Vec<SpentDetail>, anyhow::Error>
-    fn get_spent_detail_installment_process(
+    fn find_spent_detail_installment_process(
         &self,
         spent_detail_by_installment: &SpentDetailByInstallment,
     ) -> Result<Vec<SpentDetail>, anyhow::Error> {
@@ -419,17 +419,17 @@ impl ProcessService for ProcessServiceImpl {
     ///
     /// # Returns
     /// * Result<PermonDatetime, anyhow::Error>
-    fn get_nmonth_to_current_date(
+    fn find_nmonth_to_current_date(
         &self,
         date_start: DateTime<Utc>,
         date_end: DateTime<Utc>,
         nmonth: i32,
     ) -> Result<PerDatetime, anyhow::Error> {
-        let n_month_start: DateTime<Utc> = get_add_month_from_naivedate(date_start, nmonth)
-            .map_err(|e| anyhow!("[ProcessServiceImpl::get_nmonth_to_current_date] {:?} -> in get_nmonth_to_current_date().n_month_start", e))?;
+        let n_month_start: DateTime<Utc> = find_add_month_from_naivedate(date_start, nmonth)
+            .map_err(|e| anyhow!("[ProcessServiceImpl::get_nmonth_to_current_date] {:?} -> in find_nmonth_to_current_date().n_month_start", e))?;
 
-        let n_month_end: DateTime<Utc> = get_add_month_from_naivedate(date_end, nmonth)
-            .map_err(|e| anyhow!("[ProcessServiceImpl::get_nmonth_to_current_date] {:?} -> in get_nmonth_to_current_date().n_month_end", e))?;
+        let n_month_end: DateTime<Utc> = find_add_month_from_naivedate(date_end, nmonth)
+            .map_err(|e| anyhow!("[ProcessServiceImpl::get_nmonth_to_current_date] {:?} -> in find_nmonth_to_current_date().n_month_end", e))?;
 
         let per_mon_datetim: PerDatetime =
             PerDatetime::new(date_start, date_end, n_month_start, n_month_end);
@@ -443,7 +443,7 @@ impl ProcessService for ProcessServiceImpl {
     ///
     /// # Returns
     /// * Result<Vec<ConsumeResultByType>, anyhow::Error>
-    fn get_consumption_result_by_category(
+    fn find_consumption_result_by_category(
         &self,
         spent_details: &AggResultSet<SpentDetailByEs>,
     ) -> Result<Vec<ConsumeResultByType>, anyhow::Error> {
@@ -468,7 +468,7 @@ impl ProcessService for ProcessServiceImpl {
         cost_map.retain(|_, v| *v > 0);
 
         let mut consume_result_by_types: Vec<ConsumeResultByType> =
-            self.get_calculate_pie_infos_from_category(total_cost, &cost_map)?;
+            self.find_calculate_pie_infos_from_category(total_cost, &cost_map)?;
 
         consume_result_by_types.sort_by(|a, b| {
             b.consume_prodt_cost
@@ -485,7 +485,7 @@ impl ProcessService for ProcessServiceImpl {
     ///
     /// # Returns
     /// * Result<ToPythonGraphCircle, anyhow::Error>
-    fn convert_consume_result_by_type_to_python_graph_circle(
+    fn to_python_graph_circle_by_consume_type(
         &self,
         consume_result_by_types: &[ConsumeResultByType],
         total_cost: f64,
@@ -535,14 +535,14 @@ impl ProcessService for ProcessServiceImpl {
     ///
     /// # Returns
     /// * Result<PermonDatetime, anyhow::Error>
-    fn get_nday_to_current_date(
+    fn find_nday_to_current_date(
         &self,
         date_start: DateTime<Utc>,
         date_end: DateTime<Utc>,
         nday: i32,
     ) -> Result<PerDatetime, anyhow::Error> {
-        let n_day_start: DateTime<Utc> = get_add_date_from_naivedate(date_start, nday)?;
-        let n_day_end: DateTime<Utc> = get_add_date_from_naivedate(date_end, nday)?;
+        let n_day_start: DateTime<Utc> = find_add_date_from_naivedate(date_start, nday)?;
+        let n_day_end: DateTime<Utc> = find_add_date_from_naivedate(date_end, nday)?;
 
         let per_day_datetim: PerDatetime =
             PerDatetime::new(date_start, date_end, n_day_start, n_day_end);

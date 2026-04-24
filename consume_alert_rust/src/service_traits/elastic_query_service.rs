@@ -21,7 +21,7 @@ pub trait ElasticQueryService {
     /// # Errors
     ///
     /// Returns an error if the response body is malformed or deserialization fails.
-    async fn get_query_result_vec<T: DeserializeOwned>(
+    async fn find_query_result_vec<T: DeserializeOwned>(
         &self,
         response_body: &Value,
     ) -> Result<Vec<DocumentWithId<T>>, anyhow::Error>;
@@ -39,7 +39,7 @@ pub trait ElasticQueryService {
     /// # Errors
     ///
     /// Returns an error if the Elasticsearch query fails.
-    async fn get_consume_type_judgement(
+    async fn find_consume_type_judgement(
         &self,
         prodt_name: &str,
     ) -> Result<ConsumingIndexProdtType, anyhow::Error>;
@@ -61,7 +61,7 @@ pub trait ElasticQueryService {
     ///
     /// Returns an error if the Elasticsearch query fails.
     #[allow(dead_code)]
-    async fn get_info_orderby_cnt<T: DeserializeOwned>(
+    async fn find_info_orderby_cnt<T: DeserializeOwned>(
         &self,
         index_name: &str,
         order_by_field: &str,
@@ -92,7 +92,7 @@ pub trait ElasticQueryService {
     ///
     /// Returns an error if the Elasticsearch query fails.
     #[allow(clippy::too_many_arguments)]
-    async fn get_info_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
+    async fn find_info_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
         &self,
         index_name: &str,
         range_field: &str,

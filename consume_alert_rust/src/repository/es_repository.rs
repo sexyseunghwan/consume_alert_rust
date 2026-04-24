@@ -16,7 +16,7 @@ pub trait EsRepository {
     /// # Errors
     ///
     /// Returns an error if the HTTP request fails or the response indicates a non-success status.
-    async fn get_search_query(
+    async fn find_search_query(
         &self,
         es_query: &Value,
         index_name: &str,
@@ -95,7 +95,7 @@ impl EsRepositoryPub {
 #[async_trait]
 impl EsRepository for EsRepositoryPub {
     #[doc = "Function that EXECUTES elasticsearch queries - search"]
-    async fn get_search_query(&self, es_query: &Value, index_name: &str) -> anyhow::Result<Value> {
+    async fn find_search_query(&self, es_query: &Value, index_name: &str) -> anyhow::Result<Value> {
         let response: Response = self
             .es_client
             .search(SearchParts::Index(&[index_name]))
@@ -109,7 +109,7 @@ impl EsRepository for EsRepositoryPub {
         } else {
             let error_body: String = response.text().await?;
             Err(anyhow!(
-                "[EsRepositoryPub::node_search_query] response status is failed: {:?}",
+                "[EsRepositoryPub::find_search_query] response status is failed: {:?}",
                 error_body
             ))
         }

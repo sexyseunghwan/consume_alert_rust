@@ -37,7 +37,7 @@ impl<T: std::fmt::Debug> ScoreManager<T> {
     }
 
     /* Insert Score and Data */
-    pub fn insert(&mut self, score: i64, data: T) {
+    pub fn input_data(&mut self, score: i64, data: T) {
         /* Insert Data */
         self.data_map
             .entry(score)
@@ -51,7 +51,7 @@ impl<T: std::fmt::Debug> ScoreManager<T> {
     }
 
     /* Get the lowest score and data */
-    pub fn pop_lowest(&mut self) -> Option<ScoredData<T>> {
+    pub fn delete_lowest(&mut self) -> Option<ScoredData<T>> {
         /* Get the lowest score in the heap */
         let lowest_score: i64 = self.heap.pop()?.0;
 

@@ -33,7 +33,7 @@ pub trait ProcessService {
     /// # Errors
     ///
     /// Returns an error if parsing fails or the card type is unrecognized.
-    fn process_by_consume_filter(
+    fn modify_by_consume_filter(
         &self,
         split_args_vec: &[String],
         user_seq: i64,
@@ -55,7 +55,7 @@ pub trait ProcessService {
     /// # Errors
     ///
     /// Returns an error if date arithmetic fails.
-    fn get_spent_detail_installment_process(
+    fn find_spent_detail_installment_process(
         &self,
         spent_detail_by_installment: &SpentDetailByInstallment,
     ) -> Result<Vec<SpentDetail>, anyhow::Error>;
@@ -74,7 +74,7 @@ pub trait ProcessService {
     /// # Errors
     ///
     /// Returns an error if the date arithmetic produces an invalid date.
-    fn get_nmonth_to_current_date(
+    fn find_nmonth_to_current_date(
         &self,
         date_start: DateTime<Utc>,
         date_end: DateTime<Utc>,
@@ -96,7 +96,7 @@ pub trait ProcessService {
     /// # Errors
     ///
     /// Returns an error if construction of the graph payload fails.
-    fn convert_consume_result_by_type_to_python_graph_circle(
+    fn to_python_graph_circle_by_consume_type(
         &self,
         consume_result_by_types: &[ConsumeResultByType],
         total_cost: f64,
@@ -116,7 +116,7 @@ pub trait ProcessService {
     /// # Errors
     ///
     /// Returns an error if the calculation fails.
-    fn get_consumption_result_by_category(
+    fn find_consumption_result_by_category(
         &self,
         spent_details: &AggResultSet<SpentDetailByEs>,
     ) -> Result<Vec<ConsumeResultByType>, anyhow::Error>;
@@ -135,7 +135,7 @@ pub trait ProcessService {
     /// # Errors
     ///
     /// Returns an error if the date arithmetic produces an invalid date.
-    fn get_nday_to_current_date(
+    fn find_nday_to_current_date(
         &self,
         date_start: DateTime<Utc>,
         date_end: DateTime<Utc>,

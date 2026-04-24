@@ -7,7 +7,7 @@ use crate::common::*;
 ///
 /// # Returns
 /// * Result<T, anyhow::Error>
-pub fn get_parsed_value_from_vector<T: FromStr>(
+pub fn find_parsed_value_from_vector<T: FromStr>(
     vec: &[String],
     index: usize,
 ) -> Result<T, anyhow::Error>
