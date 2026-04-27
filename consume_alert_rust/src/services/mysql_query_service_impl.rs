@@ -163,6 +163,41 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         Ok(result.map(|room| room.room_seq))
     }
 
+
+    /// Retrieves the aggregation group sequence number for a Telegram room identified by token and user sequence.
+    ///
+    /// # Arguments
+    ///
+    /// * `room_token` - The Telegram room token to match
+    /// * `user_seq` - The user sequence number to match
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Some(i64))` with the `agg_group_seq` if found, or `Ok(None)` if no group is assigned.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails.
+    async fn find_telegram_group_seq_by_token_and_userseq(
+        &self,
+        room_token: &str,
+        user_seq: i64,
+    ) -> anyhow::Result<Option<i64>> {
+        let result: Option<telegram_room::Model> = telegram_room::Entity::find()
+            .filter(telegram_room::Column::RoomToken.eq(room_token))
+            .filter(telegram_room::Column::UserSeq.eq(user_seq))
+            .one(self.db_conn.get_connection())
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "[MysqlQueryServiceImpl::find_telegram_room_seq_by_token_and_userseq] Failed to query: {:?}",
+                    e
+                )
+            })?;
+
+        Ok(result.and_then(|room| room.agg_group_seq))
+    }
+    
     /// Retrieves the user ID string for the given user sequence number.
     ///
     /// # Arguments

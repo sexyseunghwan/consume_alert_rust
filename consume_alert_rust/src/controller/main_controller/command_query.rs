@@ -100,7 +100,8 @@ impl<
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
-            room_seq,
+            Some(room_seq),
+            None,
             true,
         )
         .await
@@ -195,7 +196,8 @@ impl<
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
-            room_seq,
+            Some(room_seq),
+            None,
             true,
         )
         .await
@@ -268,7 +270,8 @@ impl<
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
-            room_seq,
+            Some(room_seq),
+            None,
             true,
         )
         .await
@@ -334,7 +337,8 @@ impl<
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
-            room_seq,
+            Some(room_seq),
+            None,
             true,
         )
         .await
@@ -410,7 +414,8 @@ impl<
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThanOrEqual,
-            room_seq,
+            Some(room_seq),
+            None,
             false,
         )
         .await
@@ -503,31 +508,33 @@ impl<
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThan,
-            room_seq,
+            Some(room_seq),
+            None,
             true,
         )
         .await
     }
 
-    /// Shows the salary-period consumption summary for the caller's room (`sg [YYYY.MM]`).
+
+    /// Fetches and displays salary-cycle consumption data aggregated at the group level,
+    /// comparing the current salary period against the same period one month prior.
     ///
-    /// Uses the same 25th-to-25th date window as `command_consumption_per_salary`.
-    /// The range is treated as a half-open interval from one 25th up to, but not including, the next 25th.
-    /// Defaults to the salary period containing today when no argument is provided.
-    /// Accepts an optional `YYYY.MM` argument to query the period ending on the 25th of that month.
+    /// The salary period runs from the 25th of the previous month to the 25th of the current month.
+    /// An optional `YYYY.MM` argument shifts the reference month; when omitted, today's date is used.
     ///
     /// # Arguments
     ///
-    /// * `telegram_token` - Telegram bot token used to resolve the caller
-    /// * `telegram_user_id` - Telegram user id used to resolve the caller and room
+    /// * `telegram_token` - The Telegram bot token used to identify the room and resolve the user
+    /// * `telegram_user_id` - The Telegram user ID string used to resolve the user
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` after the summary graphs and messages are sent to Telegram.
+    /// Returns `Ok(())` after all graph images and summary messages have been sent.
     ///
     /// # Errors
     ///
-    /// Returns an error if the date argument is invalid, or if any downstream service call fails.
+    /// Returns an error if the parameter format is invalid, the user or group cannot be resolved,
+    /// or the Elasticsearch query or Telegram send fails.
     pub async fn command_consumption_per_salary_group(
         &self,
         telegram_token: &str,
@@ -586,17 +593,18 @@ impl<
         let user_seq: i64 = self
             .resolve_user_seq(telegram_token, telegram_user_id)
             .await?;
-
-        let room_seq: i64 = self
-            .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
+        
+        let group_seq: i64 = self
+            .resolve_telegram_group_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
-
+        
         self.common_process_python_double(
             &CONSUME_DETAIL,
             permon_datetime,
             RangeOperator::GreaterThanOrEqual,
             RangeOperator::LessThan,
-            room_seq,
+            None,
+            Some(group_seq),
             true,
         )
         .await

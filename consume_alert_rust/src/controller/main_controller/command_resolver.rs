@@ -145,4 +145,32 @@ impl<
             }
         }
     }
+
+    pub(super) async fn resolve_telegram_group_seq(
+        &self,
+        user_seq: i64,
+        telegram_token: &str,
+        telegram_user_id: &str,
+    ) -> anyhow::Result<i64> {
+        match self
+            .cache_service
+            .find_telegram_group_seq(user_seq, telegram_token, telegram_user_id)
+            .await?
+        {
+            Some(seq) => Ok(seq),
+            None => {
+                self.tele_bot_service
+                    .input_message_confirm(
+                        "The token is invalid or you are not an authorized user.\nPlease contact the administrator.",
+                    )
+                    .await?;
+                Err(anyhow!(
+                    "[resolve_telegram_group_seq] Unauthorized user: user_seq={}, telegram_token={}, telegram_user_id={}",
+                    user_seq,
+                    telegram_token,
+                    telegram_user_id
+                ))
+            }
+        }
+    }
 }

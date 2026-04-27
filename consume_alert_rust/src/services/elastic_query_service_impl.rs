@@ -197,7 +197,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
     /// # Returns
     /// * Result<AggResultSet<T>, anyhow::Error>
     #[allow(clippy::too_many_arguments)]
-    async fn find_info_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
+    async fn find_info_filter_roomseq_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
         &self,
         index_name: &str,
         range_field: &str,
@@ -245,7 +245,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
             }
         });
 
-        info!("{}", query.to_string());
+        //info!("{}", query.to_string());
 
         let response_body: Value = self
             .elastic_conn
@@ -268,6 +268,98 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
         let result: AggResultSet<T> = AggResultSet::new(agg_result, consume_list);
 
         Ok(result)
+    }
+
+    /// Queries an Elasticsearch index filtered by `agg_group_seq` within a date range,
+    /// sorted by the given field, and returns an aggregated sum result set.
+    ///
+    /// # Arguments
+    ///
+    /// * `index_name` - The Elasticsearch index to query
+    /// * `range_field` - The document field used for the date range filter
+    /// * `start_date` - Start of the date range
+    /// * `end_date` - End of the date range
+    /// * `start_op` - Range operator applied to the start boundary
+    /// * `end_op` - Range operator applied to the end boundary
+    /// * `order_by_field` - The field to sort results by
+    /// * `asc_yn` - `true` for ascending order, `false` for descending
+    /// * `aggs_field` - The numeric field to sum in the aggregation
+    /// * `group_seq` - The group sequence number to filter documents by `agg_group_seq`
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(AggResultSet<T>)` containing the aggregated sum and matched documents.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the Elasticsearch query fails or the aggregation result is missing.
+    async fn find_info_filter_groupseq_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
+        &self,
+        index_name: &str,
+        range_field: &str,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
+        start_op: RangeOperator,
+        end_op: RangeOperator,
+        order_by_field: &str,
+        asc_yn: bool,
+        aggs_field: &str,
+        group_seq: i64,
+    ) -> Result<AggResultSet<T>, anyhow::Error> {
+        let order_by_asc: &str = if asc_yn { "asc" } else { "desc" };
+
+        let query: Value = json!({
+            "size": 10000,
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "range": {
+                                range_field: {
+                                    start_op.to_str(): start_date.format("%Y-%m-%d").to_string(),
+                                    end_op.to_str(): end_date.format("%Y-%m-%d").to_string()
+                                }
+                            }
+                        },
+                        {
+                            "term": {
+                                "agg_group_seq": group_seq
+                            }
+                        }
+                    ]
+                }
+            },
+            "aggs": {
+                "aggs_result": {
+                    "sum": {
+                        "field": aggs_field
+                    }
+                }
+            },
+            "sort": {
+                order_by_field: { "order": order_by_asc }
+            }
+        });
+
+        let response_body: Value = self
+            .elastic_conn
+            .find_search_query(&query, index_name)
+            .await?;
+
+        let agg_result: f64 = match &response_body["aggregations"]["aggs_result"]["value"].as_f64()
+        {
+            Some(agg_result) => *agg_result,
+            None => {
+                return Err(anyhow!(
+                    "[Error][find_info_filter_groupseq_orderby_aggs_range()] 'agg_result' error"
+                ))
+            }
+        };
+
+        let consume_list: Vec<DocumentWithId<T>> =
+            self.find_query_result_vec(&response_body).await?;
+
+        Ok(AggResultSet::new(agg_result, consume_list))
     }
 
     #[doc = "Functions that erase specific documents in the index"]

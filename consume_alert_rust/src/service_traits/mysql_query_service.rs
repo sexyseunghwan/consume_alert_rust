@@ -25,6 +25,11 @@ pub trait MysqlQueryService {
         room_token: &str,
         user_seq: i64,
     ) -> anyhow::Result<Option<i64>>;
+    async fn find_telegram_group_seq_by_token_and_userseq(
+        &self,
+        room_token: &str,
+        user_seq: i64,
+    ) -> anyhow::Result<Option<i64>>;
     #[allow(dead_code)]
     async fn find_user_id_by_seq(&self, user_seq: i64) -> anyhow::Result<Option<String>>;
     #[allow(dead_code)]
