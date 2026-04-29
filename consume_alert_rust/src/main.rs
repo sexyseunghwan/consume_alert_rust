@@ -66,6 +66,14 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
               2026-03-05 Seunghwan Shin       # [v.4.0.1] Fix an issue where the conusme category type was not retrieved correctly.
               2026-03-14 Seunghwan Shin       # [v.4.1.0] Exclude aggregation results where the sum of a specific expense type is 0.
               2026-04-21 Seunghwan Shin       # [v.4.2.0] Split main_controller.rs into mod.rs, command_consume.rs, and command_query.rs. Added English doc comments to all functions.
+              2026-04-29 Seunghwan Shin       # [v.4.3.0]
+                                              # 1) Fixed type mismatch bug in find_telegram_group_seq_by_token_and_userseq (map -> and_then)
+                                              # 2) Added find_info_filter_groupseq_orderby_aggs_range to ElasticQueryService for agg_group_seq-based ES queries
+                                              # 3) Modified common_process_python_double to dispatch between room_seq and group_seq
+                                              # 4) Applied comment policy: removed doc comments from all trait definitions, added missing doc comments to impl functions
+                                              # 5) Fixed duplicate "etc" category bug in to_python_graph_circle_by_consume_type
+                                              # 6) Fixed all cargo clippy warnings (wrong_self_convention, too_many_arguments, dead_code)
+                                              # 7) Added group-level query commands: gm, gt, gw, gy, gs (group counterparts of cm, ct, cw, cy, cs)
 */
 mod common;
 use common::*;

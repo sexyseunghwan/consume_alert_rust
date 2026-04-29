@@ -372,7 +372,7 @@ impl<
 
         let permon_datetime: PerDatetime = match args.len() {
             1 => {
-                let cur_year = find_current_kor_naivedate().year();
+                let cur_year: i32 = find_current_kor_naivedate().year();
                 let start_date: DateTime<Utc> = find_naivedate(cur_year, 1, 1)?;
                 let end_date: DateTime<Utc> = find_naivedate(cur_year, 12, 31)?;
                 self.process_service
@@ -408,7 +408,7 @@ impl<
         let room_seq: i64 = self
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
-
+        
         self.common_process_python_double(
             &CONSUME_DETAIL,
             permon_datetime,
@@ -606,6 +606,305 @@ impl<
             None,
             Some(group_seq),
             true,
+        )
+        .await
+    }
+
+    /// Shows the monthly consumption summary aggregated at the group level (`gm [YYYY.MM]`).
+    ///
+    /// Group-level variant of `cm`. Defaults to the current month when no argument is provided.
+    /// Accepts an optional `YYYY.MM` argument to query a specific month.
+    ///
+    /// # Arguments
+    ///
+    /// * `telegram_token` - Telegram bot token used to resolve the caller
+    /// * `telegram_user_id` - Telegram user id used to resolve the caller and group
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` after the summary graphs and messages are sent to Telegram.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the date argument is invalid, or if any downstream service call fails.
+    pub(super) async fn command_consumption_per_mon_group(
+        &self,
+        telegram_token: &str,
+        telegram_user_id: &str,
+    ) -> anyhow::Result<()> {
+        let args: Vec<String> = self.to_preprocessed_tokens(" ");
+
+        let permon_datetime: PerDatetime = match args.len() {
+            1 => {
+                let date_start: DateTime<Utc> = find_current_kor_naivedate_first_date()?;
+                let date_end: DateTime<Utc> = find_lastday_naivedate(date_start)?;
+                self.process_service
+                    .find_nmonth_to_current_date(date_start, date_end, -1)?
+            }
+            2 if args
+                .get(1)
+                .is_some_and(|d| is_valid_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)) =>
+            {
+                let parts: Vec<&str> = args[1].split('.').collect();
+                let year: i32 = parts
+                    .first()
+                    .ok_or_else(|| anyhow!("[command_consumption_per_mon_group] Missing year"))?
+                    .parse()?;
+                let month: u32 = parts
+                    .get(1)
+                    .ok_or_else(|| anyhow!("[command_consumption_per_mon_group] Missing month"))?
+                    .parse()?;
+                let date_start: DateTime<Utc> = find_naivedate(year, month, 1)?;
+                let date_end: DateTime<Utc> = find_lastday_naivedate(date_start)?;
+                self.process_service
+                    .find_nmonth_to_current_date(date_start, date_end, -1)?
+            }
+            _ => {
+                self.tele_bot_service
+                    .input_message_confirm(
+                        "Invalid date format. Please use format YYYY.MM like gm 2023.07",
+                    )
+                    .await?;
+                return Err(anyhow!(
+                    "[command_consumption_per_mon_group] Invalid parameter: {:?}",
+                    self.tele_bot_service.get_input_text()
+                ));
+            }
+        };
+
+        let user_seq: i64 = self
+            .resolve_user_seq(telegram_token, telegram_user_id)
+            .await?;
+
+        let group_seq: i64 = self
+            .resolve_telegram_group_seq(user_seq, telegram_token, telegram_user_id)
+            .await?;
+
+        self.common_process_python_double(
+            &CONSUME_DETAIL,
+            permon_datetime,
+            RangeOperator::GreaterThanOrEqual,
+            RangeOperator::LessThanOrEqual,
+            None,
+            Some(group_seq),
+            true,
+        )
+        .await
+    }
+
+    /// Shows the daily consumption summary aggregated at the group level (`gt [YYYY.MM.DD]`).
+    ///
+    /// Group-level variant of `ct`. Defaults to today when no argument is provided.
+    /// Accepts an optional `YYYY.MM.DD` argument to query a specific date.
+    ///
+    /// # Arguments
+    ///
+    /// * `telegram_token` - Telegram bot token used to resolve the caller
+    /// * `telegram_user_id` - Telegram user id used to resolve the caller and group
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` after the summary graphs and messages are sent to Telegram.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the date argument is invalid, or if any downstream service call fails.
+    pub(super) async fn command_consumption_per_day_group(
+        &self,
+        telegram_token: &str,
+        telegram_user_id: &str,
+    ) -> anyhow::Result<()> {
+        let args: Vec<String> = self.to_preprocessed_tokens(" ");
+
+        let permon_datetime: PerDatetime = match args.len() {
+            1 => {
+                let today: DateTime<Utc> = find_current_kor_naivedate();
+                self.process_service
+                    .find_nday_to_current_date(today, today, -1)?
+            }
+            2 if args.get(1).is_some_and(|d| {
+                is_valid_date_format(d, r"^\d{4}\.\d{2}\.\d{2}$").unwrap_or(false)
+            }) =>
+            {
+                let date: DateTime<Utc> = to_utc_datetime(&args[1], "%Y.%m.%d")
+                    .inspect_err(|e| {
+                        error!("[command_consumption_per_day_group] Invalid date format: {:#}", e)
+                    })?;
+                self.process_service
+                    .find_nday_to_current_date(date, date, -1)?
+            }
+            _ => {
+                self.tele_bot_service
+                    .input_message_confirm(
+                        "There is a problem with the parameter you entered. Please check again.\nEX) gt or gt 2023.11.11",
+                    )
+                    .await?;
+                return Err(anyhow!(
+                    "[command_consumption_per_day_group] Invalid parameter: {:?}",
+                    self.tele_bot_service.get_input_text()
+                ));
+            }
+        };
+
+        let user_seq: i64 = self
+            .resolve_user_seq(telegram_token, telegram_user_id)
+            .await?;
+
+        let group_seq: i64 = self
+            .resolve_telegram_group_seq(user_seq, telegram_token, telegram_user_id)
+            .await?;
+
+        self.common_process_python_double(
+            &CONSUME_DETAIL,
+            permon_datetime,
+            RangeOperator::GreaterThanOrEqual,
+            RangeOperator::LessThanOrEqual,
+            None,
+            Some(group_seq),
+            true,
+        )
+        .await
+    }
+
+    /// Shows the weekly consumption summary aggregated at the group level (`gw`).
+    ///
+    /// Group-level variant of `cw`. Calculates the Monday–Sunday range of the current KST week.
+    /// Takes no date argument.
+    ///
+    /// # Arguments
+    ///
+    /// * `telegram_token` - Telegram bot token used to resolve the caller
+    /// * `telegram_user_id` - Telegram user id used to resolve the caller and group
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` after the summary graphs and messages are sent to Telegram.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any unexpected argument is provided, or if any downstream service call fails.
+    pub(super) async fn command_consumption_per_week_group(
+        &self,
+        telegram_token: &str,
+        telegram_user_id: &str,
+    ) -> anyhow::Result<()> {
+        let args: Vec<String> = self.to_preprocessed_tokens(" ");
+
+        let permon_datetime: PerDatetime = match args.len() {
+            1 => {
+                let today: DateTime<Utc> = find_current_kor_naivedate();
+                let days_to_monday: i64 = Weekday::Mon.num_days_from_monday() as i64
+                    - today.weekday().num_days_from_monday() as i64;
+                let monday: DateTime<Utc> = today + chrono::Duration::days(days_to_monday);
+                let date_end: DateTime<Utc> = monday + chrono::Duration::days(6);
+                self.process_service
+                    .find_nday_to_current_date(monday, date_end, -7)?
+            }
+            _ => {
+                self.tele_bot_service
+                    .input_message_confirm(
+                        "There is a problem with the parameter you entered. Please check again.\nEX) gw",
+                    )
+                    .await?;
+                return Err(anyhow!(
+                    "[command_consumption_per_week_group] Invalid parameter: {:?}",
+                    self.tele_bot_service.get_input_text()
+                ));
+            }
+        };
+
+        let user_seq: i64 = self
+            .resolve_user_seq(telegram_token, telegram_user_id)
+            .await?;
+
+        let group_seq: i64 = self
+            .resolve_telegram_group_seq(user_seq, telegram_token, telegram_user_id)
+            .await?;
+
+        self.common_process_python_double(
+            &CONSUME_DETAIL,
+            permon_datetime,
+            RangeOperator::GreaterThanOrEqual,
+            RangeOperator::LessThanOrEqual,
+            None,
+            Some(group_seq),
+            true,
+        )
+        .await
+    }
+
+    /// Shows the yearly consumption summary aggregated at the group level (`gy [YYYY]`).
+    ///
+    /// Group-level variant of `cy`. Defaults to the current year when no argument is provided.
+    /// Accepts an optional 4-digit `YYYY` argument to query a specific year.
+    /// The per-item detail message is suppressed, but charts and category summary are sent.
+    ///
+    /// # Arguments
+    ///
+    /// * `telegram_token` - Telegram bot token used to resolve the caller
+    /// * `telegram_user_id` - Telegram user id used to resolve the caller and group
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` after the summary graphs and messages are sent to Telegram.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the year argument is invalid, or if any downstream service call fails.
+    pub(super) async fn command_consumption_per_year_group(
+        &self,
+        telegram_token: &str,
+        telegram_user_id: &str,
+    ) -> anyhow::Result<()> {
+        let args: Vec<String> = self.to_preprocessed_tokens(" ");
+
+        let permon_datetime: PerDatetime = match args.len() {
+            1 => {
+                let cur_year = find_current_kor_naivedate().year();
+                let start_date: DateTime<Utc> = find_naivedate(cur_year, 1, 1)?;
+                let end_date: DateTime<Utc> = find_naivedate(cur_year, 12, 31)?;
+                self.process_service
+                    .find_nmonth_to_current_date(start_date, end_date, -12)?
+            }
+            2 if args
+                .get(1)
+                .is_some_and(|d| is_valid_date_format(d, r"^\d{4}$").unwrap_or(false)) =>
+            {
+                let year: i32 = args[1].parse()?;
+                let start_date: DateTime<Utc> = find_naivedate(year, 1, 1)?;
+                let end_date: DateTime<Utc> = find_naivedate(year, 12, 31)?;
+                self.process_service
+                    .find_nmonth_to_current_date(start_date, end_date, -12)?
+            }
+            _ => {
+                self.tele_bot_service
+                    .input_message_confirm(
+                        "There is a problem with the parameter you entered. Please check again.\nEX01) gy\nEX02) gy 2023",
+                    )
+                    .await?;
+                return Err(anyhow!(
+                    "[command_consumption_per_year_group] Invalid parameter: {:?}",
+                    self.tele_bot_service.get_input_text()
+                ));
+            }
+        };
+
+        let user_seq: i64 = self
+            .resolve_user_seq(telegram_token, telegram_user_id)
+            .await?;
+
+        let group_seq: i64 = self
+            .resolve_telegram_group_seq(user_seq, telegram_token, telegram_user_id)
+            .await?;
+
+        self.common_process_python_double(
+            &CONSUME_DETAIL,
+            permon_datetime,
+            RangeOperator::GreaterThanOrEqual,
+            RangeOperator::LessThanOrEqual,
+            None,
+            Some(group_seq),
+            false,
         )
         .await
     }

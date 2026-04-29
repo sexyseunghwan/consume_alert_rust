@@ -141,6 +141,22 @@ impl<
                 self.command_consumption_per_salary_group(&telegram_token, &telegram_user_id)
                     .await?
             }
+            "gm" => {
+                self.command_consumption_per_mon_group(&telegram_token, &telegram_user_id)
+                    .await?
+            }
+            "gt" => {
+                self.command_consumption_per_day_group(&telegram_token, &telegram_user_id)
+                    .await?
+            }
+            "gw" => {
+                self.command_consumption_per_week_group(&telegram_token, &telegram_user_id)
+                    .await?
+            }
+            "gy" => {
+                self.command_consumption_per_year_group(&telegram_token, &telegram_user_id)
+                    .await?
+            }
             _ => {
                 self.command_consumption_auto(&telegram_token, &telegram_user_id)
                     .await?
