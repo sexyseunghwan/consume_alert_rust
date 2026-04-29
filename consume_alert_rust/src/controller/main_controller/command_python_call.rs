@@ -84,7 +84,7 @@ impl<
                         rs,
                     )
                     .await?;
-                let versus = self
+                let versus: AggResultSet<SpentDetailByEs> = self
                     .elastic_query_service
                     .find_info_filter_roomseq_orderby_aggs_range(
                         index_name,

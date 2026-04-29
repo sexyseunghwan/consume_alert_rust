@@ -127,10 +127,6 @@ impl<
                 self.command_consumption_per_salary(&telegram_token, &telegram_user_id)
                     .await?
             }
-            "sg" => {
-                self.command_consumption_per_salary_group(&telegram_token, &telegram_user_id)
-                    .await?
-            }
             "cw" => {
                 self.command_consumption_per_week(&telegram_token, &telegram_user_id)
                     .await?

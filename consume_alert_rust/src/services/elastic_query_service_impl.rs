@@ -245,8 +245,6 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
             }
         });
 
-        //info!("{}", query.to_string());
-
         let response_body: Value = self
             .elastic_conn
             .find_search_query(&query, index_name)

@@ -492,15 +492,17 @@ impl ProcessService for ProcessServiceImpl {
         start_dt: DateTime<Utc>,
         end_dt: DateTime<Utc>,
     ) -> Result<ToPythonGraphCircle, anyhow::Error> {
+        // "etc" 카테고리가 이미 존재할 경우 중복 방지를 위해
+        // 3% 이하 항목과 기존 "etc" 항목을 모두 합산한다.
         let etc_per: f64 = consume_result_by_types
             .iter()
-            .filter(|elem| *elem.consume_prodt_per() <= 3.0)
+            .filter(|elem| *elem.consume_prodt_per() <= 3.0 || elem.consume_prodt_type() == "etc")
             .map(|elem| elem.consume_prodt_per())
             .sum();
 
         let mut entries: Vec<(String, f64)> = consume_result_by_types
             .iter()
-            .filter(|elem| *elem.consume_prodt_per() > 3.0)
+            .filter(|elem| *elem.consume_prodt_per() > 3.0 && elem.consume_prodt_type() != "etc")
             .map(|elem| {
                 (
                     elem.consume_prodt_type().to_string(),
