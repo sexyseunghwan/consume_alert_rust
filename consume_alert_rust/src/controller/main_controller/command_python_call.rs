@@ -52,6 +52,7 @@ impl<
     /// # Errors
     ///
     /// Returns an error if the Elasticsearch query, graph API call, or Telegram send fails.
+    #[allow(clippy::too_many_arguments)]
     pub(super) async fn common_process_python_double(
         &self,
         index_name: &str,

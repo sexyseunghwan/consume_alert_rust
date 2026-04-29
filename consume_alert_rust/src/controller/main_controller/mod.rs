@@ -30,6 +30,7 @@ pub struct MainController<
     pub(super) tele_bot_service: T,
     pub(super) process_service: Arc<P>,
     pub(super) producer_service: Arc<KP>,
+    #[allow(dead_code)]
     pub(super) redis_service: Arc<R>,
     pub(super) cache_service: Arc<C>,
 }
@@ -61,6 +62,7 @@ impl<
     /// # Returns
     ///
     /// Returns a new `MainController` instance.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         graph_api_service: Arc<G>,
         elastic_query_service: Arc<E>,
