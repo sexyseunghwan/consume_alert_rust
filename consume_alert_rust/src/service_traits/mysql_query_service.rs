@@ -1,11 +1,16 @@
 use crate::common::*;
 
+use crate::models::earned_detail::*;
 use crate::models::spent_detail::*;
 use crate::models::spent_detail_with_info::*;
 use crate::models::user_payment_methods::*;
 
 #[async_trait]
 pub trait MysqlQueryService {
+    async fn input_earned_detail_with_transaction(
+        &self,
+        earned_detail: &EarnedDetail,
+    ) -> anyhow::Result<i64>;
     async fn input_prodt_detail_with_transaction(
         &self,
         spent_detail: &SpentDetail,

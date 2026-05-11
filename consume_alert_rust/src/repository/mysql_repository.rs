@@ -1,4 +1,5 @@
 use crate::common::*;
+use crate::entity::earned_detail;
 use crate::entity::spent_detail;
 
 #[async_trait]
@@ -58,6 +59,11 @@ pub trait MysqlRepository {
     /// * `Ok(())` - Row deleted and transaction committed.
     /// * `Err`    - The transaction is rolled back and the error is propagated.
     async fn delete_spent_detail_with_transaction(&self, spent_idx: i64) -> anyhow::Result<()>;
+
+    async fn input_earned_detail_with_transaction(
+        &self,
+        active_model: earned_detail::ActiveModel,
+    ) -> anyhow::Result<i64>;
 
     /// Returns a reference to the DatabaseConnection.
     ///
@@ -254,6 +260,44 @@ impl MysqlRepository for MysqlRepositoryImpl {
             ))?;
 
         Ok(())
+    }
+
+    async fn input_earned_detail_with_transaction(
+        &self,
+        active_model: earned_detail::ActiveModel,
+    ) -> anyhow::Result<i64> {
+        let txn: DatabaseTransaction = self
+            .db_conn
+            .begin()
+            .await
+            .inspect_err(|e| {
+                error!(
+                    "[MysqlRepositoryImpl::input_earned_detail_with_transaction] Failed to begin transaction: {:#}",
+                    e
+                )
+            })?;
+
+        let insert_result: InsertResult<earned_detail::ActiveModel> =
+            earned_detail::Entity::insert(active_model)
+                .exec(&txn)
+                .await
+                .inspect_err(|e| {
+                    error!(
+                        "[MysqlRepositoryImpl::input_earned_detail_with_transaction] Failed to insert record: {:#}",
+                        e
+                    )
+                })?;
+
+        txn.commit()
+            .await
+            .inspect_err(|e| {
+                error!(
+                    "[MysqlRepositoryImpl::input_earned_detail_with_transaction] Failed to commit transaction: {:#}",
+                    e
+                )
+            })?;
+
+        Ok(insert_result.last_insert_id)
     }
 
     #[doc = "Get a reference to the underlying database connection"]

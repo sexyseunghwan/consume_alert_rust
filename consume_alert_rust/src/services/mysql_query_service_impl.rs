@@ -1,8 +1,10 @@
 use crate::common::*;
 
 use crate::entity::{
-    common_consume_keyword_type, spent_detail, telegram_room, user_payment_methods, users,
+    common_consume_keyword_type, earned_detail, spent_detail, telegram_room, user_payment_methods,
+    users,
 };
+use crate::models::earned_detail::*;
 use crate::models::spent_detail::*;
 use crate::models::spent_detail_with_info::*;
 use crate::models::user_payment_methods::*;
@@ -19,6 +21,36 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {}
 
 #[async_trait]
 impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceImpl<R> {
+    /// Converts an `EarnedDetail` domain model and inserts it into the database within a transaction.
+    ///
+    /// # Arguments
+    ///
+    /// * `earned_detail_model` - The earned-income record to persist
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(i64)` containing the auto-incremented `earned_idx` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the conversion to ActiveModel fails or the database transaction fails.
+    async fn input_earned_detail_with_transaction(
+        &self,
+        earned_detail_model: &EarnedDetail,
+    ) -> anyhow::Result<i64> {
+        let active_model: earned_detail::ActiveModel =
+            earned_detail_model.to_active_model().inspect_err(|e| {
+                error!(
+                    "[input_earned_detail_with_transaction] Failed to convert to ActiveModel: {:#}",
+                    e
+                )
+            })?;
+
+        self.db_conn
+            .input_earned_detail_with_transaction(active_model)
+            .await
+    }
+
     /// Converts a `SpentDetail` domain model and inserts it into the database within a transaction.
     ///
     /// # Arguments
@@ -36,9 +68,8 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         &self,
         spent_detail: &SpentDetail,
     ) -> anyhow::Result<i64> {
-        let active_model: spent_detail::ActiveModel = spent_detail
-            .to_active_model()
-            .inspect_err(|e| {
+        let active_model: spent_detail::ActiveModel =
+            spent_detail.to_active_model().inspect_err(|e| {
                 error!(
                     "[input_prodt_detail_with_transaction] Failed to convert to ActiveModel: {:#}",
                     e
@@ -163,7 +194,6 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         Ok(result.map(|room| room.room_seq))
     }
 
-
     /// Retrieves the aggregation group sequence number for a Telegram room identified by token and user sequence.
     ///
     /// # Arguments
@@ -197,7 +227,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
 
         Ok(result.and_then(|room| room.agg_group_seq))
     }
-    
+
     /// Retrieves the user ID string for the given user sequence number.
     ///
     /// # Arguments

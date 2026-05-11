@@ -69,7 +69,7 @@ impl<
                 )
                 .await?;
             return Err(anyhow!(
-                "[main_controller::command_consumptio] Invalid parameter format: {}",
+                "[main_controller::command_consumption] Invalid parameter format: {}",
                 self.tele_bot_service.get_input_text()
             ));
         }
@@ -92,7 +92,7 @@ impl<
                     )
                     .await?;
                 return Err(anyhow!(
-                    "[main_controller::command_consumptio] Non-numeric cash parameter: {:#}",
+                    "[main_controller::command_consumption] Non-numeric cash parameter: {:#}",
                     e
                 ));
             }
@@ -361,7 +361,7 @@ impl<
                 .await?;
             return Ok(());
         }
-
+        
         let user_seq: i64 = self
             .resolve_user_seq(telegram_token, telegram_user_id)
             .await?;
@@ -369,7 +369,7 @@ impl<
         let room_seq: i64 = self
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
-
+        
         let latest_spent_detail: SpentDetailWithInfo = match self
             .mysql_query_service
             .find_latest_spent_detail(user_seq, room_seq)
@@ -383,7 +383,7 @@ impl<
                 return Ok(());
             }
         };
-
+        
         let spent_idx: i64 = latest_spent_detail.spent_idx;
 
         let spent_detail_view: SpentDetailView = latest_spent_detail.to_spent_detail_view();

@@ -475,7 +475,7 @@ impl ProcessService for ProcessServiceImpl {
                 .partial_cmp(&a.consume_prodt_cost)
                 .unwrap_or(Ordering::Equal)
         });
-
+        
         Ok(consume_result_by_types)
     }
 

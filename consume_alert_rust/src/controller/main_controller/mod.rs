@@ -13,6 +13,7 @@ mod command_consume;
 mod command_query;
 mod command_resolver;
 mod command_python_call;
+mod command_estate;
 
 pub struct MainController<
     G: GraphApiService,
@@ -155,6 +156,14 @@ impl<
             }
             "gy" => {
                 self.command_consumption_per_year_group(&telegram_token, &telegram_user_id)
+                    .await?
+            }
+            "ew" => {
+                self.command_earend_detail_by_won(&telegram_token, &telegram_user_id)
+                    .await?
+            }
+            "ed" => {
+                self.command_earend_detail_by_dollor(&telegram_token, &telegram_user_id)
                     .await?
             }
             _ => {

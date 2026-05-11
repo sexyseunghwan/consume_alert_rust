@@ -38,6 +38,7 @@ mysql_async = "0.34.1"
 diesel = { version = "2.1.5", features = ["mysql", "r2d2"] }
 strsim = "0.11.1"
 rayon = "1.10.0"
-sea-orm = { version = "1.1.9", features = ["sqlx-mysql", "runtime-tokio-rustls"] }
+rust_decimal = { version = "1", features = ["serde-float"] }
+sea-orm = { version = "1.1.9", features = ["sqlx-mysql", "runtime-tokio-rustls", "with-rust_decimal"] }
 rdkafka = "0.38.0"
 redis = { version = "1.0", features = ["aio", "tokio-comp", "connection-manager", "cluster", "cluster-async"] }

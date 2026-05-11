@@ -209,7 +209,7 @@ async fn main() {
             let producer_service: Arc<AppProducerService> = Arc::clone(&producer_service);
             let redis_service: Arc<AppRedisService> = Arc::clone(&redis_service);
             let cache_service: Arc<AppCacheService> = Arc::clone(&cache_service);
-
+            
             async move {
                 info!(
                     "[main] Bot polling started (token prefix: {}...)",

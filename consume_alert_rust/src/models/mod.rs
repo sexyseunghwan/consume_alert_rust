@@ -1,6 +1,7 @@
 pub mod agg_group;
 pub mod agg_result_set;
 pub mod consume_index_prodt_type;
+pub mod earned_detail;
 pub mod consume_prodt_info;
 pub mod consume_result_by_type;
 pub mod document_with_id;
