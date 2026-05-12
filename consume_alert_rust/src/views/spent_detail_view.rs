@@ -7,7 +7,7 @@ use std::fmt;
 pub struct SpentDetailView {
     pub spent_name: String,
     pub spent_money: String,
-    pub spent_at: DateTime<Local>,
+    pub spent_at: DateTime<FixedOffset>,
     pub consume_keyword_type_nm: String,
 }
 

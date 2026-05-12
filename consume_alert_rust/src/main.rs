@@ -74,6 +74,7 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
                                               # 5) Fixed duplicate "etc" category bug in to_python_graph_circle_by_consume_type
                                               # 6) Fixed all cargo clippy warnings (wrong_self_convention, too_many_arguments, dead_code)
                                               # 7) Added group-level query commands: gm, gt, gw, gy, gs (group counterparts of cm, ct, cw, cy, cs)
+              2026-05-12 Seunghwan Shin       # [v.4.4.0] Modified modify_nh_card to handle multiple payment notification formats and persist all cases to the database
 */
 mod common;
 use common::*;

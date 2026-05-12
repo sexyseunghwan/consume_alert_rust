@@ -13,7 +13,7 @@ use crate::models::consume_index_prodt_type::*;
 pub struct SpentDetail {
     pub spent_name: String,
     pub spent_money: i64,
-    pub spent_at: DateTime<Local>,
+    pub spent_at: DateTime<FixedOffset>,
     pub should_index: i8,
     pub user_seq: i64,
     pub spent_group_id: i64,

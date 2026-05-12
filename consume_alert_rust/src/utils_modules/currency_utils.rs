@@ -1,6 +1,6 @@
 use crate::common::*;
 
-static HTTP_CLIENT: once_lazy<Client> = once_lazy::new(|| reqwest::Client::new());
+static HTTP_CLIENT: once_lazy<Client> = once_lazy::new(reqwest::Client::new);
 
 const TWELVE_DATA_URL: &str = "https://api.twelvedata.com/exchange_rate?symbol=USD%2FKRW&apikey=";
 

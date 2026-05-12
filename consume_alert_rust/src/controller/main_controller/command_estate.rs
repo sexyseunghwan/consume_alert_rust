@@ -9,21 +9,14 @@ use crate::service_traits::producer_service::*;
 use crate::service_traits::redis_service::*;
 use crate::service_traits::telebot_service::*;
 
-use crate::models::consume_index_prodt_type::*;
 use crate::models::earned_detail::*;
-use crate::models::spent_detail::*;
-use crate::models::spent_detail_to_kafka::*;
-use crate::models::spent_detail_with_info::*;
-use crate::models::user_payment_methods::*;
 
 use crate::utils_modules::currency_utils::*;
 use crate::utils_modules::io_utils::*;
 
 use rust_decimal::Decimal;
 
-use crate::views::spent_detail_view::SpentDetailView;
 
-use crate::AppConfig;
 
 use super::MainController;
 

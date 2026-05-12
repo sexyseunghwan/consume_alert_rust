@@ -131,7 +131,7 @@ impl<
         let spent_detail: SpentDetail = SpentDetail::new(
             spent_name,
             spent_money,
-            Local::now(),
+            Utc::now().with_timezone(&Seoul).fixed_offset(),
             1,
             user_seq,
             0,
@@ -224,18 +224,30 @@ impl<
         telegram_user_id: &str,
     ) -> anyhow::Result<()> {
         let args: String = self.tele_bot_service.get_input_text();
-        
-        let bracket_re: Regex = Regex::new(r"\[.*?\]\n?").map_err(|e| {
+
+        // let bracket_re: Regex = Regex::new(r"\[.*?\]\n?").map_err(|e| {
+        //     anyhow!(
+        //         "[main_controller::command_consumption_auto] Bad regex: {:?}",
+        //         e
+        //     )
+        // })?;
+
+        let bracket_re: Regex = Regex::new(r"\.*?\\n?").map_err(|e| {
             anyhow!(
                 "[main_controller::command_consumption_auto] Bad regex: {:?}",
                 e
             )
         })?;
-
+        
         let lines: Vec<String> = bracket_re
             .replace_all(&args, "")
             .split('\n')
-            .map(|s| s.trim().to_string())
+            .map(|s| {
+                s.replace("[", "")
+                    .replace("]", "")
+                    .trim()
+                    .to_string()
+            })
             .filter(|s| !s.is_empty())
             .collect();
 
