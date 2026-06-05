@@ -2,7 +2,7 @@
 
 use sea_orm::entity::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "EARNED_DETAIL")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
@@ -16,6 +16,7 @@ pub struct Model {
     pub created_by: String,
     pub updated_by: Option<String>,
     pub user_seq: i64,
+    pub room_seq: i64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -26,12 +27,23 @@ pub enum Relation {
         to = "super::users::Column::UserSeq"
     )]
     Users,
+    #[sea_orm(
+        belongs_to = "super::telegram_room::Entity",
+        from = "Column::RoomSeq",
+        to = "super::telegram_room::Column::RoomSeq"
+    )]
+    TelegramRoom,
 }
 
 impl Related<super::users::Entity> for Entity {
-    /// Returns the relation definition to `USERS`.
     fn to() -> RelationDef {
         Relation::Users.def()
+    }
+}
+
+impl Related<super::telegram_room::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::TelegramRoom.def()
     }
 }
 

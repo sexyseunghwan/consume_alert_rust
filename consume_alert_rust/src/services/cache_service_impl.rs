@@ -49,7 +49,12 @@ where
             .redis_service
             .find_string(&redis_key)
             .await
-            .inspect_err(|e| error!("[CacheServiceImpl::find_user_seq] Redis read failed: {:#}", e))?
+            .inspect_err(|e| {
+                error!(
+                    "[CacheServiceImpl::find_user_seq] Redis read failed: {:#}",
+                    e
+                )
+            })?
         {
             return Ok(Some(cached.parse::<i64>().inspect_err(|e| {
                 error!(
@@ -63,13 +68,23 @@ where
             .mysql_query_service
             .has_telegram_room_by_token_and_id(telegram_token, telegram_user_id)
             .await
-            .inspect_err(|e| error!("[CacheServiceImpl::find_user_seq] MySQL query failed: {:#}", e))?;
+            .inspect_err(|e| {
+                error!(
+                    "[CacheServiceImpl::find_user_seq] MySQL query failed: {:#}",
+                    e
+                )
+            })?;
 
         if let Some(seq) = seq_opt {
             self.redis_service
                 .input_string(&redis_key, &seq.to_string(), None)
                 .await
-                .inspect_err(|e| error!("[CacheServiceImpl::find_user_seq] Redis write failed: {:#}", e))?;
+                .inspect_err(|e| {
+                    error!(
+                        "[CacheServiceImpl::find_user_seq] Redis write failed: {:#}",
+                        e
+                    )
+                })?;
         }
 
         Ok(seq_opt)
@@ -110,7 +125,12 @@ where
             .redis_service
             .find_string(&redis_key)
             .await
-            .inspect_err(|e| error!("[CacheServiceImpl::find_telegram_room_seq] Redis read failed: {:#}", e))?
+            .inspect_err(|e| {
+                error!(
+                    "[CacheServiceImpl::find_telegram_room_seq] Redis read failed: {:#}",
+                    e
+                )
+            })?
         {
             return Ok(Some(cached.parse::<i64>().inspect_err(|e| {
                 error!(
@@ -124,13 +144,23 @@ where
             .mysql_query_service
             .find_telegram_room_seq_by_token_and_userseq(telegram_token, user_seq)
             .await
-            .inspect_err(|e| error!("[CacheServiceImpl::find_telegram_room_seq] MySQL query failed: {:#}", e))?;
+            .inspect_err(|e| {
+                error!(
+                    "[CacheServiceImpl::find_telegram_room_seq] MySQL query failed: {:#}",
+                    e
+                )
+            })?;
 
         if let Some(seq) = seq_opt {
             self.redis_service
                 .input_string(&redis_key, &seq.to_string(), None)
                 .await
-                .inspect_err(|e| error!("[CacheServiceImpl::find_telegram_room_seq] Redis write failed: {:#}", e))?;
+                .inspect_err(|e| {
+                    error!(
+                        "[CacheServiceImpl::find_telegram_room_seq] Redis write failed: {:#}",
+                        e
+                    )
+                })?;
         }
 
         Ok(seq_opt)
@@ -158,7 +188,6 @@ where
         telegram_token: &str,
         telegram_user_id: &str,
     ) -> anyhow::Result<Option<i64>> {
-
         let app_config: &AppConfig = AppConfig::get_global();
 
         let redis_key: String = format!(
@@ -172,7 +201,12 @@ where
             .redis_service
             .find_string(&redis_key)
             .await
-            .inspect_err(|e| error!("[CacheServiceImpl::find_telegram_group_seq] Redis read failed: {:#}", e))?
+            .inspect_err(|e| {
+                error!(
+                    "[CacheServiceImpl::find_telegram_group_seq] Redis read failed: {:#}",
+                    e
+                )
+            })?
         {
             return Ok(Some(cached.parse::<i64>().inspect_err(|e| {
                 error!(
@@ -186,13 +220,23 @@ where
             .mysql_query_service
             .find_telegram_group_seq_by_token_and_userseq(telegram_token, user_seq)
             .await
-            .inspect_err(|e| error!("[CacheServiceImpl::find_telegram_group_seq] MySQL query failed: {:#}", e))?;
+            .inspect_err(|e| {
+                error!(
+                    "[CacheServiceImpl::find_telegram_group_seq] MySQL query failed: {:#}",
+                    e
+                )
+            })?;
 
         if let Some(seq) = seq_opt {
             self.redis_service
                 .input_string(&redis_key, &seq.to_string(), None)
                 .await
-                .inspect_err(|e| error!("[CacheServiceImpl::find_telegram_group_seq] Redis write failed: {:#}", e))?;
+                .inspect_err(|e| {
+                    error!(
+                        "[CacheServiceImpl::find_telegram_group_seq] Redis write failed: {:#}",
+                        e
+                    )
+                })?;
         }
 
         Ok(seq_opt)

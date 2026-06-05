@@ -1,10 +1,7 @@
 use crate::common::*;
 
 /// Parses a date string into a `DateTime<Utc>` (midnight UTC on the parsed date).
-pub fn to_utc_datetime(
-    date: &str,
-    format: &str,
-) -> Result<DateTime<Utc>, anyhow::Error> {
+pub fn to_utc_datetime(date: &str, format: &str) -> Result<DateTime<Utc>, anyhow::Error> {
     NaiveDate::parse_from_str(date, format)
         .map_err(|e| anyhow!("[Datetime Parsing Error][to_utc_datetime()] Failed to parse date string: {:?} : {:?}", date, e))
         .map(|d| d.and_time(NaiveTime::MIN).and_utc())
@@ -19,15 +16,38 @@ pub fn find_current_kor_naivedate() -> DateTime<Utc> {
 }
 
 /// Returns the first day of the current Korean month as `DateTime<Utc>` (midnight UTC).
+// pub fn find_current_kor_naivedate_first_date() -> Result<DateTime<Utc>, anyhow::Error> {
+//     let utc_now: DateTime<Utc> = Utc::now();
+//     let kst_time: DateTime<chrono_tz::Tz> = utc_now.with_timezone(&Seoul);
+
+//     NaiveDate::from_ymd_opt(kst_time.year(), kst_time.month(), 1)
+//         .ok_or_else(|| anyhow!("[Datetime Parsing Error][find_current_kor_naivedate_first_date()] Invalid date => year: {}, month: {}, day: 1",
+//             kst_time.year(),
+//             kst_time.month()))
+//         .map(|d| d.and_time(NaiveTime::MIN).and_utc())
+// }
+
+/// Returns the first day of the current Korean month as `DateTime<Utc>` (midnight UTC).
 pub fn find_current_kor_naivedate_first_date() -> Result<DateTime<Utc>, anyhow::Error> {
     let utc_now: DateTime<Utc> = Utc::now();
     let kst_time: DateTime<chrono_tz::Tz> = utc_now.with_timezone(&Seoul);
 
-    NaiveDate::from_ymd_opt(kst_time.year(), kst_time.month(), 1)
-        .ok_or_else(|| anyhow!("[Datetime Parsing Error][find_current_kor_naivedate_first_date()] Invalid date => year: {}, month: {}, day: 1",
-            kst_time.year(),
-            kst_time.month()))
-        .map(|d| d.and_time(NaiveTime::MIN).and_utc())
+    let naive_kst_start: NaiveDateTime = NaiveDate::from_ymd_opt(kst_time.year(), kst_time.month(), 1)
+        .ok_or_else(|| {
+            anyhow!(
+                "[time_utils::find_current_kor_naivedate_first_date] Invalid date => year: {}, month: {}, day: 1",
+                kst_time.year(),
+                kst_time.month()
+            )
+        })?
+        .and_time(NaiveTime::MIN);
+
+    let kst_start: DateTime<chrono_tz::Tz> = naive_kst_start
+        .and_local_timezone(Seoul)
+        .single()
+        .ok_or_else(|| anyhow!("[time_utils::find_current_kor_naivedate_first_date] Invalid or ambiguous Seoul datetime"))?;
+
+    Ok(kst_start.with_timezone(&Utc))
 }
 
 /// Returns the last day of the month that `dt` falls in, as `DateTime<Utc>` (midnight UTC).
@@ -39,12 +59,16 @@ pub fn find_lastday_naivedate(dt: DateTime<Utc>) -> Result<DateTime<Utc>, anyhow
     } else {
         NaiveDate::from_ymd_opt(naive_date.year(), naive_date.month() + 1, 1)
     }
-    .ok_or_else(|| anyhow!("[Datetime Parsing Error][find_lastday_naivedate()] Invalid date when calculating the first day of the next month."))?;
+    .ok_or_else(|| anyhow!("[time_utils::find_lastday_naivedate] Invalid date when calculating the first day of the next month."))?;
 
     let last_day_of_month: NaiveDate = next_month.pred_opt()
-        .ok_or_else(|| anyhow!("[Datetime Parsing Error][find_lastday_naivedate()] Unable to import the previous date for that date."))?;
+        .ok_or_else(|| anyhow!("[time_utils::find_lastday_naivedate] Unable to import the previous date for that date."))?;
 
-    Ok(last_day_of_month.and_time(NaiveTime::MIN).and_utc())
+    let end_of_day: NaiveTime = NaiveTime::from_hms_opt(23, 59, 59).ok_or_else(|| {
+        anyhow!("[time_utils::find_lastday_naivedate] Unable to create end-of-day time.")
+    })?;
+
+    Ok(last_day_of_month.and_time(end_of_day).and_utc())
 }
 
 /// Returns a `DateTime<Utc>` for midnight UTC on the given year/month/day.

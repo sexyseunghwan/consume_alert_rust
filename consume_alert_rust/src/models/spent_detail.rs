@@ -32,9 +32,7 @@ impl SpentDetail {
     /// # Errors
     ///
     /// Returns an error if any field conversion fails.
-    pub fn to_active_model(
-        &self,
-    ) -> anyhow::Result<spent_detail::ActiveModel> {
+    pub fn to_active_model(&self) -> anyhow::Result<spent_detail::ActiveModel> {
         let spent_at_naive: NaiveDateTime = self.spent_at.naive_utc();
         let now: NaiveDateTime = Utc::now().naive_utc();
 

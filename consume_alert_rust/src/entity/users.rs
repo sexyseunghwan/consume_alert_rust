@@ -31,33 +31,85 @@ pub enum Relation {
     TelegramRoom,
     #[sea_orm(has_many = "super::user_payment_methods::Entity")]
     UserPaymentMethods,
+    #[sea_orm(has_many = "super::deposit_asset::Entity")]
+    DepositAsset,
+    #[sea_orm(has_many = "super::saving_asset::Entity")]
+    SavingAsset,
+    #[sea_orm(has_many = "super::users_email::Entity")]
+    UsersEmail,
+    #[sea_orm(has_many = "super::stock_asset::Entity")]
+    StockAsset,
+    #[sea_orm(has_many = "super::user_current_asset_snapshot::Entity")]
+    UserCurrentAssetSnapshot,
+    #[sea_orm(has_many = "super::crypto_asset::Entity")]
+    CryptoAsset,
+    #[sea_orm(has_many = "super::cash_asset::Entity")]
+    CashAsset,
 }
 
 impl Related<super::earned_detail::Entity> for Entity {
-    /// Returns the relation definition to `EARNED_DETAIL`.
     fn to() -> RelationDef {
         Relation::EarnedDetail.def()
     }
 }
 
 impl Related<super::spent_detail::Entity> for Entity {
-    /// Returns the relation definition to `SPENT_DETAIL`.
     fn to() -> RelationDef {
         Relation::SpentDetail.def()
     }
 }
 
 impl Related<super::telegram_room::Entity> for Entity {
-    /// Returns the relation definition to `TELEGRAM_ROOM`.
     fn to() -> RelationDef {
         Relation::TelegramRoom.def()
     }
 }
 
 impl Related<super::user_payment_methods::Entity> for Entity {
-    /// Returns the relation definition to `USER_PAYMENT_METHODS`.
     fn to() -> RelationDef {
         Relation::UserPaymentMethods.def()
+    }
+}
+
+impl Related<super::deposit_asset::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::DepositAsset.def()
+    }
+}
+
+impl Related<super::saving_asset::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::SavingAsset.def()
+    }
+}
+
+impl Related<super::users_email::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::UsersEmail.def()
+    }
+}
+
+impl Related<super::stock_asset::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::StockAsset.def()
+    }
+}
+
+impl Related<super::user_current_asset_snapshot::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::UserCurrentAssetSnapshot.def()
+    }
+}
+
+impl Related<super::crypto_asset::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::CryptoAsset.def()
+    }
+}
+
+impl Related<super::cash_asset::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::CashAsset.def()
     }
 }
 

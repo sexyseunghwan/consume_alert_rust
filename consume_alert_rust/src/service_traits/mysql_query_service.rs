@@ -1,9 +1,10 @@
 use crate::common::*;
 
-use crate::models::earned_detail::*;
-use crate::models::spent_detail::*;
-use crate::models::spent_detail_with_info::*;
-use crate::models::user_payment_methods::*;
+use crate::models::{
+    cash_asset::*, crypto_resp::*, currency_exchange_rate_snapshot::*, deposit_asset::*,
+    earned_detail::*, saving_asset::*, spent_detail::*, spent_detail_with_info::*, stock_resp::*,
+    user_payment_methods::*,
+};
 
 #[async_trait]
 pub trait MysqlQueryService {
@@ -59,4 +60,39 @@ pub trait MysqlQueryService {
         user_seq: i64,
         is_default: bool,
     ) -> anyhow::Result<Vec<UserPaymentMethods>>;
+    async fn find_currency_exchange_rate_snapshot(
+        &self,
+        base_currency_code: &str,
+        target_currency_code: &str,
+    ) -> anyhow::Result<Vec<CurrencyExchangeRateSnapshot>>;
+
+    async fn find_deposit_asset(
+        &self,
+        user_seq: i64,
+        currency_code: &str,
+    ) -> anyhow::Result<Vec<DepositAsset>>;
+
+    async fn find_saving_asset(
+        &self,
+        user_seq: i64,
+        currency_code: &str,
+    ) -> anyhow::Result<Vec<SavingAsset>>;
+
+    async fn find_stock_response(
+        &self,
+        user_seq: i64,
+        currency_code: &str,
+    ) -> anyhow::Result<Vec<StockResp>>;
+
+    async fn find_crypto_response(
+        &self,
+        user_seq: i64,
+        currency_code: &str,
+    ) -> anyhow::Result<Vec<CryptoResp>>;
+
+    async fn find_cash_asset(
+        &self,
+        user_seq: i64,
+        currency_code: &str,
+    ) -> anyhow::Result<Vec<CashAsset>>;
 }

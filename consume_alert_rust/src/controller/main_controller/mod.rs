@@ -9,11 +9,11 @@ use crate::service_traits::producer_service::*;
 use crate::service_traits::redis_service::*;
 use crate::service_traits::telebot_service::*;
 
+mod command_asset;
 mod command_consume;
+mod command_python_call;
 mod command_query;
 mod command_resolver;
-mod command_python_call;
-mod command_estate;
 
 pub struct MainController<
     G: GraphApiService,
@@ -166,10 +166,14 @@ impl<
                 self.command_earend_detail_by_dollor(&telegram_token, &telegram_user_id)
                     .await?
             }
+            "my" => {
+                self.command_show_all_asset(&telegram_token, &telegram_user_id)
+                    .await?
+            }
             _ => {
                 self.command_consumption_auto(&telegram_token, &telegram_user_id)
                     .await?
-            } 
+            }
         }
 
         Ok(())

@@ -9,7 +9,10 @@ const TWELVE_DATA_URL: &str = "https://api.twelvedata.com/exchange_rate?symbol=U
 /// * `Result<f64, anyhow::Error>` - exchange rate (1 USD = N KRW)
 pub async fn get_usd_to_krw_rate() -> anyhow::Result<f64> {
     let api_key: String = env::var("TWELVE_DATA_API_KEY").map_err(|e| {
-        anyhow!("[get_usd_to_krw_rate] 'TWELVE_DATA_API_KEY' must be set: {:#}", e)
+        anyhow!(
+            "[get_usd_to_krw_rate] 'TWELVE_DATA_API_KEY' must be set: {:#}",
+            e
+        )
     })?;
 
     let url: String = format!("{}{}", TWELVE_DATA_URL, api_key);
@@ -21,7 +24,12 @@ pub async fn get_usd_to_krw_rate() -> anyhow::Result<f64> {
         .map_err(|e| anyhow!("[get_usd_to_krw_rate] HTTP request failed: {:#}", e))?
         .json::<Value>()
         .await
-        .map_err(|e| anyhow!("[get_usd_to_krw_rate] Failed to parse JSON response: {:#}", e))?;
+        .map_err(|e| {
+            anyhow!(
+                "[get_usd_to_krw_rate] Failed to parse JSON response: {:#}",
+                e
+            )
+        })?;
 
     if let Some(code) = response["code"].as_u64() {
         return Err(anyhow!(

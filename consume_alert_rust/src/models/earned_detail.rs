@@ -14,6 +14,7 @@ pub struct EarnedDetail {
     pub earned_money_dollor: Decimal,
     pub earned_at: DateTime<Local>,
     pub user_seq: i64,
+    pub room_seq: i64,
 }
 
 impl EarnedDetail {
@@ -32,6 +33,7 @@ impl EarnedDetail {
             created_by: Set("system".to_string()),
             updated_by: Set(None),
             user_seq: Set(self.user_seq),
+            room_seq: Set(self.room_seq),
         })
     }
 }

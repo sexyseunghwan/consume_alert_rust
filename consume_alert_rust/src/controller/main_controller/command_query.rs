@@ -45,7 +45,11 @@ impl<
     /// # Errors
     ///
     /// Returns an error if the date argument is invalid, or if any downstream service call fails.
-    pub async fn command_consumption_per_mon(&self, telegram_token: &str, telegram_user_id: &str) -> anyhow::Result<()> {
+    pub async fn command_consumption_per_mon(
+        &self,
+        telegram_token: &str,
+        telegram_user_id: &str,
+    ) -> anyhow::Result<()> {
         let args: Vec<String> = self.to_preprocessed_tokens(" ");
 
         let permon_datetime: PerDatetime = match args.len() {
@@ -139,15 +143,15 @@ impl<
             }) =>
             {
                 let parts: Vec<&str> = args[1].split('-').collect();
-                let start_date: DateTime<Utc> = to_utc_datetime(parts[0], "%Y.%m.%d")
-                    .inspect_err(|e| {
+                let start_date: DateTime<Utc> =
+                    to_utc_datetime(parts[0], "%Y.%m.%d").inspect_err(|e| {
                         error!(
                             "[command_consumption_per_term] Invalid start date format: {:#}",
                             e
                         )
                     })?;
-                let end_date: DateTime<Utc> = to_utc_datetime(parts[1], "%Y.%m.%d")
-                    .inspect_err(|e| {
+                let end_date: DateTime<Utc> =
+                    to_utc_datetime(parts[1], "%Y.%m.%d").inspect_err(|e| {
                         error!(
                             "[command_consumption_per_term] Invalid end date format: {:#}",
                             e
@@ -237,8 +241,8 @@ impl<
                 is_valid_date_format(d, r"^\d{4}\.\d{2}\.\d{2}$").unwrap_or(false)
             }) =>
             {
-                let date: DateTime<Utc> = to_utc_datetime(&args[1], "%Y.%m.%d")
-                    .inspect_err(|e| {
+                let date: DateTime<Utc> =
+                    to_utc_datetime(&args[1], "%Y.%m.%d").inspect_err(|e| {
                         error!("[command_consumption_per_day] Invalid date format: {:#}", e)
                     })?;
                 self.process_service
@@ -408,7 +412,7 @@ impl<
         let room_seq: i64 = self
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
-        
+
         self.common_process_python_double(
             &CONSUME_DETAIL,
             permon_datetime,
@@ -461,26 +465,32 @@ impl<
                 } else {
                     find_add_month_from_naivedate(find_naivedate(year, month, 25)?, 1)?
                 };
-                self.process_service
-                    .find_nmonth_to_current_date(cur_date_start, cur_date_end, -1)?
+                self.process_service.find_nmonth_to_current_date(
+                    cur_date_start,
+                    cur_date_end,
+                    -1,
+                )?
             }
             2 if args
                 .get(1)
                 .is_some_and(|d| is_valid_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)) =>
             {
                 let ref_date: DateTime<Utc> =
-                    to_utc_datetime(&format!("{}.01", args[1]), "%Y.%m.%d")
-                        .inspect_err(|e| {
-                            error!(
-                                "[command_consumption_per_salary] Invalid date format: {:#}",
-                                e
-                            )
-                        })?;
+                    to_utc_datetime(&format!("{}.01", args[1]), "%Y.%m.%d").inspect_err(|e| {
+                        error!(
+                            "[command_consumption_per_salary] Invalid date format: {:#}",
+                            e
+                        )
+                    })?;
                 let cur_date_end: DateTime<Utc> =
                     find_naivedate(ref_date.year(), ref_date.month(), 25)?;
-                let cur_date_start: DateTime<Utc> = find_add_month_from_naivedate(cur_date_end, -1)?;
-                self.process_service
-                    .find_nmonth_to_current_date(cur_date_start, cur_date_end, -1)?
+                let cur_date_start: DateTime<Utc> =
+                    find_add_month_from_naivedate(cur_date_end, -1)?;
+                self.process_service.find_nmonth_to_current_date(
+                    cur_date_start,
+                    cur_date_end,
+                    -1,
+                )?
             }
             _ => {
                 self.tele_bot_service
@@ -514,7 +524,6 @@ impl<
         )
         .await
     }
-
 
     /// Fetches and displays salary-cycle consumption data aggregated at the group level,
     /// comparing the current salary period against the same period one month prior.
@@ -556,26 +565,32 @@ impl<
                 } else {
                     find_add_month_from_naivedate(find_naivedate(year, month, 25)?, 1)?
                 };
-                self.process_service
-                    .find_nmonth_to_current_date(cur_date_start, cur_date_end, -1)?
+                self.process_service.find_nmonth_to_current_date(
+                    cur_date_start,
+                    cur_date_end,
+                    -1,
+                )?
             }
             2 if args
                 .get(1)
                 .is_some_and(|d| is_valid_date_format(d, r"^\d{4}\.\d{2}$").unwrap_or(false)) =>
             {
                 let ref_date: DateTime<Utc> =
-                    to_utc_datetime(&format!("{}.01", args[1]), "%Y.%m.%d")
-                        .inspect_err(|e| {
-                            error!(
-                                "[command_consumption_per_salary_group] Invalid date format: {:#}",
-                                e
-                            )
-                        })?;
+                    to_utc_datetime(&format!("{}.01", args[1]), "%Y.%m.%d").inspect_err(|e| {
+                        error!(
+                            "[command_consumption_per_salary_group] Invalid date format: {:#}",
+                            e
+                        )
+                    })?;
                 let cur_date_end: DateTime<Utc> =
                     find_naivedate(ref_date.year(), ref_date.month(), 25)?;
-                let cur_date_start: DateTime<Utc> = find_add_month_from_naivedate(cur_date_end, -1)?;
-                self.process_service
-                    .find_nmonth_to_current_date(cur_date_start, cur_date_end, -1)?
+                let cur_date_start: DateTime<Utc> =
+                    find_add_month_from_naivedate(cur_date_end, -1)?;
+                self.process_service.find_nmonth_to_current_date(
+                    cur_date_start,
+                    cur_date_end,
+                    -1,
+                )?
             }
             _ => {
                 self.tele_bot_service
@@ -593,11 +608,11 @@ impl<
         let user_seq: i64 = self
             .resolve_user_seq(telegram_token, telegram_user_id)
             .await?;
-        
+
         let group_seq: i64 = self
             .resolve_telegram_group_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
-        
+
         self.common_process_python_double(
             &CONSUME_DETAIL,
             permon_datetime,
@@ -726,9 +741,12 @@ impl<
                 is_valid_date_format(d, r"^\d{4}\.\d{2}\.\d{2}$").unwrap_or(false)
             }) =>
             {
-                let date: DateTime<Utc> = to_utc_datetime(&args[1], "%Y.%m.%d")
-                    .inspect_err(|e| {
-                        error!("[command_consumption_per_day_group] Invalid date format: {:#}", e)
+                let date: DateTime<Utc> =
+                    to_utc_datetime(&args[1], "%Y.%m.%d").inspect_err(|e| {
+                        error!(
+                            "[command_consumption_per_day_group] Invalid date format: {:#}",
+                            e
+                        )
                     })?;
                 self.process_service
                     .find_nday_to_current_date(date, date, -1)?

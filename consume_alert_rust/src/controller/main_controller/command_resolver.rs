@@ -11,7 +11,6 @@ use crate::service_traits::telebot_service::*;
 
 use crate::models::consume_index_prodt_type::*;
 
-
 use super::MainController;
 
 impl<

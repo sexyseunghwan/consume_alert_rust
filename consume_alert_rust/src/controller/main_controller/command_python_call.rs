@@ -19,7 +19,6 @@ use crate::enums::range_operator::*;
 
 use crate::utils_modules::io_utils::*;
 
-
 use super::MainController;
 
 impl<
@@ -63,8 +62,6 @@ impl<
         group_seq: Option<i64>,
         detail_yn: bool,
     ) -> anyhow::Result<()> {
-        
-
         let (spent_detail_info, versus_spent_detail_info): (
             AggResultSet<SpentDetailByEs>,
             AggResultSet<SpentDetailByEs>,
@@ -158,7 +155,10 @@ impl<
 
         if detail_yn {
             self.tele_bot_service
-                .input_message_consume_split(&cur_python_graph_info, spent_detail_info.source_list())
+                .input_message_consume_split(
+                    &cur_python_graph_info,
+                    spent_detail_info.source_list(),
+                )
                 .await?;
         }
 
@@ -190,7 +190,9 @@ impl<
 
         let img_files: Vec<String> = vec![consume_detail_img_path, circle_graph_path];
 
-        self.tele_bot_service.input_photo_confirm(&img_files).await?;
+        self.tele_bot_service
+            .input_photo_confirm(&img_files)
+            .await?;
 
         self.tele_bot_service
             .input_message_consume_info_by_typelist(
@@ -202,8 +204,7 @@ impl<
             .await?;
 
         delete_file(img_files)?;
-        
+
         Ok(())
     }
-
 }

@@ -73,7 +73,7 @@ impl<
                 self.tele_bot_service.get_input_text()
             ));
         }
-        
+
         let user_seq: i64 = self
             .resolve_user_seq(telegram_token, telegram_user_id)
             .await?;
@@ -81,7 +81,7 @@ impl<
         let room_seq: i64 = self
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
-        
+
         let spent_name: String = args[0].clone();
         let spent_money: i64 = match find_parsed_value_from_vector(&args, 1) {
             Ok(cash) => cash,
@@ -97,7 +97,7 @@ impl<
                 ));
             }
         };
-        
+
         let spent_type: ConsumingIndexProdtType = self
             .resolve_spend_type(&spent_name)
             .await
@@ -238,16 +238,11 @@ impl<
                 e
             )
         })?;
-        
+
         let lines: Vec<String> = bracket_re
             .replace_all(&args, "")
             .split('\n')
-            .map(|s| {
-                s.replace("[", "")
-                    .replace("]", "")
-                    .trim()
-                    .to_string()
-            })
+            .map(|s| s.replace("[", "").replace("]", "").trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
 
@@ -315,7 +310,7 @@ impl<
             SpentDetailToKafka::new(spent_idx, String::from("I"), utc_now);
 
         let partition_key: String = spent_idx.to_string();
-        
+
         let app_config: &AppConfig = AppConfig::get_global();
         let produce_topic: &str = app_config.produce_topic();
 
@@ -373,7 +368,7 @@ impl<
                 .await?;
             return Ok(());
         }
-        
+
         let user_seq: i64 = self
             .resolve_user_seq(telegram_token, telegram_user_id)
             .await?;
@@ -381,7 +376,7 @@ impl<
         let room_seq: i64 = self
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
-        
+
         let latest_spent_detail: SpentDetailWithInfo = match self
             .mysql_query_service
             .find_latest_spent_detail(user_seq, room_seq)
@@ -395,7 +390,7 @@ impl<
                 return Ok(());
             }
         };
-        
+
         let spent_idx: i64 = latest_spent_detail.spent_idx;
 
         let spent_detail_view: SpentDetailView = latest_spent_detail.to_spent_detail_view();
@@ -410,7 +405,7 @@ impl<
                     "[command_delete_recent_consumption] latest spent_idx={} (user_seq={}, room_seq={})",
                     spent_idx, user_seq, room_seq
                 );
-                
+
                 self.tele_bot_service
                     .input_message_confirm(&spent_detail_view.to_telegram_string_to_delete())
                     .await?;

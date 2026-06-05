@@ -178,9 +178,7 @@ impl ProcessServiceImpl {
         let card_name: String = split_args_vec
             .first()
             .ok_or_else(|| {
-                anyhow!(
-                    "[ProcessServiceImpl::modify_nh_card] Price field (index 0) not found"
-                )
+                anyhow!("[ProcessServiceImpl::modify_nh_card] Price field (index 0) not found")
             })?
             .replace("승인", "");
 
@@ -194,7 +192,7 @@ impl ProcessServiceImpl {
                     card_name
                 )
             })?;
-        
+
         let (spent_money, spent_at, spent_name): (i64, DateTime<FixedOffset>, String) =
             if split_args_vec.len() > 4 {
                 let price_str: &str = split_args_vec.get(2).ok_or_else(|| {
@@ -304,7 +302,7 @@ impl ProcessServiceImpl {
         })?;
         let consume_time_vec: Vec<String> = time_str.split(" ").map(|s| s.to_string()).collect();
         let spent_at: DateTime<FixedOffset> = self.to_consume_datetime_seoul(&consume_time_vec)?;
-        
+
         let spent_name: String = consume_time_vec
             .get(2)
             .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Product name not found in time field"))?
@@ -366,7 +364,7 @@ impl ProcessService for ProcessServiceImpl {
                 acc.entry(nm).or_default().push(elem);
                 acc
             });
-        
+
         if card_company_nms.contains_key("nh") && consume_type.contains("nh") {
             let user_payment_methods: &Vec<UserPaymentMethods> = card_company_nms
                 .get("nh")
@@ -492,7 +490,7 @@ impl ProcessService for ProcessServiceImpl {
                 .partial_cmp(&a.consume_prodt_cost)
                 .unwrap_or(Ordering::Equal)
         });
-        
+
         Ok(consume_result_by_types)
     }
 

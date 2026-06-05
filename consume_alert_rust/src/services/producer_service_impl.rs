@@ -109,7 +109,10 @@ where
                 Ok(_) => {
                     success_count += 1;
                     if success_count % 100 == 0 {
-                        info!("[ProducerServiceImpl::input_objects_to_topic] Sent {} messages to {}", success_count, topic);
+                        info!(
+                            "[ProducerServiceImpl::input_objects_to_topic] Sent {} messages to {}",
+                            success_count, topic
+                        );
                     }
                 }
                 Err(e) => {

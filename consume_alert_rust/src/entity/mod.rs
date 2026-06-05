@@ -3,11 +3,27 @@
 pub mod prelude;
 
 pub mod agg_group;
+pub mod cash_asset;
 pub mod common_consume_keyword_type;
 pub mod common_consume_prodt_keyword;
+pub mod crypto;
+pub mod crypto_asset;
+pub mod currency_code;
+pub mod currency_exchange_rate_snapshot;
+pub mod deposit_asset;
+pub mod dim_calendar;
 pub mod earned_detail;
+pub mod kis_api_token;
+pub mod saving_asset;
+pub mod send_email_agg_group;
 pub mod spent_detail;
+pub mod spent_detail_indexing;
 pub mod spent_group_info;
+pub mod stock;
+pub mod stock_asset;
+pub mod stock_type;
 pub mod telegram_room;
+pub mod user_current_asset_snapshot;
 pub mod user_payment_methods;
 pub mod users;
+pub mod users_email;

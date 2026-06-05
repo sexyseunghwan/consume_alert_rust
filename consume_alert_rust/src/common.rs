@@ -81,3 +81,5 @@ pub use redis::{
     aio::MultiplexedConnection, cluster::ClusterClient, cluster_async::ClusterConnection,
     AsyncCommands, Client as redisClient, RedisError,
 };
+
+pub use rust_decimal::Decimal;

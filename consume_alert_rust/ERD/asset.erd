@@ -4,9 +4,9 @@
   "settings": {
     "width": 2000,
     "height": 2000,
-    "scrollTop": 0,
-    "scrollLeft": -316,
-    "zoomLevel": 1,
+    "scrollTop": -396,
+    "scrollLeft": -279,
+    "zoomLevel": 0.82,
     "show": 431,
     "database": 4,
     "databaseName": "",
@@ -38,16 +38,33 @@
       "0lVPLy0hJbppFysQzLwXH",
       "S4YUkJOloERdcaYTpmtep",
       "u4ybAFDSOQJJT3q1vzsMs",
-      "ohxZwzgDEh16wfmqM8zQO"
+      "ohxZwzgDEh16wfmqM8zQO",
+      "gZ4TD48YnWozNIdho7L6f",
+      "Pngz-8b3Tfddii3G3tGPG",
+      "CLUBSPsONxxzAqniBDMIp",
+      "nHrnZlsenWOAET9J1rs-O",
+      "u6eX3_2DAGkG7xtedfBHU",
+      "RhmtWJ453juu_5yf6Yqwa"
     ],
     "relationshipIds": [
-      "WCiWzGN-PCTVClqScOYTP",
-      "XEIXg8e5hgGjhH0FdZzyN",
-      "1C0I2-PEFnzOTha3XrkTe",
       "6yTjsvtivu_SPmjTiejV8",
       "y8ysCpNTozLge9AaFY71n",
       "Ijg49fexv3SZVEgSEt4P1",
-      "mDpaHjQ_dmnYZXbFu4cHp"
+      "mDpaHjQ_dmnYZXbFu4cHp",
+      "0_IL-3UoOn2ycq09KSi8Q",
+      "lDQ8J37J1iQVcvnRO4Drk",
+      "MbHbGXoSXtZaxrSL8bpoD",
+      "pS4nCkyA5rvvm1876rV0j",
+      "UeyJQKAZfq-hiol0HHnuC",
+      "rpUXGupqvQGx2GRKl2bF0",
+      "FB2M3R5qqPYz5f-BftoEx",
+      "mDksk9YfQkyMfRKLHWpE_",
+      "OJu3Rk6gBrdWiUZinpuO5",
+      "IqqlKDKUnqw5G2_KzrCb_",
+      "io9znLra46RzUXNWC4IU8",
+      "q4G9LVcOluOAMBppdzbQj",
+      "QnLLMXAKbLZCC66MNu-dd",
+      "_eKaqDRDP2Ys08gXLalUY"
     ],
     "indexIds": [],
     "memoIds": []
@@ -60,17 +77,14 @@
         "comment": "주식 자산",
         "columnIds": [
           "8SQZziVbGpcbgVg0QyJFV",
-          "Wud09iYBl4h3WR1Km_Sm4",
-          "P2Wo6HO86pYhXbDzuTzmM",
-          "uHVoMWqSJasjOJHrLyALS",
           "f9a_mVaUyioaguxolj56i",
-          "v3XKfoEVtxWmbPilBu6NP",
-          "RPQkFeMX0RPhuFQ6WBERf",
-          "agY8bLwKqfbx_I-qBxUME",
+          "_61Kx-Lf4vZ1ImONXmAF4",
           "okZAukQE_BNBHt9YqNpM7",
           "5QFEW4mLmkaOKCUZ-Wna3",
           "4qmf2yZJdT-5wRFYARPKL",
-          "znBhKXcO108AqUFdtrSQK"
+          "znBhKXcO108AqUFdtrSQK",
+          "XXgRF-cO-9DTDJclL0axV",
+          "y-HIc1Fga45Z6vn9XRFgl"
         ],
         "seqColumnIds": [
           "8SQZziVbGpcbgVg0QyJFV",
@@ -83,21 +97,24 @@
           "v3XKfoEVtxWmbPilBu6NP",
           "RPQkFeMX0RPhuFQ6WBERf",
           "agY8bLwKqfbx_I-qBxUME",
+          "_61Kx-Lf4vZ1ImONXmAF4",
           "okZAukQE_BNBHt9YqNpM7",
           "5QFEW4mLmkaOKCUZ-Wna3",
           "4qmf2yZJdT-5wRFYARPKL",
-          "znBhKXcO108AqUFdtrSQK"
+          "znBhKXcO108AqUFdtrSQK",
+          "XXgRF-cO-9DTDJclL0axV",
+          "y-HIc1Fga45Z6vn9XRFgl"
         ],
         "ui": {
-          "x": 47,
-          "y": 22,
+          "x": 1435.7561,
+          "y": 32.5611,
           "zIndex": 2,
           "widthName": 75,
           "widthComment": 60,
-          "color": ""
+          "color": "#03A9F4"
         },
         "meta": {
-          "updateAt": 1778661764075,
+          "updateAt": 1779251997410,
           "createAt": 1778636913655
         }
       },
@@ -107,11 +124,10 @@
         "comment": "크립토 자산",
         "columnIds": [
           "KGQFW-U2F7RiglaP1ErBU",
-          "RL7wx99Wo9fxw4YZYJjqD",
           "FKFXCyVCUFQAekRxAKEK5",
-          "dCU1EDB9QM-x9egKjV8Tp",
-          "B-1JJBQu683SZGUIOkULB",
-          "OhjMKjvUzWCKAKYuhovnF",
+          "nWXxhLgkWOMCG62oaWG0C",
+          "L7blAxrSp6tWFsieJ9vUp",
+          "6YHG4CqEvgLCLR_7VAWpe",
           "tHMg-Skq7JlAAwWKV7m7b",
           "vkySTSL-UefRQbzBiUJq-",
           "biVCmPzY3jeYQN4xVgIFg",
@@ -125,21 +141,25 @@
           "dCU1EDB9QM-x9egKjV8Tp",
           "B-1JJBQu683SZGUIOkULB",
           "OhjMKjvUzWCKAKYuhovnF",
+          "tqtWVVCCscSCqhJyx006Z",
+          "nWXxhLgkWOMCG62oaWG0C",
+          "L7blAxrSp6tWFsieJ9vUp",
+          "6YHG4CqEvgLCLR_7VAWpe",
           "tHMg-Skq7JlAAwWKV7m7b",
           "vkySTSL-UefRQbzBiUJq-",
           "biVCmPzY3jeYQN4xVgIFg",
           "ZlMgQXpJaiynzz5ijmbwY"
         ],
         "ui": {
-          "x": 1308,
-          "y": 76,
+          "x": 78.4634,
+          "y": 622.2927,
           "zIndex": 7,
           "widthName": 82,
           "widthComment": 65,
-          "color": ""
+          "color": "#03A9F4"
         },
         "meta": {
-          "updateAt": 1778662151079,
+          "updateAt": 1779264694220,
           "createAt": 1778636927792
         }
       },
@@ -150,9 +170,9 @@
         "columnIds": [
           "QUGvsyRHDqMy0mYg4Afr9",
           "wECSBE40Q5FMK5u3ZXFB0",
-          "ld3CfKH-Nsv7T33S8XDvZ",
           "8HGrsyVb3_WJY280eiBLF",
           "RBuRa5YQNuQA30TJ4cQxH",
+          "rBX91hi68wX7NIgeSQQtk",
           "cm6syN2qIwt5ddetQaHZ0",
           "PdPTl61t4lHmCJy5NYBkz",
           "0RyJvn6h5nbn2jfLOvsY-",
@@ -164,30 +184,32 @@
           "ld3CfKH-Nsv7T33S8XDvZ",
           "8HGrsyVb3_WJY280eiBLF",
           "RBuRa5YQNuQA30TJ4cQxH",
+          "rBX91hi68wX7NIgeSQQtk",
           "cm6syN2qIwt5ddetQaHZ0",
           "PdPTl61t4lHmCJy5NYBkz",
           "0RyJvn6h5nbn2jfLOvsY-",
           "TYQ9XiA4P7srmAACSQN80"
         ],
         "ui": {
-          "x": 54,
-          "y": 694,
+          "x": 632.561,
+          "y": 1271.3659,
           "zIndex": 12,
           "widthName": 70,
           "widthComment": 60,
-          "color": ""
+          "color": "#03A9F4"
         },
         "meta": {
-          "updateAt": 1778662104077,
+          "updateAt": 1780358786692,
           "createAt": 1778637013656
         }
       },
       "bbp2krTDjIA--YnYd-Qvr": {
         "id": "bbp2krTDjIA--YnYd-Qvr",
-        "name": "REAL_ESTATE_ASSET_KRW",
-        "comment": "한국 부동산 자산",
+        "name": "REAL_ESTATE_ASSET",
+        "comment": "부동산 자산",
         "columnIds": [
           "8QFS3lf6Fs_PuAUFRfh0N",
+          "BTTU6bif3ppd2KS214_Zl",
           "Ox3eDaLWrhjUpIPfkXRqL",
           "Rto_4p_MxLUGZlO74u_k7",
           "VB-gJZv9l9qPfpuqg9_Wn",
@@ -209,6 +231,7 @@
         ],
         "seqColumnIds": [
           "8QFS3lf6Fs_PuAUFRfh0N",
+          "BTTU6bif3ppd2KS214_Zl",
           "Ox3eDaLWrhjUpIPfkXRqL",
           "Rto_4p_MxLUGZlO74u_k7",
           "VB-gJZv9l9qPfpuqg9_Wn",
@@ -232,15 +255,15 @@
           "LGJe4QNj3hNelPK37pH6D"
         ],
         "ui": {
-          "x": 404,
-          "y": 990,
+          "x": 1131,
+          "y": 1212,
           "zIndex": 17,
-          "widthName": 139,
-          "widthComment": 93,
+          "widthName": 109,
+          "widthComment": 65,
           "color": ""
         },
         "meta": {
-          "updateAt": 1778662106068,
+          "updateAt": 1778812172661,
           "createAt": 1778637024958
         }
       },
@@ -255,51 +278,22 @@
           "iiSu6jBNHfZOc86ufRapq"
         ],
         "ui": {
-          "x": 821,
-          "y": 260,
+          "x": 693.8537,
+          "y": 719.7805,
           "zIndex": 81,
           "widthName": 60,
           "widthComment": 62,
-          "color": ""
+          "color": "#03A9F4"
         },
         "meta": {
-          "updateAt": 1778662153080,
+          "updateAt": 1779260504794,
           "createAt": 1778637225782
-        }
-      },
-      "_-iIjaVUgKSlL-NDK3w_c": {
-        "id": "_-iIjaVUgKSlL-NDK3w_c",
-        "name": "KOSPI_ASSET",
-        "comment": "코스피 자산",
-        "columnIds": [
-          "L_-7USiyZAMzP9sgJlsLK",
-          "WGIVLmnwNBxclNA6mBwvO",
-          "7Uh5PJexv65ARM183lvhB",
-          "xJ2hZ5mUoOctKsGTcaDLx"
-        ],
-        "seqColumnIds": [
-          "L_-7USiyZAMzP9sgJlsLK",
-          "WGIVLmnwNBxclNA6mBwvO",
-          "7Uh5PJexv65ARM183lvhB",
-          "xJ2hZ5mUoOctKsGTcaDLx"
-        ],
-        "ui": {
-          "x": 1055,
-          "y": 301,
-          "zIndex": 96,
-          "widthName": 72,
-          "widthComment": 65,
-          "color": ""
-        },
-        "meta": {
-          "updateAt": 1778637513426,
-          "createAt": 1778637409055
         }
       },
       "S4YUkJOloERdcaYTpmtep": {
         "id": "S4YUkJOloERdcaYTpmtep",
-        "name": "LOAN_ASSET_KRW",
-        "comment": "원화 부채",
+        "name": "LOAN_ASSET",
+        "comment": "부채",
         "columnIds": [
           "55wAXcjFTgZQ_LTzoYEFz",
           "dbhSyMYkWwwfG6uZCpeyL",
@@ -309,6 +303,7 @@
           "xIeo0lLT7ESLZFXvnFgVY",
           "EmD5XDiRuray5iqWYbWhj",
           "3saKuVpetYEqFreciOrja",
+          "zWkInr5w9jDlWe9gnFNM1",
           "zLcW1NwVgzO_Utz_iKa1o",
           "AmeLV6qSjvI4w3nPn-7wn",
           "v5RYdxZeKNVYSpduO6f7U",
@@ -324,21 +319,22 @@
           "xIeo0lLT7ESLZFXvnFgVY",
           "EmD5XDiRuray5iqWYbWhj",
           "3saKuVpetYEqFreciOrja",
+          "zWkInr5w9jDlWe9gnFNM1",
           "zLcW1NwVgzO_Utz_iKa1o",
           "AmeLV6qSjvI4w3nPn-7wn",
           "v5RYdxZeKNVYSpduO6f7U",
           "YUwdzMaPbcKh2Q4pKiihc"
         ],
         "ui": {
-          "x": 931,
-          "y": 621,
+          "x": 1405.9512,
+          "y": 393.2927,
           "zIndex": 114,
-          "widthName": 101,
+          "widthName": 71,
           "widthComment": 60,
           "color": ""
         },
         "meta": {
-          "updateAt": 1778662110069,
+          "updateAt": 1779245237836,
           "createAt": 1778637450163
         }
       },
@@ -349,7 +345,8 @@
         "columnIds": [
           "JCliVaSnj2AlOEgDar7a0",
           "kMtr0tq3yAfH4qGRBvQ8m",
-          "1hzH6khyiOWml0brSAT8K",
+          "i3v6kZHBb1vhbS5b9FOK0",
+          "pF2IdKNDJ0qSVQRL3rg6q",
           "_eb_gh8qm1pp_Pt8tHpEV",
           "xs6SQOIC7Ae3VqENyBN1o",
           "MlCwNCeRT2mga87kc4JoE",
@@ -359,21 +356,23 @@
           "JCliVaSnj2AlOEgDar7a0",
           "kMtr0tq3yAfH4qGRBvQ8m",
           "1hzH6khyiOWml0brSAT8K",
+          "i3v6kZHBb1vhbS5b9FOK0",
+          "pF2IdKNDJ0qSVQRL3rg6q",
           "_eb_gh8qm1pp_Pt8tHpEV",
           "xs6SQOIC7Ae3VqENyBN1o",
           "MlCwNCeRT2mga87kc4JoE",
           "FfnDZMZE0ZXtIJgIro3uu"
         ],
         "ui": {
-          "x": -24,
-          "y": 444,
+          "x": 197,
+          "y": 11.0245,
           "zIndex": 195,
           "widthName": 68,
           "widthComment": 60,
-          "color": ""
+          "color": "#03A9F4"
         },
         "meta": {
-          "updateAt": 1778662147064,
+          "updateAt": 1780390000640,
           "createAt": 1778638249153
         }
       },
@@ -398,16 +397,272 @@
           "z6bqBFyXho5DsNmCwjUAc"
         ],
         "ui": {
-          "x": 1265,
-          "y": 1060,
+          "x": 1519.1463,
+          "y": 857.7317,
           "zIndex": 917,
           "widthName": 101,
           "widthComment": 60,
           "color": ""
         },
         "meta": {
-          "updateAt": 1778662110069,
+          "updateAt": 1779245234409,
           "createAt": 1778661970627
+        }
+      },
+      "gZ4TD48YnWozNIdho7L6f": {
+        "id": "gZ4TD48YnWozNIdho7L6f",
+        "name": "CURRENCY_CODE",
+        "comment": "통화 테이블",
+        "columnIds": [
+          "MiF61GmapXKpkVd2typAv",
+          "jBrYdiqstZt9EW1Q3co3l",
+          "qmETQR5pmWnMR9-KuATH5",
+          "phAzs39YQrVmBY6iwV_mo",
+          "ZePR_ruMrmqwbxfcmVXsV",
+          "4TP_0OdvFJ8COBdWSlQ3W",
+          "UOdUjRM8RE4lVylVFx-Ju",
+          "IKZ7WbdsMmyJlgAG77E-w"
+        ],
+        "seqColumnIds": [
+          "MiF61GmapXKpkVd2typAv",
+          "jBrYdiqstZt9EW1Q3co3l",
+          "qmETQR5pmWnMR9-KuATH5",
+          "phAzs39YQrVmBY6iwV_mo",
+          "ZePR_ruMrmqwbxfcmVXsV",
+          "4TP_0OdvFJ8COBdWSlQ3W",
+          "Qefg6u0bO35AFiefPmO-P",
+          "58hsCiBw-vqVQV-_ZPRdZ",
+          "UOdUjRM8RE4lVylVFx-Ju",
+          "IKZ7WbdsMmyJlgAG77E-w"
+        ],
+        "ui": {
+          "x": 611.4062,
+          "y": 358,
+          "zIndex": 922,
+          "widthName": 97,
+          "widthComment": 65,
+          "color": "#03A9F4"
+        },
+        "meta": {
+          "updateAt": 1778834749802,
+          "createAt": 1778803720273
+        }
+      },
+      "Pngz-8b3Tfddii3G3tGPG": {
+        "id": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "DEPOSIT_ASSET",
+        "comment": "예금 자산",
+        "columnIds": [
+          "KL1ApqAKjqGxCmOm3-teK",
+          "6PbG1_fdLHiqctwUZXAfu",
+          "ZIEZJt7zkCdH8JOA9vZJZ",
+          "LYJG4ISJBi3GDS7XAMk2l",
+          "OzM2pj1UheAg9clcjCF-M",
+          "UEr0qUX65VDPJp9_FLb_h",
+          "BjcerZ_NGulV71Qk0-4hh",
+          "CMe5WFNqkDjBd4QvF84Ub",
+          "2YQ-5M0q8IqML4V49WHha",
+          "SnfCiNbuK-zQ8U3irNfA8",
+          "1s8_ahxhAZSgO6k-SZRAP",
+          "ZoQ2jOH-qBOvmWSYOZTwP",
+          "mz0dMRmNN6RhGTp0_FiYV",
+          "KsI2M0udEuTF1XRcAlhP8"
+        ],
+        "seqColumnIds": [
+          "KL1ApqAKjqGxCmOm3-teK",
+          "l9Lacy4WOEBY1UYCYI38l",
+          "6PbG1_fdLHiqctwUZXAfu",
+          "ZIEZJt7zkCdH8JOA9vZJZ",
+          "LYJG4ISJBi3GDS7XAMk2l",
+          "OzM2pj1UheAg9clcjCF-M",
+          "UEr0qUX65VDPJp9_FLb_h",
+          "BjcerZ_NGulV71Qk0-4hh",
+          "CMe5WFNqkDjBd4QvF84Ub",
+          "3V948UFHMX2_-Eo6ljtRp",
+          "kAmmLKun1llLDGfKh8d9v",
+          "2YQ-5M0q8IqML4V49WHha",
+          "SnfCiNbuK-zQ8U3irNfA8",
+          "1s8_ahxhAZSgO6k-SZRAP",
+          "ZoQ2jOH-qBOvmWSYOZTwP",
+          "mz0dMRmNN6RhGTp0_FiYV",
+          "KsI2M0udEuTF1XRcAlhP8"
+        ],
+        "ui": {
+          "x": 88.9024,
+          "y": 989.8782,
+          "zIndex": 1147,
+          "widthName": 86,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1780560976355,
+          "createAt": 1778808772083
+        }
+      },
+      "CLUBSPsONxxzAqniBDMIp": {
+        "id": "CLUBSPsONxxzAqniBDMIp",
+        "name": "SAVING_ASSET",
+        "comment": "적금 자산",
+        "columnIds": [
+          "C25fDBHk7cPH0QG3ov_Ri",
+          "sCVtapAMz848gqdXwEnEw",
+          "agJAiHkQPdNvpYXbpxshq",
+          "_L2z_rt0YghO1CW4OHe3j",
+          "dKLdP9JRnFaYp8QOUCYuO",
+          "RwfB-Jf95KZIKWMNE694b",
+          "EhFwAY29RNN6XCZhyxm5B",
+          "SDxuN4mx2ZzkLl1_QXxiV",
+          "TTzs-QjtRC5cjAzc8hdqO",
+          "i7mHCtTGi4aqE5DeEeuq3",
+          "YJ70yFw4TLZrk-Z0JSZM_",
+          "MHBH4_7hZPAagTfU_Nb2e",
+          "0HKrBBRLpj-Pg0MPLCx0Q",
+          "Hknux0fDOCsgVKCOqBOly",
+          "Yxq6NlB7O10jIztdVlw_H"
+        ],
+        "seqColumnIds": [
+          "C25fDBHk7cPH0QG3ov_Ri",
+          "sCVtapAMz848gqdXwEnEw",
+          "agJAiHkQPdNvpYXbpxshq",
+          "_L2z_rt0YghO1CW4OHe3j",
+          "dKLdP9JRnFaYp8QOUCYuO",
+          "RwfB-Jf95KZIKWMNE694b",
+          "EhFwAY29RNN6XCZhyxm5B",
+          "SDxuN4mx2ZzkLl1_QXxiV",
+          "Rv-_S7lgHdj2knTgQ6Veq",
+          "TTzs-QjtRC5cjAzc8hdqO",
+          "i7mHCtTGi4aqE5DeEeuq3",
+          "YJ70yFw4TLZrk-Z0JSZM_",
+          "MHBH4_7hZPAagTfU_Nb2e",
+          "0HKrBBRLpj-Pg0MPLCx0Q",
+          "Hknux0fDOCsgVKCOqBOly",
+          "Yxq6NlB7O10jIztdVlw_H"
+        ],
+        "ui": {
+          "x": 87.6585,
+          "y": 1439.9024,
+          "zIndex": 1300,
+          "widthName": 81,
+          "widthComment": 60,
+          "color": "#03A9F4"
+        },
+        "meta": {
+          "updateAt": 1780383765026,
+          "createAt": 1778809783354
+        }
+      },
+      "nHrnZlsenWOAET9J1rs-O": {
+        "id": "nHrnZlsenWOAET9J1rs-O",
+        "name": "STOCK",
+        "comment": "주식",
+        "columnIds": [
+          "oE9vImeA3yszN7EGcxEqY",
+          "h2LKntekC6TVV6z9jWG4i",
+          "8H7ZOzI4fmF-yn22h8DeN",
+          "aCG5lG7zW8ZUE9yFWaCSe",
+          "j1laqSxjBOHnyBNsgXPAg",
+          "-yUrPegLeodSvNkAcpX4J",
+          "U8J7etpgwDNx-M7X-t7qz",
+          "5Cx2MYEiaArlwsClQso4g",
+          "HotVC4NMcgoUT7XXycrZH"
+        ],
+        "seqColumnIds": [
+          "oE9vImeA3yszN7EGcxEqY",
+          "h2LKntekC6TVV6z9jWG4i",
+          "RKg_3-Qzb0vk1I8fdQ1T8",
+          "8H7ZOzI4fmF-yn22h8DeN",
+          "aCG5lG7zW8ZUE9yFWaCSe",
+          "j1laqSxjBOHnyBNsgXPAg",
+          "-yUrPegLeodSvNkAcpX4J",
+          "U8J7etpgwDNx-M7X-t7qz",
+          "5Cx2MYEiaArlwsClQso4g",
+          "HotVC4NMcgoUT7XXycrZH"
+        ],
+        "ui": {
+          "x": 838.8125,
+          "y": 8.7805,
+          "zIndex": 1417,
+          "widthName": 60,
+          "widthComment": 60,
+          "color": "#03A9F4"
+        },
+        "meta": {
+          "updateAt": 1779245651828,
+          "createAt": 1778811481099
+        }
+      },
+      "u6eX3_2DAGkG7xtedfBHU": {
+        "id": "u6eX3_2DAGkG7xtedfBHU",
+        "name": "CRYPTO",
+        "comment": "크립토",
+        "columnIds": [
+          "OVzs31Wj8REYBv-3R77S_",
+          "JhdRxMnU2GuIyMW1ldlbn",
+          "lnd3vAxOGeHX7yLG9vDR3",
+          "gr_L9fI0omY7OeTLCvJ7Q",
+          "ExvzIe0zSfLM6mNORqK_7",
+          "5q4s_M-QkOE7pcynT6MTH",
+          "Vgj9ohA3m5XU7l4GToMzO",
+          "Yr7baVLHTMq9nU1JbRzm2",
+          "HZRBcUD1pXwilSOXEDX16"
+        ],
+        "seqColumnIds": [
+          "OVzs31Wj8REYBv-3R77S_",
+          "JhdRxMnU2GuIyMW1ldlbn",
+          "lnd3vAxOGeHX7yLG9vDR3",
+          "gr_L9fI0omY7OeTLCvJ7Q",
+          "ExvzIe0zSfLM6mNORqK_7",
+          "5q4s_M-QkOE7pcynT6MTH",
+          "Vgj9ohA3m5XU7l4GToMzO",
+          "Yr7baVLHTMq9nU1JbRzm2",
+          "HZRBcUD1pXwilSOXEDX16"
+        ],
+        "ui": {
+          "x": 46,
+          "y": 267,
+          "zIndex": 1486,
+          "widthName": 60,
+          "widthComment": 60,
+          "color": "#03A9F4"
+        },
+        "meta": {
+          "updateAt": 1778834746229,
+          "createAt": 1778811987577
+        }
+      },
+      "RhmtWJ453juu_5yf6Yqwa": {
+        "id": "RhmtWJ453juu_5yf6Yqwa",
+        "name": "KIS_API_TOKEN",
+        "comment": "한국 투자증권 API 관련 토큰정보 테이블",
+        "columnIds": [
+          "wFXcr3HlTF0u80fUkAwDZ",
+          "1KN7w6zkHsbv1DAhrQa0I",
+          "JBaybhhA3uOHBJa5tc86b",
+          "lD6NvbbvS1Pfy7Tra8BH_",
+          "CB_s_7C1UTb36mMDILk1V",
+          "8lBQr_RLFAUPMSXOxqLJz"
+        ],
+        "seqColumnIds": [
+          "wFXcr3HlTF0u80fUkAwDZ",
+          "1KN7w6zkHsbv1DAhrQa0I",
+          "YolcMTvum-tYQMP97luOm",
+          "JBaybhhA3uOHBJa5tc86b",
+          "lD6NvbbvS1Pfy7Tra8BH_",
+          "CB_s_7C1UTb36mMDILk1V",
+          "8lBQr_RLFAUPMSXOxqLJz"
+        ],
+        "ui": {
+          "x": 636.5854,
+          "y": 1574.3902,
+          "zIndex": 1489,
+          "widthName": 83,
+          "widthComment": 216,
+          "color": "#03A9F4"
+        },
+        "meta": {
+          "updateAt": 1780383770376,
+          "createAt": 1780359097437
         }
       }
     },
@@ -752,86 +1007,6 @@
           "createAt": 1778637239340
         }
       },
-      "L_-7USiyZAMzP9sgJlsLK": {
-        "id": "L_-7USiyZAMzP9sgJlsLK",
-        "tableId": "_-iIjaVUgKSlL-NDK3w_c",
-        "name": "created_at",
-        "comment": "생성시각",
-        "dataType": "DATETIME",
-        "default": "",
-        "options": 8,
-        "ui": {
-          "keys": 0,
-          "widthName": 60,
-          "widthComment": 60,
-          "widthDataType": 60,
-          "widthDefault": 60
-        },
-        "meta": {
-          "updateAt": 1778637513246,
-          "createAt": 1778637513246
-        }
-      },
-      "WGIVLmnwNBxclNA6mBwvO": {
-        "id": "WGIVLmnwNBxclNA6mBwvO",
-        "tableId": "_-iIjaVUgKSlL-NDK3w_c",
-        "name": "updated_at",
-        "comment": "수정시각",
-        "dataType": "DATETIME",
-        "default": "",
-        "options": 0,
-        "ui": {
-          "keys": 0,
-          "widthName": 62,
-          "widthComment": 60,
-          "widthDataType": 60,
-          "widthDefault": 60
-        },
-        "meta": {
-          "updateAt": 1778637513247,
-          "createAt": 1778637513246
-        }
-      },
-      "7Uh5PJexv65ARM183lvhB": {
-        "id": "7Uh5PJexv65ARM183lvhB",
-        "tableId": "_-iIjaVUgKSlL-NDK3w_c",
-        "name": "created_by",
-        "comment": "생성자",
-        "dataType": "VARCHAR(100)",
-        "default": "",
-        "options": 8,
-        "ui": {
-          "keys": 0,
-          "widthName": 60,
-          "widthComment": 60,
-          "widthDataType": 81,
-          "widthDefault": 60
-        },
-        "meta": {
-          "updateAt": 1778637513247,
-          "createAt": 1778637513247
-        }
-      },
-      "xJ2hZ5mUoOctKsGTcaDLx": {
-        "id": "xJ2hZ5mUoOctKsGTcaDLx",
-        "tableId": "_-iIjaVUgKSlL-NDK3w_c",
-        "name": "updated_by",
-        "comment": "수정자",
-        "dataType": "VARCHAR(100)",
-        "default": "",
-        "options": 0,
-        "ui": {
-          "keys": 0,
-          "widthName": 64,
-          "widthComment": 60,
-          "widthDataType": 81,
-          "widthDefault": 60
-        },
-        "meta": {
-          "updateAt": 1778637513247,
-          "createAt": 1778637513247
-        }
-      },
       "zLcW1NwVgzO_Utz_iKa1o": {
         "id": "zLcW1NwVgzO_Utz_iKa1o",
         "tableId": "S4YUkJOloERdcaYTpmtep",
@@ -975,40 +1150,40 @@
       "8HGrsyVb3_WJY280eiBLF": {
         "id": "8HGrsyVb3_WJY280eiBLF",
         "tableId": "irnPxKgyEbKzpED_ivHnd",
-        "name": "cash_dollor",
-        "comment": "현금자산(달러)",
+        "name": "cash",
+        "comment": "현금자산",
         "dataType": "DECIMAL(18,2)",
         "default": "",
         "options": 0,
         "ui": {
           "keys": 0,
-          "widthName": 62,
-          "widthComment": 81,
+          "widthName": 60,
+          "widthComment": 60,
           "widthDataType": 81,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778660190837,
+          "updateAt": 1778804005003,
           "createAt": 1778637753503
         }
       },
       "8SQZziVbGpcbgVg0QyJFV": {
         "id": "8SQZziVbGpcbgVg0QyJFV",
         "tableId": "1Ef2OtYW62KRQNuihJjma",
-        "name": "stock_seq",
+        "name": "stock_asset_seq",
         "comment": "주식 자산 식별자",
         "dataType": "BIGINT",
         "default": "",
         "options": 10,
         "ui": {
           "keys": 1,
-          "widthName": 60,
+          "widthName": 85,
           "widthComment": 93,
           "widthDataType": 60,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778638221644,
+          "updateAt": 1778811725638,
           "createAt": 1778637812972
         }
       },
@@ -1028,7 +1203,7 @@
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778638484387,
+          "updateAt": 1778811026185,
           "createAt": 1778638025893
         }
       },
@@ -1196,19 +1371,19 @@
         "id": "kMtr0tq3yAfH4qGRBvQ8m",
         "tableId": "u4ybAFDSOQJJT3q1vzsMs",
         "name": "market",
-        "comment": "마켓 이름 - 나스닥,코스피,..",
+        "comment": "마켓 이름",
         "dataType": "VARCHAR(100)",
         "default": "",
         "options": 8,
         "ui": {
           "keys": 0,
           "widthName": 60,
-          "widthComment": 147,
+          "widthComment": 60,
           "widthDataType": 81,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778638416704,
+          "updateAt": 1778811034172,
           "createAt": 1778638393736
         }
       },
@@ -1241,7 +1416,7 @@
         "default": "",
         "options": 8,
         "ui": {
-          "keys": 2,
+          "keys": 0,
           "widthName": 62,
           "widthComment": 65,
           "widthDataType": 60,
@@ -1268,47 +1443,47 @@
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778660199313,
+          "updateAt": 1778803930973,
           "createAt": 1778638497459
         }
       },
       "RPQkFeMX0RPhuFQ6WBERf": {
         "id": "RPQkFeMX0RPhuFQ6WBERf",
         "tableId": "1Ef2OtYW62KRQNuihJjma",
-        "name": "stock_price_dollor",
-        "comment": "주당 가치(달러)",
+        "name": "stock_price",
+        "comment": "주당 가치",
         "dataType": "DECIMAL(18,2)",
         "default": "",
         "options": 0,
         "ui": {
           "keys": 0,
-          "widthName": 97,
-          "widthComment": 85,
+          "widthName": 61,
+          "widthComment": 60,
           "widthDataType": 81,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778660066446,
+          "updateAt": 1778803944019,
           "createAt": 1778638528104
         }
       },
       "KGQFW-U2F7RiglaP1ErBU": {
         "id": "KGQFW-U2F7RiglaP1ErBU",
         "tableId": "XatyKl8ZuIhuiebUKzR2x",
-        "name": "crypto_seq",
+        "name": "crypto_asset_seq",
         "comment": "크립토 자산 식별자",
         "dataType": "BIGINT",
         "default": "",
         "options": 10,
         "ui": {
           "keys": 1,
-          "widthName": 60,
+          "widthName": 91,
           "widthComment": 105,
           "widthDataType": 60,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778639085229,
+          "updateAt": 1778812050350,
           "createAt": 1778638697061
         }
       },
@@ -1376,19 +1551,19 @@
         "id": "dCU1EDB9QM-x9egKjV8Tp",
         "tableId": "XatyKl8ZuIhuiebUKzR2x",
         "name": "crypto_price",
-        "comment": "크립토 개당 가치(달러)",
+        "comment": "크립토 개당 가치",
         "dataType": "DECIMAL(18,2)",
         "default": "",
         "options": 8,
         "ui": {
           "keys": 0,
           "widthName": 67,
-          "widthComment": 124,
+          "widthComment": 93,
           "widthDataType": 81,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778660463072,
+          "updateAt": 1778804374530,
           "createAt": 1778638862255
         }
       },
@@ -1441,7 +1616,7 @@
         "default": "",
         "options": 8,
         "ui": {
-          "keys": 2,
+          "keys": 0,
           "widthName": 60,
           "widthComment": 62,
           "widthDataType": 60,
@@ -1461,7 +1636,7 @@
         "default": "",
         "options": 8,
         "ui": {
-          "keys": 2,
+          "keys": 0,
           "widthName": 60,
           "widthComment": 62,
           "widthDataType": 60,
@@ -1617,18 +1792,18 @@
         "tableId": "bbp2krTDjIA--YnYd-Qvr",
         "name": "purchase_price",
         "comment": "구입가격",
-        "dataType": "BIGINT",
+        "dataType": "DECIMAL(18,2)",
         "default": "",
         "options": 0,
         "ui": {
           "keys": 0,
           "widthName": 81,
           "widthComment": 60,
-          "widthDataType": 60,
+          "widthDataType": 81,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778660165632,
+          "updateAt": 1778804158920,
           "createAt": 1778659510240
         }
       },
@@ -1677,18 +1852,18 @@
         "tableId": "bbp2krTDjIA--YnYd-Qvr",
         "name": "current_market_price",
         "comment": "현재 부동산 가치",
-        "dataType": "BIGINT",
+        "dataType": "DECIMAL(18,2)",
         "default": "",
         "options": 0,
         "ui": {
           "keys": 0,
           "widthName": 113,
           "widthComment": 93,
-          "widthDataType": 60,
+          "widthDataType": 81,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778660167717,
+          "updateAt": 1778804161926,
           "createAt": 1778659729478
         }
       },
@@ -1777,18 +1952,18 @@
         "tableId": "bbp2krTDjIA--YnYd-Qvr",
         "name": "deposit_amount_price",
         "comment": "보증금",
-        "dataType": "BIGINT",
+        "dataType": "DECIMAL(18,2)",
         "default": "",
         "options": 0,
         "ui": {
           "keys": 0,
           "widthName": 119,
           "widthComment": 60,
-          "widthDataType": 60,
+          "widthDataType": 81,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778660242845,
+          "updateAt": 1778804168496,
           "createAt": 1778659967324
         }
       },
@@ -1837,18 +2012,18 @@
         "tableId": "S4YUkJOloERdcaYTpmtep",
         "name": "loan_amount",
         "comment": "부채 가격",
-        "dataType": "BIGINT",
+        "dataType": "DECIMAL(18,2)",
         "default": "",
         "options": 8,
         "ui": {
           "keys": 0,
           "widthName": 71,
           "widthComment": 60,
-          "widthDataType": 60,
+          "widthDataType": 81,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778660537530,
+          "updateAt": 1778809006464,
           "createAt": 1778660370482
         }
       },
@@ -1856,19 +2031,19 @@
         "id": "3ezrK8jjlLCcX38HQeUxu",
         "tableId": "S4YUkJOloERdcaYTpmtep",
         "name": "interest_rate",
-        "comment": "이자율",
+        "comment": "이자율(연기준)",
         "dataType": "DECIMAL(5, 2)",
         "default": "",
         "options": 8,
         "ui": {
           "keys": 0,
           "widthName": 67,
-          "widthComment": 60,
+          "widthComment": 81,
           "widthDataType": 77,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778660575132,
+          "updateAt": 1778809404044,
           "createAt": 1778660560044
         }
       },
@@ -2096,19 +2271,19 @@
         "id": "0sjRFVTYT5PJHMp11q78o",
         "tableId": "ohxZwzgDEh16wfmqM8zQO",
         "name": "loan_type",
-        "comment": "부채 타입 - 전세자금, 집담보, ..",
+        "comment": "부채 타입",
         "dataType": "VARCHAR(30)",
         "default": "",
         "options": 10,
         "ui": {
           "keys": 1,
           "widthName": 60,
-          "widthComment": 166,
+          "widthComment": 60,
           "widthDataType": 75,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778662002724,
+          "updateAt": 1778804326710,
           "createAt": 1778661997193
         }
       },
@@ -2116,19 +2291,19 @@
         "id": "dbhSyMYkWwwfG6uZCpeyL",
         "tableId": "S4YUkJOloERdcaYTpmtep",
         "name": "loan_type",
-        "comment": "부채 타입 - 전세자금, 집담보, ..",
+        "comment": "부채 타입",
         "dataType": "VARCHAR(30)",
         "default": "",
         "options": 8,
         "ui": {
           "keys": 2,
           "widthName": 60,
-          "widthComment": 166,
+          "widthComment": 60,
           "widthDataType": 75,
           "widthDefault": 60
         },
         "meta": {
-          "updateAt": 1778662012071,
+          "updateAt": 1778804338018,
           "createAt": 1778662012071
         }
       },
@@ -2151,93 +2326,1629 @@
           "updateAt": 1778662046929,
           "createAt": 1778662022131
         }
+      },
+      "MiF61GmapXKpkVd2typAv": {
+        "id": "MiF61GmapXKpkVd2typAv",
+        "tableId": "gZ4TD48YnWozNIdho7L6f",
+        "name": "currency_code",
+        "comment": "통화 코드",
+        "dataType": "VARCHAR(3)",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 1,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778803878038,
+          "createAt": 1778803766841
+        }
+      },
+      "jBrYdiqstZt9EW1Q3co3l": {
+        "id": "jBrYdiqstZt9EW1Q3co3l",
+        "tableId": "gZ4TD48YnWozNIdho7L6f",
+        "name": "currency_name",
+        "comment": "통화 이름",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 82,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778803807579,
+          "createAt": 1778803792556
+        }
+      },
+      "qmETQR5pmWnMR9-KuATH5": {
+        "id": "qmETQR5pmWnMR9-KuATH5",
+        "tableId": "gZ4TD48YnWozNIdho7L6f",
+        "name": "country_code",
+        "comment": "사용국가",
+        "dataType": "VARCHAR(2)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 73,
+          "widthComment": 60,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778803838568,
+          "createAt": 1778803816983
+        }
+      },
+      "phAzs39YQrVmBY6iwV_mo": {
+        "id": "phAzs39YQrVmBY6iwV_mo",
+        "tableId": "gZ4TD48YnWozNIdho7L6f",
+        "name": "is_active",
+        "comment": "사용여부",
+        "dataType": "BIT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778803869689,
+          "createAt": 1778803844095
+        }
+      },
+      "ZePR_ruMrmqwbxfcmVXsV": {
+        "id": "ZePR_ruMrmqwbxfcmVXsV",
+        "tableId": "gZ4TD48YnWozNIdho7L6f",
+        "name": "created_at",
+        "comment": "생성시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778803874905,
+          "createAt": 1778803874905
+        }
+      },
+      "Qefg6u0bO35AFiefPmO-P": {
+        "id": "Qefg6u0bO35AFiefPmO-P",
+        "tableId": "gZ4TD48YnWozNIdho7L6f",
+        "name": "updated_at",
+        "comment": "수정시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 62,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778803874905,
+          "createAt": 1778803874905
+        }
+      },
+      "58hsCiBw-vqVQV-_ZPRdZ": {
+        "id": "58hsCiBw-vqVQV-_ZPRdZ",
+        "tableId": "gZ4TD48YnWozNIdho7L6f",
+        "name": "created_by",
+        "comment": "생성자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778803874905,
+          "createAt": 1778803874905
+        }
+      },
+      "IKZ7WbdsMmyJlgAG77E-w": {
+        "id": "IKZ7WbdsMmyJlgAG77E-w",
+        "tableId": "gZ4TD48YnWozNIdho7L6f",
+        "name": "updated_by",
+        "comment": "수정자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778803874905,
+          "createAt": 1778803874905
+        }
+      },
+      "pF2IdKNDJ0qSVQRL3rg6q": {
+        "id": "pF2IdKNDJ0qSVQRL3rg6q",
+        "tableId": "u4ybAFDSOQJJT3q1vzsMs",
+        "name": "currency_code",
+        "comment": "통화 코드",
+        "dataType": "VARCHAR(3)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778803909841,
+          "createAt": 1778803909841
+        }
+      },
+      "rBX91hi68wX7NIgeSQQtk": {
+        "id": "rBX91hi68wX7NIgeSQQtk",
+        "tableId": "irnPxKgyEbKzpED_ivHnd",
+        "name": "currency_code",
+        "comment": "통화 코드",
+        "dataType": "VARCHAR(3)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778804011732,
+          "createAt": 1778804011732
+        }
+      },
+      "BTTU6bif3ppd2KS214_Zl": {
+        "id": "BTTU6bif3ppd2KS214_Zl",
+        "tableId": "bbp2krTDjIA--YnYd-Qvr",
+        "name": "currency_code",
+        "comment": "통화 코드",
+        "dataType": "VARCHAR(3)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778804188180,
+          "createAt": 1778804188180
+        }
+      },
+      "zWkInr5w9jDlWe9gnFNM1": {
+        "id": "zWkInr5w9jDlWe9gnFNM1",
+        "tableId": "S4YUkJOloERdcaYTpmtep",
+        "name": "currency_code",
+        "comment": "통화 코드",
+        "dataType": "VARCHAR(3)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778804351766,
+          "createAt": 1778804351766
+        }
+      },
+      "tqtWVVCCscSCqhJyx006Z": {
+        "id": "tqtWVVCCscSCqhJyx006Z",
+        "tableId": "XatyKl8ZuIhuiebUKzR2x",
+        "name": "currency_code",
+        "comment": "통화 코드",
+        "dataType": "VARCHAR(3)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778804400014,
+          "createAt": 1778804400014
+        }
+      },
+      "KL1ApqAKjqGxCmOm3-teK": {
+        "id": "KL1ApqAKjqGxCmOm3-teK",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "deposit_seq",
+        "comment": "예금 자산 식별자",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 1,
+          "widthName": 65,
+          "widthComment": 93,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809625990,
+          "createAt": 1778808804767
+        }
+      },
+      "6PbG1_fdLHiqctwUZXAfu": {
+        "id": "6PbG1_fdLHiqctwUZXAfu",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "deposit_name",
+        "comment": "예금 상품 이름",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 76,
+          "widthComment": 81,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809629630,
+          "createAt": 1778808831950
+        }
+      },
+      "BjcerZ_NGulV71Qk0-4hh": {
+        "id": "BjcerZ_NGulV71Qk0-4hh",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "user_seq",
+        "comment": "유저식별자",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 62,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778808863632,
+          "createAt": 1778808863632
+        }
+      },
+      "CMe5WFNqkDjBd4QvF84Ub": {
+        "id": "CMe5WFNqkDjBd4QvF84Ub",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "currency_code",
+        "comment": "통화 코드",
+        "dataType": "VARCHAR(3)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778808870375,
+          "createAt": 1778808870375
+        }
+      },
+      "LYJG4ISJBi3GDS7XAMk2l": {
+        "id": "LYJG4ISJBi3GDS7XAMk2l",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "interest_rate",
+        "comment": "이자율(연 기준)",
+        "dataType": "DECIMAL(5, 2)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 67,
+          "widthComment": 85,
+          "widthDataType": 77,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809392484,
+          "createAt": 1778808965915
+        }
+      },
+      "ZIEZJt7zkCdH8JOA9vZJZ": {
+        "id": "ZIEZJt7zkCdH8JOA9vZJZ",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "deposit_amount",
+        "comment": "예금 금액(화폐단위)",
+        "dataType": "DECIMAL(18,2)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 88,
+          "widthComment": 109,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809633303,
+          "createAt": 1778809027553
+        }
+      },
+      "OzM2pj1UheAg9clcjCF-M": {
+        "id": "OzM2pj1UheAg9clcjCF-M",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "drposit_start_date",
+        "comment": "시작일",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 96,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809523726,
+          "createAt": 1778809087279
+        }
+      },
+      "UEr0qUX65VDPJp9_FLb_h": {
+        "id": "UEr0qUX65VDPJp9_FLb_h",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "drposit_end_date",
+        "comment": "종료일",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 93,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809527638,
+          "createAt": 1778809087279
+        }
+      },
+      "l9Lacy4WOEBY1UYCYI38l": {
+        "id": "l9Lacy4WOEBY1UYCYI38l",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "deposit_type",
+        "comment": "예/적금 타입(DEP,SAV)",
+        "dataType": "VARCHAR(3)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 70,
+          "widthComment": 122,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809465712,
+          "createAt": 1778809112063
+        }
+      },
+      "3V948UFHMX2_-Eo6ljtRp": {
+        "id": "3V948UFHMX2_-Eo6ljtRp",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "drposit",
+        "comment": "",
+        "dataType": "",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809535908,
+          "createAt": 1778809535908
+        }
+      },
+      "1s8_ahxhAZSgO6k-SZRAP": {
+        "id": "1s8_ahxhAZSgO6k-SZRAP",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "created_at",
+        "comment": "생성시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809545837,
+          "createAt": 1778809545837
+        }
+      },
+      "ZoQ2jOH-qBOvmWSYOZTwP": {
+        "id": "ZoQ2jOH-qBOvmWSYOZTwP",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "updated_at",
+        "comment": "수정시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 62,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809545837,
+          "createAt": 1778809545837
+        }
+      },
+      "mz0dMRmNN6RhGTp0_FiYV": {
+        "id": "mz0dMRmNN6RhGTp0_FiYV",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "created_by",
+        "comment": "생성자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809545837,
+          "createAt": 1778809545837
+        }
+      },
+      "KsI2M0udEuTF1XRcAlhP8": {
+        "id": "KsI2M0udEuTF1XRcAlhP8",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "updated_by",
+        "comment": "수정자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809545837,
+          "createAt": 1778809545837
+        }
+      },
+      "kAmmLKun1llLDGfKh8d9v": {
+        "id": "kAmmLKun1llLDGfKh8d9v",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "is_long_term",
+        "comment": "장기예금 유무",
+        "dataType": "BIT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 69,
+          "widthComment": 77,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809694510,
+          "createAt": 1778809673660
+        }
+      },
+      "C25fDBHk7cPH0QG3ov_Ri": {
+        "id": "C25fDBHk7cPH0QG3ov_Ri",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "saving_seq",
+        "comment": "적금 자산 식별자",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 93,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809815329,
+          "createAt": 1778809798805
+        }
+      },
+      "sCVtapAMz848gqdXwEnEw": {
+        "id": "sCVtapAMz848gqdXwEnEw",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "saving_name",
+        "comment": "적금 상품 이름",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 70,
+          "widthComment": 81,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778809836549,
+          "createAt": 1778809818591
+        }
+      },
+      "_L2z_rt0YghO1CW4OHe3j": {
+        "id": "_L2z_rt0YghO1CW4OHe3j",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "accum_saving_amount",
+        "comment": "누적 적금 금액",
+        "dataType": "DECIMAL(18,2)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 121,
+          "widthComment": 81,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810337874,
+          "createAt": 1778809846123
+        }
+      },
+      "2YQ-5M0q8IqML4V49WHha": {
+        "id": "2YQ-5M0q8IqML4V49WHha",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "is_terminated",
+        "comment": "예금 해지 여부",
+        "dataType": "BIT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 73,
+          "widthComment": 81,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810044046,
+          "createAt": 1778809990526
+        }
+      },
+      "SnfCiNbuK-zQ8U3irNfA8": {
+        "id": "SnfCiNbuK-zQ8U3irNfA8",
+        "tableId": "Pngz-8b3Tfddii3G3tGPG",
+        "name": "term_month",
+        "comment": "상품 개월수",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 67,
+          "widthComment": 65,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810245289,
+          "createAt": 1778810216592
+        }
+      },
+      "RwfB-Jf95KZIKWMNE694b": {
+        "id": "RwfB-Jf95KZIKWMNE694b",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "term_month",
+        "comment": "상품 개월수",
+        "dataType": "INT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 67,
+          "widthComment": 65,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810252608,
+          "createAt": 1778810252608
+        }
+      },
+      "dKLdP9JRnFaYp8QOUCYuO": {
+        "id": "dKLdP9JRnFaYp8QOUCYuO",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "interest_rate",
+        "comment": "이자율(연 기준)",
+        "dataType": "DECIMAL(5, 2)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 67,
+          "widthComment": 85,
+          "widthDataType": 77,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810259433,
+          "createAt": 1778810259433
+        }
+      },
+      "EhFwAY29RNN6XCZhyxm5B": {
+        "id": "EhFwAY29RNN6XCZhyxm5B",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "saving_start_date",
+        "comment": "시작일",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 93,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810271459,
+          "createAt": 1778810265155
+        }
+      },
+      "SDxuN4mx2ZzkLl1_QXxiV": {
+        "id": "SDxuN4mx2ZzkLl1_QXxiV",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "saving_end_date",
+        "comment": "종료일",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 89,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810278012,
+          "createAt": 1778810265155
+        }
+      },
+      "i7mHCtTGi4aqE5DeEeuq3": {
+        "id": "i7mHCtTGi4aqE5DeEeuq3",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "user_seq",
+        "comment": "유저식별자",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 62,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810377092,
+          "createAt": 1778810377092
+        }
+      },
+      "YJ70yFw4TLZrk-Z0JSZM_": {
+        "id": "YJ70yFw4TLZrk-Z0JSZM_",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "currency_code",
+        "comment": "통화 코드",
+        "dataType": "VARCHAR(3)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810388144,
+          "createAt": 1778810388144
+        }
+      },
+      "MHBH4_7hZPAagTfU_Nb2e": {
+        "id": "MHBH4_7hZPAagTfU_Nb2e",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "created_at",
+        "comment": "생성시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810395669,
+          "createAt": 1778810395669
+        }
+      },
+      "0HKrBBRLpj-Pg0MPLCx0Q": {
+        "id": "0HKrBBRLpj-Pg0MPLCx0Q",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "updated_at",
+        "comment": "수정시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 62,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810395669,
+          "createAt": 1778810395669
+        }
+      },
+      "Hknux0fDOCsgVKCOqBOly": {
+        "id": "Hknux0fDOCsgVKCOqBOly",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "created_by",
+        "comment": "생성자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810395669,
+          "createAt": 1778810395669
+        }
+      },
+      "Yxq6NlB7O10jIztdVlw_H": {
+        "id": "Yxq6NlB7O10jIztdVlw_H",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "updated_by",
+        "comment": "수정자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778810395669,
+          "createAt": 1778810395669
+        }
+      },
+      "oE9vImeA3yszN7EGcxEqY": {
+        "id": "oE9vImeA3yszN7EGcxEqY",
+        "tableId": "nHrnZlsenWOAET9J1rs-O",
+        "name": "stock_seq",
+        "comment": "주식 식별자",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 65,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778811951110,
+          "createAt": 1778811507864
+        }
+      },
+      "h2LKntekC6TVV6z9jWG4i": {
+        "id": "h2LKntekC6TVV6z9jWG4i",
+        "tableId": "nHrnZlsenWOAET9J1rs-O",
+        "name": "market_seq",
+        "comment": "마켓 식별자",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 62,
+          "widthComment": 65,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778811548106,
+          "createAt": 1778811548106
+        }
+      },
+      "RKg_3-Qzb0vk1I8fdQ1T8": {
+        "id": "RKg_3-Qzb0vk1I8fdQ1T8",
+        "tableId": "nHrnZlsenWOAET9J1rs-O",
+        "name": "currency_code",
+        "comment": "통화 코드",
+        "dataType": "VARCHAR(3)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778811555857,
+          "createAt": 1778811555857
+        }
+      },
+      "8H7ZOzI4fmF-yn22h8DeN": {
+        "id": "8H7ZOzI4fmF-yn22h8DeN",
+        "tableId": "nHrnZlsenWOAET9J1rs-O",
+        "name": "stock_name",
+        "comment": "주식 이름",
+        "dataType": "VARCHAR(200)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778811566054,
+          "createAt": 1778811566054
+        }
+      },
+      "aCG5lG7zW8ZUE9yFWaCSe": {
+        "id": "aCG5lG7zW8ZUE9yFWaCSe",
+        "tableId": "nHrnZlsenWOAET9J1rs-O",
+        "name": "api_symbol",
+        "comment": "자산 API 심볼",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 61,
+          "widthComment": 74,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778811677966,
+          "createAt": 1778811677966
+        }
+      },
+      "j1laqSxjBOHnyBNsgXPAg": {
+        "id": "j1laqSxjBOHnyBNsgXPAg",
+        "tableId": "nHrnZlsenWOAET9J1rs-O",
+        "name": "stock_price",
+        "comment": "주당 가치",
+        "dataType": "DECIMAL(18,5)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 61,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778828887329,
+          "createAt": 1778811696169
+        }
+      },
+      "-yUrPegLeodSvNkAcpX4J": {
+        "id": "-yUrPegLeodSvNkAcpX4J",
+        "tableId": "nHrnZlsenWOAET9J1rs-O",
+        "name": "created_at",
+        "comment": "생성시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778811704743,
+          "createAt": 1778811704743
+        }
+      },
+      "U8J7etpgwDNx-M7X-t7qz": {
+        "id": "U8J7etpgwDNx-M7X-t7qz",
+        "tableId": "nHrnZlsenWOAET9J1rs-O",
+        "name": "updated_at",
+        "comment": "수정시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 62,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778811704743,
+          "createAt": 1778811704743
+        }
+      },
+      "5Cx2MYEiaArlwsClQso4g": {
+        "id": "5Cx2MYEiaArlwsClQso4g",
+        "tableId": "nHrnZlsenWOAET9J1rs-O",
+        "name": "created_by",
+        "comment": "생성자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778811704743,
+          "createAt": 1778811704743
+        }
+      },
+      "HotVC4NMcgoUT7XXycrZH": {
+        "id": "HotVC4NMcgoUT7XXycrZH",
+        "tableId": "nHrnZlsenWOAET9J1rs-O",
+        "name": "updated_by",
+        "comment": "수정자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778811704743,
+          "createAt": 1778811704743
+        }
+      },
+      "XXgRF-cO-9DTDJclL0axV": {
+        "id": "XXgRF-cO-9DTDJclL0axV",
+        "tableId": "1Ef2OtYW62KRQNuihJjma",
+        "name": "user_seq",
+        "comment": "유저식별자",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 62,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778811906618,
+          "createAt": 1778811906618
+        }
+      },
+      "y-HIc1Fga45Z6vn9XRFgl": {
+        "id": "y-HIc1Fga45Z6vn9XRFgl",
+        "tableId": "1Ef2OtYW62KRQNuihJjma",
+        "name": "stock_seq",
+        "comment": "주식 식별자",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 65,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778811961106,
+          "createAt": 1778811961106
+        }
+      },
+      "OVzs31Wj8REYBv-3R77S_": {
+        "id": "OVzs31Wj8REYBv-3R77S_",
+        "tableId": "u6eX3_2DAGkG7xtedfBHU",
+        "name": "crypto_seq",
+        "comment": "크립토 식별자",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 77,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778812005278,
+          "createAt": 1778812000972
+        }
+      },
+      "JhdRxMnU2GuIyMW1ldlbn": {
+        "id": "JhdRxMnU2GuIyMW1ldlbn",
+        "tableId": "u6eX3_2DAGkG7xtedfBHU",
+        "name": "crypto_name",
+        "comment": "크립토 자산 이름",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 70,
+          "widthComment": 93,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778812008151,
+          "createAt": 1778812008151
+        }
+      },
+      "lnd3vAxOGeHX7yLG9vDR3": {
+        "id": "lnd3vAxOGeHX7yLG9vDR3",
+        "tableId": "u6eX3_2DAGkG7xtedfBHU",
+        "name": "crypto_price",
+        "comment": "크립토 개당 가치",
+        "dataType": "DECIMAL(18,2)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 67,
+          "widthComment": 93,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778812029722,
+          "createAt": 1778812029722
+        }
+      },
+      "gr_L9fI0omY7OeTLCvJ7Q": {
+        "id": "gr_L9fI0omY7OeTLCvJ7Q",
+        "tableId": "u6eX3_2DAGkG7xtedfBHU",
+        "name": "api_symbol",
+        "comment": "자산 API 심볼",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 61,
+          "widthComment": 74,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778812032353,
+          "createAt": 1778812032353
+        }
+      },
+      "5q4s_M-QkOE7pcynT6MTH": {
+        "id": "5q4s_M-QkOE7pcynT6MTH",
+        "tableId": "u6eX3_2DAGkG7xtedfBHU",
+        "name": "created_at",
+        "comment": "생성시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778812036863,
+          "createAt": 1778812036863
+        }
+      },
+      "Vgj9ohA3m5XU7l4GToMzO": {
+        "id": "Vgj9ohA3m5XU7l4GToMzO",
+        "tableId": "u6eX3_2DAGkG7xtedfBHU",
+        "name": "updated_at",
+        "comment": "수정시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 62,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778812036863,
+          "createAt": 1778812036863
+        }
+      },
+      "Yr7baVLHTMq9nU1JbRzm2": {
+        "id": "Yr7baVLHTMq9nU1JbRzm2",
+        "tableId": "u6eX3_2DAGkG7xtedfBHU",
+        "name": "created_by",
+        "comment": "생성자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778812036863,
+          "createAt": 1778812036863
+        }
+      },
+      "HZRBcUD1pXwilSOXEDX16": {
+        "id": "HZRBcUD1pXwilSOXEDX16",
+        "tableId": "u6eX3_2DAGkG7xtedfBHU",
+        "name": "updated_by",
+        "comment": "수정자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778812036863,
+          "createAt": 1778812036863
+        }
+      },
+      "ExvzIe0zSfLM6mNORqK_7": {
+        "id": "ExvzIe0zSfLM6mNORqK_7",
+        "tableId": "u6eX3_2DAGkG7xtedfBHU",
+        "name": "currency_code",
+        "comment": "통화 코드",
+        "dataType": "VARCHAR(3)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 78,
+          "widthComment": 60,
+          "widthDataType": 68,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778812060304,
+          "createAt": 1778812060304
+        }
+      },
+      "L7blAxrSp6tWFsieJ9vUp": {
+        "id": "L7blAxrSp6tWFsieJ9vUp",
+        "tableId": "XatyKl8ZuIhuiebUKzR2x",
+        "name": "crypto_seq",
+        "comment": "크립토 식별자",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 77,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778812070302,
+          "createAt": 1778812070302
+        }
+      },
+      "6YHG4CqEvgLCLR_7VAWpe": {
+        "id": "6YHG4CqEvgLCLR_7VAWpe",
+        "tableId": "XatyKl8ZuIhuiebUKzR2x",
+        "name": "user_seq",
+        "comment": "유저식별자",
+        "dataType": "BIGINT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 62,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778812077204,
+          "createAt": 1778812077204
+        }
+      },
+      "4TP_0OdvFJ8COBdWSlQ3W": {
+        "id": "4TP_0OdvFJ8COBdWSlQ3W",
+        "tableId": "gZ4TD48YnWozNIdho7L6f",
+        "name": "updated_at",
+        "comment": "수정시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 62,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778827457232,
+          "createAt": 1778827457231
+        }
+      },
+      "UOdUjRM8RE4lVylVFx-Ju": {
+        "id": "UOdUjRM8RE4lVylVFx-Ju",
+        "tableId": "gZ4TD48YnWozNIdho7L6f",
+        "name": "created_by",
+        "comment": "생성자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1778827471463,
+          "createAt": 1778827471463
+        }
+      },
+      "_61Kx-Lf4vZ1ImONXmAF4": {
+        "id": "_61Kx-Lf4vZ1ImONXmAF4",
+        "tableId": "1Ef2OtYW62KRQNuihJjma",
+        "name": "avg_purchase_price",
+        "comment": "평균 매수 단가",
+        "dataType": "DECIMAL(18,5)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 105,
+          "widthComment": 81,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1779260190678,
+          "createAt": 1779246087174
+        }
+      },
+      "nWXxhLgkWOMCG62oaWG0C": {
+        "id": "nWXxhLgkWOMCG62oaWG0C",
+        "tableId": "XatyKl8ZuIhuiebUKzR2x",
+        "name": "avg_purchase_price",
+        "comment": "평균 매수 단가",
+        "dataType": "DECIMAL(18,5)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 105,
+          "widthComment": 81,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1779260185241,
+          "createAt": 1779260169202
+        }
+      },
+      "Rv-_S7lgHdj2knTgQ6Veq": {
+        "id": "Rv-_S7lgHdj2knTgQ6Veq",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "accum_",
+        "comment": "",
+        "dataType": "",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1779785141353,
+          "createAt": 1779785122451
+        }
+      },
+      "TTzs-QjtRC5cjAzc8hdqO": {
+        "id": "TTzs-QjtRC5cjAzc8hdqO",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "is_terminated",
+        "comment": "적금 해지/종료 여부",
+        "dataType": "BIT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 73,
+          "widthComment": 109,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1779785283511,
+          "createAt": 1779785237846
+        }
+      },
+      "agJAiHkQPdNvpYXbpxshq": {
+        "id": "agJAiHkQPdNvpYXbpxshq",
+        "tableId": "CLUBSPsONxxzAqniBDMIp",
+        "name": "saving_amount",
+        "comment": "기간당 적금 금액",
+        "dataType": "DECIMAL(18,2)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 82,
+          "widthComment": 93,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1779785578411,
+          "createAt": 1779785542999
+        }
+      },
+      "JBaybhhA3uOHBJa5tc86b": {
+        "id": "JBaybhhA3uOHBJa5tc86b",
+        "tableId": "RhmtWJ453juu_5yf6Yqwa",
+        "name": "created_at",
+        "comment": "생성시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780359153518,
+          "createAt": 1780359153517
+        }
+      },
+      "lD6NvbbvS1Pfy7Tra8BH_": {
+        "id": "lD6NvbbvS1Pfy7Tra8BH_",
+        "tableId": "RhmtWJ453juu_5yf6Yqwa",
+        "name": "updated_at",
+        "comment": "수정시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 62,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780359153518,
+          "createAt": 1780359153518
+        }
+      },
+      "CB_s_7C1UTb36mMDILk1V": {
+        "id": "CB_s_7C1UTb36mMDILk1V",
+        "tableId": "RhmtWJ453juu_5yf6Yqwa",
+        "name": "created_by",
+        "comment": "생성자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780359153518,
+          "createAt": 1780359153518
+        }
+      },
+      "8lBQr_RLFAUPMSXOxqLJz": {
+        "id": "8lBQr_RLFAUPMSXOxqLJz",
+        "tableId": "RhmtWJ453juu_5yf6Yqwa",
+        "name": "updated_by",
+        "comment": "수정자",
+        "dataType": "VARCHAR(100)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780359153518,
+          "createAt": 1780359153518
+        }
+      },
+      "wFXcr3HlTF0u80fUkAwDZ": {
+        "id": "wFXcr3HlTF0u80fUkAwDZ",
+        "tableId": "RhmtWJ453juu_5yf6Yqwa",
+        "name": "access_token",
+        "comment": "access token",
+        "dataType": "VARCHAR(500)",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 1,
+          "widthName": 71,
+          "widthComment": 69,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780360347758,
+          "createAt": 1780359154865
+        }
+      },
+      "1KN7w6zkHsbv1DAhrQa0I": {
+        "id": "1KN7w6zkHsbv1DAhrQa0I",
+        "tableId": "RhmtWJ453juu_5yf6Yqwa",
+        "name": "token_expired_at",
+        "comment": "토큰 만료 시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 92,
+          "widthComment": 81,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780359694337,
+          "createAt": 1780359669930
+        }
+      },
+      "YolcMTvum-tYQMP97luOm": {
+        "id": "YolcMTvum-tYQMP97luOm",
+        "tableId": "RhmtWJ453juu_5yf6Yqwa",
+        "name": "token_type",
+        "comment": "",
+        "dataType": "",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780360303812,
+          "createAt": 1780360301025
+        }
+      },
+      "i3v6kZHBb1vhbS5b9FOK0": {
+        "id": "i3v6kZHBb1vhbS5b9FOK0",
+        "tableId": "u4ybAFDSOQJJT3q1vzsMs",
+        "name": "market_alias",
+        "comment": "마켓 이름 별칭",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 67,
+          "widthComment": 81,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1780389998940,
+          "createAt": 1780389977353
+        }
       }
     },
     "relationshipEntities": {
-      "WCiWzGN-PCTVClqScOYTP": {
-        "id": "WCiWzGN-PCTVClqScOYTP",
-        "identification": false,
-        "relationshipType": 16,
-        "startRelationshipType": 2,
-        "start": {
-          "tableId": "u4ybAFDSOQJJT3q1vzsMs",
-          "columnIds": [
-            "JCliVaSnj2AlOEgDar7a0"
-          ],
-          "x": 226.5,
-          "y": 444,
-          "direction": 4
-        },
-        "end": {
-          "tableId": "1Ef2OtYW62KRQNuihJjma",
-          "columnIds": [
-            "Wud09iYBl4h3WR1Km_Sm4"
-          ],
-          "x": 275,
-          "y": 366,
-          "direction": 8
-        },
-        "meta": {
-          "updateAt": 1778638467609,
-          "createAt": 1778638467609
-        }
-      },
-      "XEIXg8e5hgGjhH0FdZzyN": {
-        "id": "XEIXg8e5hgGjhH0FdZzyN",
-        "identification": false,
-        "relationshipType": 16,
-        "startRelationshipType": 2,
-        "start": {
-          "tableId": "0lVPLy0hJbppFysQzLwXH",
-          "columnIds": [
-            "iiSu6jBNHfZOc86ufRapq"
-          ],
-          "x": 821,
-          "y": 273.3333333333333,
-          "direction": 1
-        },
-        "end": {
-          "tableId": "1Ef2OtYW62KRQNuihJjma",
-          "columnIds": [
-            "P2Wo6HO86pYhXbDzuTzmM"
-          ],
-          "x": 503,
-          "y": 194,
-          "direction": 2
-        },
-        "meta": {
-          "updateAt": 1778639118501,
-          "createAt": 1778639118501
-        }
-      },
-      "1C0I2-PEFnzOTha3XrkTe": {
-        "id": "1C0I2-PEFnzOTha3XrkTe",
-        "identification": false,
-        "relationshipType": 16,
-        "startRelationshipType": 2,
-        "start": {
-          "tableId": "0lVPLy0hJbppFysQzLwXH",
-          "columnIds": [
-            "iiSu6jBNHfZOc86ufRapq"
-          ],
-          "x": 1188,
-          "y": 280,
-          "direction": 2
-        },
-        "end": {
-          "tableId": "XatyKl8ZuIhuiebUKzR2x",
-          "columnIds": [
-            "OhjMKjvUzWCKAKYuhovnF"
-          ],
-          "x": 1308,
-          "y": 224,
-          "direction": 1
-        },
-        "meta": {
-          "updateAt": 1778639136571,
-          "createAt": 1778639136571
-        }
-      },
       "6yTjsvtivu_SPmjTiejV8": {
         "id": "6yTjsvtivu_SPmjTiejV8",
         "identification": false,
@@ -2248,18 +3959,18 @@
           "columnIds": [
             "iiSu6jBNHfZOc86ufRapq"
           ],
-          "x": 821,
-          "y": 300,
-          "direction": 1
+          "x": 877.3537,
+          "y": 799.7805,
+          "direction": 8
         },
         "end": {
           "tableId": "irnPxKgyEbKzpED_ivHnd",
           "columnIds": [
             "RBuRa5YQNuQA30TJ4cQxH"
           ],
-          "x": 473,
-          "y": 830,
-          "direction": 2
+          "x": 957.311,
+          "y": 1271.3659,
+          "direction": 4
         },
         "meta": {
           "updateAt": 1778659050669,
@@ -2276,17 +3987,17 @@
           "columnIds": [
             "iiSu6jBNHfZOc86ufRapq"
           ],
-          "x": 821,
-          "y": 326.6666666666667,
-          "direction": 1
+          "x": 1060.8537000000001,
+          "y": 786.4471666666665,
+          "direction": 2
         },
         "end": {
           "tableId": "bbp2krTDjIA--YnYd-Qvr",
           "columnIds": [
             "lZjENxh40be0Zj4k3MBTG"
           ],
-          "x": 688,
-          "y": 990,
+          "x": 1557,
+          "y": 1212,
           "direction": 4
         },
         "meta": {
@@ -2304,8 +4015,8 @@
           "columnIds": [
             "iiSu6jBNHfZOc86ufRapq"
           ],
-          "x": 1188,
-          "y": 320,
+          "x": 1060.8537000000001,
+          "y": 759.7804999999998,
           "direction": 2
         },
         "end": {
@@ -2313,9 +4024,9 @@
           "columnIds": [
             "3saKuVpetYEqFreciOrja"
           ],
-          "x": 1198,
-          "y": 621,
-          "direction": 4
+          "x": 1405.9512,
+          "y": 669.2927,
+          "direction": 1
         },
         "meta": {
           "updateAt": 1778660718049,
@@ -2332,22 +4043,414 @@
           "columnIds": [
             "0sjRFVTYT5PJHMp11q78o"
           ],
-          "x": 1265,
-          "y": 1160,
-          "direction": 1
+          "x": 1734.6463,
+          "y": 857.7317,
+          "direction": 4
         },
         "end": {
           "tableId": "S4YUkJOloERdcaYTpmtep",
           "columnIds": [
             "dbhSyMYkWwwfG6uZCpeyL"
           ],
-          "x": 1198,
-          "y": 965,
+          "x": 1630.4512,
+          "y": 761.2927,
           "direction": 8
         },
         "meta": {
           "updateAt": 1778662012071,
           "createAt": 1778662012071
+        }
+      },
+      "_eKaqDRDP2Ys08gXLalUY": {
+        "id": "_eKaqDRDP2Ys08gXLalUY",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "gZ4TD48YnWozNIdho7L6f",
+          "columnIds": [
+            "MiF61GmapXKpkVd2typAv"
+          ],
+          "x": 815.4062,
+          "y": 358,
+          "direction": 4
+        },
+        "end": {
+          "tableId": "u4ybAFDSOQJJT3q1vzsMs",
+          "columnIds": [
+            "pF2IdKNDJ0qSVQRL3rg6q"
+          ],
+          "x": 622,
+          "y": 197.0245,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1778803909841,
+          "createAt": 1778803909841
+        }
+      },
+      "0_IL-3UoOn2ycq09KSi8Q": {
+        "id": "0_IL-3UoOn2ycq09KSi8Q",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "gZ4TD48YnWozNIdho7L6f",
+          "columnIds": [
+            "MiF61GmapXKpkVd2typAv"
+          ],
+          "x": 917.4062,
+          "y": 606,
+          "direction": 8
+        },
+        "end": {
+          "tableId": "irnPxKgyEbKzpED_ivHnd",
+          "columnIds": [
+            "rBX91hi68wX7NIgeSQQtk"
+          ],
+          "x": 740.811,
+          "y": 1271.3659,
+          "direction": 4
+        },
+        "meta": {
+          "updateAt": 1778804011732,
+          "createAt": 1778804011732
+        }
+      },
+      "lDQ8J37J1iQVcvnRO4Drk": {
+        "id": "lDQ8J37J1iQVcvnRO4Drk",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "gZ4TD48YnWozNIdho7L6f",
+          "columnIds": [
+            "MiF61GmapXKpkVd2typAv"
+          ],
+          "x": 1019.4062,
+          "y": 544,
+          "direction": 2
+        },
+        "end": {
+          "tableId": "bbp2krTDjIA--YnYd-Qvr",
+          "columnIds": [
+            "BTTU6bif3ppd2KS214_Zl"
+          ],
+          "x": 1273,
+          "y": 1212,
+          "direction": 4
+        },
+        "meta": {
+          "updateAt": 1778804188180,
+          "createAt": 1778804188180
+        }
+      },
+      "MbHbGXoSXtZaxrSL8bpoD": {
+        "id": "MbHbGXoSXtZaxrSL8bpoD",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "gZ4TD48YnWozNIdho7L6f",
+          "columnIds": [
+            "MiF61GmapXKpkVd2typAv"
+          ],
+          "x": 1019.4062,
+          "y": 420,
+          "direction": 2
+        },
+        "end": {
+          "tableId": "S4YUkJOloERdcaYTpmtep",
+          "columnIds": [
+            "zWkInr5w9jDlWe9gnFNM1"
+          ],
+          "x": 1405.9512,
+          "y": 485.2927,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 1778804351766,
+          "createAt": 1778804351766
+        }
+      },
+      "pS4nCkyA5rvvm1876rV0j": {
+        "id": "pS4nCkyA5rvvm1876rV0j",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "0lVPLy0hJbppFysQzLwXH",
+          "columnIds": [
+            "iiSu6jBNHfZOc86ufRapq"
+          ],
+          "x": 693.8537,
+          "y": 759.7804999999998,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "Pngz-8b3Tfddii3G3tGPG",
+          "columnIds": [
+            "BjcerZ_NGulV71Qk0-4hh"
+          ],
+          "x": 442.1524,
+          "y": 989.8782,
+          "direction": 4
+        },
+        "meta": {
+          "updateAt": 1778808863632,
+          "createAt": 1778808863632
+        }
+      },
+      "UeyJQKAZfq-hiol0HHnuC": {
+        "id": "UeyJQKAZfq-hiol0HHnuC",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "gZ4TD48YnWozNIdho7L6f",
+          "columnIds": [
+            "MiF61GmapXKpkVd2typAv"
+          ],
+          "x": 611.4062,
+          "y": 544,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "Pngz-8b3Tfddii3G3tGPG",
+          "columnIds": [
+            "CMe5WFNqkDjBd4QvF84Ub"
+          ],
+          "x": 206.6524,
+          "y": 989.8782,
+          "direction": 4
+        },
+        "meta": {
+          "updateAt": 1778808870376,
+          "createAt": 1778808870376
+        }
+      },
+      "rpUXGupqvQGx2GRKl2bF0": {
+        "id": "rpUXGupqvQGx2GRKl2bF0",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "0lVPLy0hJbppFysQzLwXH",
+          "columnIds": [
+            "iiSu6jBNHfZOc86ufRapq"
+          ],
+          "x": 693.8537,
+          "y": 786.4471666666665,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "CLUBSPsONxxzAqniBDMIp",
+          "columnIds": [
+            "i7mHCtTGi4aqE5DeEeuq3"
+          ],
+          "x": 211.6585,
+          "y": 1439.9024,
+          "direction": 4
+        },
+        "meta": {
+          "updateAt": 1778810377092,
+          "createAt": 1778810377092
+        }
+      },
+      "FB2M3R5qqPYz5f-BftoEx": {
+        "id": "FB2M3R5qqPYz5f-BftoEx",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "gZ4TD48YnWozNIdho7L6f",
+          "columnIds": [
+            "MiF61GmapXKpkVd2typAv"
+          ],
+          "x": 713.4062,
+          "y": 606,
+          "direction": 8
+        },
+        "end": {
+          "tableId": "CLUBSPsONxxzAqniBDMIp",
+          "columnIds": [
+            "YJ70yFw4TLZrk-Z0JSZM_"
+          ],
+          "x": 459.6585,
+          "y": 1439.9024,
+          "direction": 4
+        },
+        "meta": {
+          "updateAt": 1778810388144,
+          "createAt": 1778810388144
+        }
+      },
+      "mDksk9YfQkyMfRKLHWpE_": {
+        "id": "mDksk9YfQkyMfRKLHWpE_",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "u4ybAFDSOQJJT3q1vzsMs",
+          "columnIds": [
+            "JCliVaSnj2AlOEgDar7a0"
+          ],
+          "x": 622,
+          "y": 73.0245,
+          "direction": 2
+        },
+        "end": {
+          "tableId": "nHrnZlsenWOAET9J1rs-O",
+          "columnIds": [
+            "h2LKntekC6TVV6z9jWG4i"
+          ],
+          "x": 838.8125,
+          "y": 144.7805,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 1778811548106,
+          "createAt": 1778811548106
+        }
+      },
+      "OJu3Rk6gBrdWiUZinpuO5": {
+        "id": "OJu3Rk6gBrdWiUZinpuO5",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "0lVPLy0hJbppFysQzLwXH",
+          "columnIds": [
+            "iiSu6jBNHfZOc86ufRapq"
+          ],
+          "x": 1060.8537000000001,
+          "y": 733.1138333333332,
+          "direction": 2
+        },
+        "end": {
+          "tableId": "1Ef2OtYW62KRQNuihJjma",
+          "columnIds": [
+            "XXgRF-cO-9DTDJclL0axV"
+          ],
+          "x": 1435.7561,
+          "y": 236.5611,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 1778811906618,
+          "createAt": 1778811906618
+        }
+      },
+      "IqqlKDKUnqw5G2_KzrCb_": {
+        "id": "IqqlKDKUnqw5G2_KzrCb_",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "nHrnZlsenWOAET9J1rs-O",
+          "columnIds": [
+            "oE9vImeA3yszN7EGcxEqY"
+          ],
+          "x": 1242.8125,
+          "y": 144.7805,
+          "direction": 2
+        },
+        "end": {
+          "tableId": "1Ef2OtYW62KRQNuihJjma",
+          "columnIds": [
+            "y-HIc1Fga45Z6vn9XRFgl"
+          ],
+          "x": 1435.7561,
+          "y": 100.56110000000001,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 1778811961106,
+          "createAt": 1778811961106
+        }
+      },
+      "io9znLra46RzUXNWC4IU8": {
+        "id": "io9znLra46RzUXNWC4IU8",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "gZ4TD48YnWozNIdho7L6f",
+          "columnIds": [
+            "MiF61GmapXKpkVd2typAv"
+          ],
+          "x": 611.4062,
+          "y": 420,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "u6eX3_2DAGkG7xtedfBHU",
+          "columnIds": [
+            "ExvzIe0zSfLM6mNORqK_7"
+          ],
+          "x": 483,
+          "y": 403,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1778812060304,
+          "createAt": 1778812060304
+        }
+      },
+      "q4G9LVcOluOAMBppdzbQj": {
+        "id": "q4G9LVcOluOAMBppdzbQj",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "u6eX3_2DAGkG7xtedfBHU",
+          "columnIds": [
+            "OVzs31Wj8REYBv-3R77S_"
+          ],
+          "x": 264.5,
+          "y": 539,
+          "direction": 8
+        },
+        "end": {
+          "tableId": "XatyKl8ZuIhuiebUKzR2x",
+          "columnIds": [
+            "L7blAxrSp6tWFsieJ9vUp"
+          ],
+          "x": 320.9634,
+          "y": 622.2927,
+          "direction": 4
+        },
+        "meta": {
+          "updateAt": 1778812070302,
+          "createAt": 1778812070302
+        }
+      },
+      "QnLLMXAKbLZCC66MNu-dd": {
+        "id": "QnLLMXAKbLZCC66MNu-dd",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "0lVPLy0hJbppFysQzLwXH",
+          "columnIds": [
+            "iiSu6jBNHfZOc86ufRapq"
+          ],
+          "x": 693.8537,
+          "y": 733.1138333333332,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "XatyKl8ZuIhuiebUKzR2x",
+          "columnIds": [
+            "6YHG4CqEvgLCLR_7VAWpe"
+          ],
+          "x": 563.4634,
+          "y": 758.2927,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1778812077204,
+          "createAt": 1778812077204
         }
       }
     },

@@ -36,7 +36,9 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
 
         let results: Vec<DocumentWithId<T>> = hits
             .as_array()
-            .ok_or_else(|| anyhow!("[Error][find_query_result_vec()] 'hits' field is not an array"))?
+            .ok_or_else(|| {
+                anyhow!("[Error][find_query_result_vec()] 'hits' field is not an array")
+            })?
             .iter()
             .map(|hit| {
                 let id: &str = hit.get("_id").and_then(|id| id.as_str()).ok_or_else(|| {
@@ -109,6 +111,8 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                 )
             })?;
 
+        //println!("results= {:?}", results);
+
         if results.is_empty() {
             return Ok(ConsumingIndexProdtType::new(
                 21,
@@ -134,10 +138,14 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                 /* Use the 'levenshtein' algorithm to determine word match */
                 let word_dist: usize = levenshtein(keyword, prodt_name);
                 let word_dist_i64: i64 = word_dist.try_into()?;
+
+                //println!("{:?} // {:?} // {:?}", word_dist_i64,score_i64, consume_type.source);
+
                 manager.input_data(word_dist_i64 + score_i64, consume_type.source);
             }
 
-            let score_data_keyword: ScoredData<ConsumingIndexProdtType> = match manager.delete_lowest()
+            let score_data_keyword: ScoredData<ConsumingIndexProdtType> = match manager
+                .delete_lowest()
             {
                 Some(score_data_keyword) => score_data_keyword,
                 None => {
