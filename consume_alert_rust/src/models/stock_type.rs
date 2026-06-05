@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::common::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromQueryResult, Getters, new)]

@@ -1,4 +1,5 @@
 //! `SeaORM` Entity for KIS_API_TOKEN table
+#![allow(dead_code)]
 
 use sea_orm::entity::prelude::*;
 

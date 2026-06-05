@@ -42,6 +42,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {
             .await
     }
 
+    #[allow(dead_code)]
     pub async fn input_prodt_details_with_transaction(
         &self,
         spent_details: &[SpentDetail],

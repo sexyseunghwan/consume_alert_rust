@@ -74,6 +74,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {
         Ok(result.and_then(|room| room.agg_group_seq))
     }
 
+    #[allow(dead_code)]
     pub async fn find_user_id_by_seq(&self, user_seq: i64) -> anyhow::Result<Option<String>> {
         let result: Option<users::Model> = users::Entity::find()
             .filter(users::Column::UserSeq.eq(user_seq))
@@ -89,6 +90,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {
         Ok(result.map(|user| user.user_id))
     }
 
+    #[allow(dead_code)]
     pub async fn find_latest_spent_idx(
         &self,
         user_seq: i64,
@@ -148,6 +150,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {
         Ok(result)
     }
 
+    #[allow(dead_code)]
     pub async fn find_spent_detail_with_info(
         &self,
         spent_idx: i64,

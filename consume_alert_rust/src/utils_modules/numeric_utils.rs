@@ -5,11 +5,13 @@ use crate::service_traits::mysql_query_service::*;
 use crate::models::currency_exchange_rate_snapshot::*;
 
 #[doc = "Function that determines if the string consists of only numbers"]
+#[allow(dead_code)]
 pub fn is_numeric(s: &str) -> bool {
     s.parse::<i64>().is_ok()
 }
 
 #[doc = "Functions that convert strings into numbers"]
+#[allow(dead_code)]
 pub fn to_numeric(s: &str) -> i64 {
     s.parse::<i64>().unwrap_or(0)
 }

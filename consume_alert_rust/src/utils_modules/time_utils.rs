@@ -16,18 +16,6 @@ pub fn find_current_kor_naivedate() -> DateTime<Utc> {
 }
 
 /// Returns the first day of the current Korean month as `DateTime<Utc>` (midnight UTC).
-// pub fn find_current_kor_naivedate_first_date() -> Result<DateTime<Utc>, anyhow::Error> {
-//     let utc_now: DateTime<Utc> = Utc::now();
-//     let kst_time: DateTime<chrono_tz::Tz> = utc_now.with_timezone(&Seoul);
-
-//     NaiveDate::from_ymd_opt(kst_time.year(), kst_time.month(), 1)
-//         .ok_or_else(|| anyhow!("[Datetime Parsing Error][find_current_kor_naivedate_first_date()] Invalid date => year: {}, month: {}, day: 1",
-//             kst_time.year(),
-//             kst_time.month()))
-//         .map(|d| d.and_time(NaiveTime::MIN).and_utc())
-// }
-
-/// Returns the first day of the current Korean month as `DateTime<Utc>` (midnight UTC).
 pub fn find_current_kor_naivedate_first_date() -> Result<DateTime<Utc>, anyhow::Error> {
     let utc_now: DateTime<Utc> = Utc::now();
     let kst_time: DateTime<chrono_tz::Tz> = utc_now.with_timezone(&Seoul);
