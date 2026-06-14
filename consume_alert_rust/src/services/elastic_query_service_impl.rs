@@ -55,7 +55,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                         e
                     )
                 })?;
-
+                
                 let score: f64 = hit
                     .get("_score")
                     .and_then(|score| score.as_f64())
@@ -228,8 +228,8 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                         {
                             "range": {
                                 range_field: {
-                                    start_op.to_str() : start_date.format("%Y-%m-%d").to_string(),
-                                    end_op.to_str() : end_date.format("%Y-%m-%d").to_string()
+                                    start_op.to_str() : start_date.format("%Y-%m-%dT%H:%M:%S").to_string(),
+                                    end_op.to_str() : end_date.format("%Y-%m-%dT%H:%M:%S").to_string()
                                 }
                             }
                         },

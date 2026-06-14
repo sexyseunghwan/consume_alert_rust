@@ -43,9 +43,9 @@ pub trait ProcessService {
         start_dt: DateTime<Utc>,
         end_dt: DateTime<Utc>,
     ) -> Result<ToPythonGraphCircle, anyhow::Error>;
-    fn find_consumption_result_by_category(
+    fn find_consumption_result_by_category<T: crate::models::to_python_graph_line::SpentDetailSource>(
         &self,
-        spent_details: &AggResultSet<SpentDetailByEs>,
+        spent_details: &AggResultSet<T>,
     ) -> Result<Vec<ConsumeResultByType>, anyhow::Error>;
     fn find_nday_to_current_date(
         &self,

@@ -12,6 +12,7 @@ use crate::models::agg_result_set::*;
 use crate::models::consume_result_by_type::*;
 use crate::models::per_datetime::*;
 use crate::models::spent_detail_by_es::*;
+use crate::models::spent_detail_by_es_kst::*;
 use crate::models::to_python_graph_circle::*;
 use crate::models::to_python_graph_line::*;
 
@@ -139,25 +140,80 @@ impl<
             }
         };
 
+        // Convert UTC to KST for display
+        let spent_detail_info_kst: AggResultSet<SpentDetailByEsKst> = AggResultSet::new(
+            *spent_detail_info.agg_result(),
+            spent_detail_info
+                .source_list()
+                .iter()
+                .map(|item| {
+                    let source_kst = SpentDetailByEsKst::new(
+                        item.source.spent_idx,
+                        item.source.spent_name.clone(),
+                        item.source.spent_money,
+                        item.source.spent_at.with_timezone(&Seoul),
+                        item.source.created_at.with_timezone(&Seoul),
+                        item.source.user_seq,
+                        item.source.consume_keyword_type_id,
+                        item.source.consume_keyword_type.clone(),
+                        item.source.room_seq,
+                        item.source.produced_at.map(|dt| dt.with_timezone(&Seoul)),
+                    );
+                    crate::models::document_with_id::DocumentWithId::new(
+                        item.id.clone(),
+                        item.score,
+                        source_kst,
+                    )
+                })
+                .collect(),
+        );
+
+        let versus_spent_detail_info_kst: AggResultSet<SpentDetailByEsKst> = AggResultSet::new(
+            *versus_spent_detail_info.agg_result(),
+            versus_spent_detail_info
+                .source_list()
+                .iter()
+                .map(|item| {
+                    let source_kst = SpentDetailByEsKst::new(
+                        item.source.spent_idx,
+                        item.source.spent_name.clone(),
+                        item.source.spent_money,
+                        item.source.spent_at.with_timezone(&Seoul),
+                        item.source.created_at.with_timezone(&Seoul),
+                        item.source.user_seq,
+                        item.source.consume_keyword_type_id,
+                        item.source.consume_keyword_type.clone(),
+                        item.source.room_seq,
+                        item.source.produced_at.map(|dt| dt.with_timezone(&Seoul)),
+                    );
+                    crate::models::document_with_id::DocumentWithId::new(
+                        item.id.clone(),
+                        item.score,
+                        source_kst,
+                    )
+                })
+                .collect(),
+        );
+
         let cur_python_graph_info: ToPythonGraphLine = ToPythonGraphLine::new(
             "cur",
             permon_datetime.date_start,
             permon_datetime.date_end,
-            &spent_detail_info,
+            &spent_detail_info_kst,
         )?;
 
         let versus_python_graph_info: ToPythonGraphLine = ToPythonGraphLine::new(
             "versus",
             permon_datetime.n_date_start,
             permon_datetime.n_date_end,
-            &versus_spent_detail_info,
+            &versus_spent_detail_info_kst,
         )?;
 
         if detail_yn {
             self.tele_bot_service
                 .input_message_consume_split(
                     &cur_python_graph_info,
-                    spent_detail_info.source_list(),
+                    spent_detail_info_kst.source_list(),
                 )
                 .await?;
         }
@@ -172,13 +228,13 @@ impl<
 
         let consume_result_by_type: Vec<ConsumeResultByType> = self
             .process_service
-            .find_consumption_result_by_category(&spent_detail_info)?;
+            .find_consumption_result_by_category(&spent_detail_info_kst)?;
 
         let circle_graph: ToPythonGraphCircle = self
             .process_service
             .to_python_graph_circle_by_consume_type(
                 &consume_result_by_type,
-                *spent_detail_info.agg_result(),
+                *spent_detail_info_kst.agg_result(),
                 permon_datetime.date_start,
                 permon_datetime.date_end,
             )?;
@@ -199,7 +255,7 @@ impl<
                 &consume_result_by_type,
                 permon_datetime.date_start,
                 permon_datetime.date_end,
-                *spent_detail_info.agg_result(),
+                *spent_detail_info_kst.agg_result(),
             )
             .await?;
 

@@ -458,21 +458,20 @@ impl ProcessService for ProcessServiceImpl {
     ///
     /// # Returns
     /// * Result<Vec<ConsumeResultByType>, anyhow::Error>
-    fn find_consumption_result_by_category(
+    fn find_consumption_result_by_category<T: crate::models::to_python_graph_line::SpentDetailSource>(
         &self,
-        spent_details: &AggResultSet<SpentDetailByEs>,
+        spent_details: &AggResultSet<T>,
     ) -> Result<Vec<ConsumeResultByType>, anyhow::Error> {
-        let spent_inner_details: &Vec<DocumentWithId<SpentDetailByEs>> =
-            spent_details.source_list();
+        let spent_inner_details: &Vec<DocumentWithId<T>> = spent_details.source_list();
         let total_cost: f64 = *spent_details.agg_result();
 
         let mut cost_map: HashMap<String, i64> =
             spent_inner_details
                 .iter()
                 .fold(HashMap::new(), |mut acc, spent_detail| {
-                    let detail: &SpentDetailByEs = spent_detail.source();
+                    let detail: &T = spent_detail.source();
                     let prodt_type: String = detail.consume_keyword_type().to_string();
-                    let prodt_money: i64 = detail.spent_money;
+                    let prodt_money: i64 = detail.spent_money();
 
                     acc.entry(prodt_type)
                         .and_modify(|value| *value += prodt_money)

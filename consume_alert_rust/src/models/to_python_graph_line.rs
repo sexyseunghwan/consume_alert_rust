@@ -2,6 +2,69 @@ use crate::common::*;
 
 use crate::models::agg_result_set::*;
 use crate::models::spent_detail_by_es::*;
+use crate::models::spent_detail_by_es_kst::*;
+
+/// Trait for spent detail types that can be used in graph generation and display
+pub trait SpentDetailSource {
+    fn spent_money(&self) -> i64;
+    fn spent_at(&self) -> DateTime<Utc>;
+    fn spent_at_kst(&self) -> DateTime<chrono_tz::Tz>;
+    fn spent_name(&self) -> &str;
+    fn consume_keyword_type(&self) -> &str;
+    fn consume_keyword_type_id(&self) -> i64;
+}
+
+impl SpentDetailSource for SpentDetailByEs {
+    fn spent_money(&self) -> i64 {
+        self.spent_money
+    }
+
+    fn spent_at(&self) -> DateTime<Utc> {
+        self.spent_at
+    }
+
+    fn spent_at_kst(&self) -> DateTime<chrono_tz::Tz> {
+        self.spent_at.with_timezone(&Seoul)
+    }
+
+    fn spent_name(&self) -> &str {
+        &self.spent_name
+    }
+
+    fn consume_keyword_type(&self) -> &str {
+        &self.consume_keyword_type
+    }
+
+    fn consume_keyword_type_id(&self) -> i64 {
+        self.consume_keyword_type_id
+    }
+}
+
+impl SpentDetailSource for SpentDetailByEsKst {
+    fn spent_money(&self) -> i64 {
+        self.spent_money
+    }
+
+    fn spent_at(&self) -> DateTime<Utc> {
+        self.spent_at.with_timezone(&Utc)
+    }
+
+    fn spent_at_kst(&self) -> DateTime<chrono_tz::Tz> {
+        self.spent_at
+    }
+
+    fn spent_name(&self) -> &str {
+        &self.spent_name
+    }
+
+    fn consume_keyword_type(&self) -> &str {
+        &self.consume_keyword_type
+    }
+
+    fn consume_keyword_type_id(&self) -> i64 {
+        self.consume_keyword_type_id
+    }
+}
 
 #[derive(Debug, Getters, Serialize, Deserialize, Clone)]
 #[getset(get = "pub")]
@@ -30,27 +93,24 @@ impl ToPythonGraphLine {
     /// # Errors
     ///
     /// Returns an error if construction fails.
-    pub fn new(
+    pub fn new<T: SpentDetailSource>(
         line_type: &str,
         start_dt: DateTime<Utc>,
         end_dt: DateTime<Utc>,
-        spent_detail: &AggResultSet<SpentDetailByEs>,
+        spent_detail: &AggResultSet<T>,
     ) -> anyhow::Result<Self> {
-        let mut date_consume: HashMap<DateTime<Utc>, i64> = HashMap::new();
+        // Group spending by KST date (date only, no time component)
+        let mut date_consume: HashMap<NaiveDate, i64> = HashMap::new();
 
         let total_cost: f64 = *spent_detail.agg_result();
 
         for elem in spent_detail.source_list() {
-            let elem_date: DateTime<Utc> = elem
-                .source
-                .spent_at
-                .date_naive()
-                .and_time(NaiveTime::MIN)
-                .and_utc();
-            let spent_money: i64 = elem.source.spent_money;
-
+            // Extract KST date (trait method handles UTC→KST conversion if needed)
+            let kst_date: NaiveDate = elem.source.spent_at_kst().date_naive();
+            let spent_money: i64 = elem.source.spent_money();
+            
             date_consume
-                .entry(elem_date)
+                .entry(kst_date)
                 .and_modify(|e| *e += spent_money)
                 .or_insert(spent_money);
         }
@@ -69,10 +129,14 @@ impl ToPythonGraphLine {
             consume_accumulate_list.push(accumulate_cost);
         }
 
+        // Convert start/end to KST for output
+        let start_dt_kst: DateTime<chrono_tz::Tz> = start_dt.with_timezone(&Seoul);
+        let end_dt_kst: DateTime<chrono_tz::Tz> = end_dt.with_timezone(&Seoul);
+
         Ok(ToPythonGraphLine {
             line_type: line_type.to_string(),
-            start_dt: start_dt.format("%Y-%m-%d").to_string(),
-            end_dt: end_dt.format("%Y-%m-%d").to_string(),
+            start_dt: start_dt_kst.format("%Y-%m-%d").to_string(),
+            end_dt: end_dt_kst.format("%Y-%m-%d").to_string(),
             total_cost,
             consume_accumulate_list,
         })

@@ -20,6 +20,7 @@ pub mod score_manager;
 pub mod send_email_agg_group;
 pub mod spent_detail;
 pub mod spent_detail_by_es;
+pub mod spent_detail_by_es_kst;
 pub mod spent_detail_by_installment;
 pub mod spent_detail_indexing;
 pub mod spent_detail_to_kafka;

@@ -201,10 +201,10 @@ impl TelebotService for TelebotServiceImpl {
     ///
     /// # Returns
     /// * Result<(), anyhow::Error>
-    async fn input_message_consume_split(
+    async fn input_message_consume_split<T: SpentDetailSource + Send + Sync>(
         &self,
         to_python_graph_line: &ToPythonGraphLine,
-        spent_detail_list: &[DocumentWithId<SpentDetailByEs>],
+        spent_detail_list: &[DocumentWithId<T>],
     ) -> Result<(), anyhow::Error> {
         let start_dt: &String = to_python_graph_line.start_dt();
         let end_dt: &String = to_python_graph_line.end_dt();
@@ -217,15 +217,14 @@ impl TelebotService for TelebotServiceImpl {
             .input_consumption_message(
                 spent_detail_list,
                 |item| {
-
-                    let kor_time: String = to_kst_datetime_format(item.source.spent_at, "%Y-%m-%dT%H:%M");
+                    let kor_time: String = to_kst_datetime_format(item.source.spent_at(), "%Y-%m-%dT%H:%M");
 
                     format!(
                         "name : {}\ndate : {}\ncost : {}\ntype: {}\n",
-                        item.source.spent_name,
+                        item.source.spent_name(),
                         kor_time,
-                        item.source.spent_money.to_formatted_string(&Locale::ko),
-                        item.source.consume_keyword_type
+                        item.source.spent_money().to_formatted_string(&Locale::ko),
+                        item.source.consume_keyword_type()
                     )
                 },
                 empty_flag,

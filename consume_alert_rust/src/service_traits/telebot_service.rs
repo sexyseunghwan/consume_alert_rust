@@ -23,10 +23,10 @@ pub trait TelebotService {
         'life1: 'life2,
         T: Send + Sync;
 
-    async fn input_message_consume_split(
+    async fn input_message_consume_split<T: SpentDetailSource + Send + Sync>(
         &self,
         to_python_graph_line: &ToPythonGraphLine,
-        spent_detail_list: &[DocumentWithId<SpentDetailByEs>],
+        spent_detail_list: &[DocumentWithId<T>],
     ) -> Result<(), anyhow::Error>;
 
     async fn input_message_consume_info_by_typelist(

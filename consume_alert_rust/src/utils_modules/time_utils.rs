@@ -38,23 +38,30 @@ pub fn find_current_kor_naivedate_first_date() -> Result<DateTime<Utc>, anyhow::
     Ok(kst_start.with_timezone(&Utc))
 }
 
-/// Returns the last day of the month that `dt` falls in, as `DateTime<Utc>` (midnight UTC).
+/// Returns the last day of the month that `dt` falls in, as `DateTime<Utc>` (midnight UTC). - deprecated..
 pub fn find_lastday_naivedate(dt: DateTime<Utc>) -> Result<DateTime<Utc>, anyhow::Error> {
     let naive_date: NaiveDate = dt.date_naive();
 
+    println!("naive_date: {:?}", naive_date);
+    
     let next_month: NaiveDate = if naive_date.month() == 12 {
         NaiveDate::from_ymd_opt(naive_date.year() + 1, 1, 1)
     } else {
-        NaiveDate::from_ymd_opt(naive_date.year(), naive_date.month() + 1, 1)
+        NaiveDate::from_ymd_opt(naive_date.year(), naive_date.month() + 2, 1)
     }
     .ok_or_else(|| anyhow!("[time_utils::find_lastday_naivedate] Invalid date when calculating the first day of the next month."))?;
+    
+    println!("next_month: {:?}", next_month);
 
     let last_day_of_month: NaiveDate = next_month.pred_opt()
         .ok_or_else(|| anyhow!("[time_utils::find_lastday_naivedate] Unable to import the previous date for that date."))?;
 
-    let end_of_day: NaiveTime = NaiveTime::from_hms_opt(23, 59, 59).ok_or_else(|| {
+    let end_of_day: NaiveTime = NaiveTime::from_hms_opt(14, 59, 59).ok_or_else(|| {
         anyhow!("[time_utils::find_lastday_naivedate] Unable to create end-of-day time.")
     })?;
+
+    println!("last_day_of_month: {:?}", last_day_of_month);
+    println!("end_of_day: {:?}", end_of_day);
 
     Ok(last_day_of_month.and_time(end_of_day).and_utc())
 }
@@ -64,6 +71,20 @@ pub fn find_naivedate(year: i32, month: u32, date: u32) -> Result<DateTime<Utc>,
     NaiveDate::from_ymd_opt(year, month, date)
         .ok_or_else(|| anyhow!("[Datetime Parsing Error][find_naivedate()] Invalid date => year: {}, month: {}, day: {}", year, month, date))
         .map(|d| d.and_time(NaiveTime::MIN).and_utc())
+}
+
+/// Returns a `DateTime<chrono_tz::Tz>` for midnight Korean time on the given year/month/day.
+pub fn find_kst_datetime(year: i32, month: u32, date: u32) -> Result<DateTime<chrono_tz::Tz>, anyhow::Error> {
+    let naive_date = NaiveDate::from_ymd_opt(year, month, date)
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error][find_kst_datetime()] Invalid date => year: {}, month: {}, day: {}", year, month, date))?;
+
+    let naive_datetime = naive_date.and_time(NaiveTime::MIN);
+    let kst_datetime = naive_datetime
+        .and_local_timezone(Seoul)
+        .single()
+        .ok_or_else(|| anyhow!("[time_utils::find_kst_datetime] Invalid or ambiguous Seoul datetime"))?;
+
+    Ok(kst_datetime)
 }
 
 /// Returns a `DateTime<Utc>` that is `add_month` months after/before `dt`.
@@ -85,7 +106,10 @@ pub fn find_add_month_from_naivedate(
     dt: DateTime<Utc>,
     add_month: i32,
 ) -> Result<DateTime<Utc>, anyhow::Error> {
-    let naive_date: NaiveDate = dt.date_naive();
+    let naive_datetime: NaiveDateTime = dt.naive_utc();
+    let naive_date: NaiveDate = naive_datetime.date();
+    let naive_time: NaiveTime = naive_datetime.time();
+
     let result_date: NaiveDate = if add_month >= 0 {
         naive_date
             .checked_add_months(Months::new(add_month as u32))
@@ -96,7 +120,7 @@ pub fn find_add_month_from_naivedate(
             .ok_or_else(|| anyhow!("[time_utils::find_add_month_from_naivedate] Date underflow when subtracting {} months from {:?}", -add_month, naive_date))?
     };
 
-    Ok(result_date.and_time(NaiveTime::MIN).and_utc())
+    Ok(result_date.and_time(naive_time).and_utc())
 }
 
 #[allow(dead_code)]
