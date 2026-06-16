@@ -1,7 +1,6 @@
 use crate::common::*;
 
-use crate::models::to_python_graph_circle::*;
-use crate::models::to_python_graph_line::*;
+use crate::models::{assets::*, to_python_graph_circle::*, to_python_graph_line::*};
 
 use crate::service_traits::graph_api_service::*;
 
@@ -14,7 +13,7 @@ fn initialize_http_clients() -> Client {
 
 #[derive(Debug, Getters, Clone)]
 pub struct GraphApiServiceImpl {
-    graph_api_url: String,
+    graph_api_url: reqwest::Url,
 }
 
 impl GraphApiServiceImpl {
@@ -24,96 +23,82 @@ impl GraphApiServiceImpl {
     ///
     /// Returns a new `GraphApiServiceImpl` instance.
     pub fn new() -> anyhow::Result<Self> {
-        let graph_api_url: String = env::var("GRAPH_API_URL").inspect_err(|e| {
+        let raw_url: String = env::var("GRAPH_API_URL").inspect_err(|e| {
             error!(
                 "[GraphApiServiceImpl::new] 'GRAPH_API_URL' must be set: {:#}",
                 e
             );
         })?;
 
+        let graph_api_url = reqwest::Url::parse(&raw_url).map_err(|e| {
+            anyhow!(
+                "[GraphApiServiceImpl::new] Invalid GRAPH_API_URL '{}': {}",
+                raw_url,
+                e
+            )
+        })?;
+
         Ok(Self { graph_api_url })
     }
-}
 
-#[async_trait]
-impl GraphApiService for GraphApiServiceImpl {
-    #[doc = "Function to send post request to 'Python' api"]
-    /// # Arguments
-    /// * `uri` - uri information
-    /// * `to_python_graph` - to_python_graph Object
-    ///
-    /// # Returns
-    /// * Result<String, anyhow::Error>
-    async fn input_api<T: Serialize + Send>(
+    async fn call_python_graph_api_bytes<T: Serialize + Send>(
         &self,
         uri: &str,
-        to_python_graph: T,
-    ) -> Result<String, anyhow::Error> {
-        let post_uri: String = format!("{}{}", self.graph_api_url, uri);
+        body: T,
+    ) -> anyhow::Result<Vec<u8>> {
+        let post_uri = self.graph_api_url.join(uri).map_err(|e| {
+            anyhow!(
+                "[GraphApiServiceImpl::call_python_graph_api_bytes] Invalid URI '{}': {}",
+                uri,
+                e
+            )
+        })?;
 
         let client: &once_lazy<Client> = &HTTP_CLIENT;
 
-        let res: reqwest::Response = client.post(&post_uri).json(&to_python_graph).send().await?;
+        let res: reqwest::Response = client.post(post_uri.clone()).json(&body).send().await?;
 
         if res.status().is_success() {
-            let response_body: String = res.text().await?;
-            Ok(response_body)
+            Ok(res.bytes().await?.to_vec())
         } else {
-            let status: reqwest::StatusCode = res.status();
+            let status = res.status();
             let error_body: String = res.text().await.unwrap_or_default();
             Err(anyhow!(
-                "[GraphApiServiceImpl::input_api] Request for '{}' failed. Status: {}, Body: {}",
-                &post_uri,
+                "[GraphApiServiceImpl::call_python_graph_api_bytes] Request for '{}' failed. Status: {}, Body: {}",
+                post_uri,
                 status,
                 error_body
             ))
         }
     }
+}
 
-    #[doc = "Function that calls python api to draw a line chart. - double"]
-    /// # Arguments
-    /// * `cur_python_graph_info` - Objects for representing consumption details in a Python graph
-    /// * `versus_python_graph_info` - Objects for representing consumption details in a Python graph (comparative group)
-    ///
-    /// # Returns
-    /// * Result<String, anyhow::Error> -> image file name
+#[async_trait]
+impl GraphApiService for GraphApiServiceImpl {
     async fn find_python_matplot_consume_detail_double(
         &self,
         cur_python_graph_info: &ToPythonGraphLine,
         versus_python_graph_info: &ToPythonGraphLine,
-    ) -> Result<String, anyhow::Error> {
+    ) -> anyhow::Result<Vec<u8>> {
         let python_graph_vec: Vec<ToPythonGraphLine> = vec![
             cur_python_graph_info.clone(),
             versus_python_graph_info.clone(),
         ];
 
-        let resp_body: String = self
-            .input_api("/api/consume_detail", python_graph_vec)
-            .await?;
-
-        Ok(resp_body)
+        self.call_python_graph_api_bytes("/api/consume_detail", python_graph_vec)
+            .await
     }
 
-    /// Calls the Python API to draw a pie chart for consumption categories.
-    ///
-    /// # Arguments
-    ///
-    /// * `to_python_graph_circle` - Data transfer object containing category and percentage information for the pie chart
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(String)` containing the generated image file path on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the HTTP request to the Python API fails.
     async fn find_python_matplot_consume_type(
         &self,
         to_python_graph_circle: &ToPythonGraphCircle,
-    ) -> Result<String, anyhow::Error> {
-        let resp_body: String = self
-            .input_api("/api/category", to_python_graph_circle)
-            .await?;
-        Ok(resp_body)
+    ) -> anyhow::Result<Vec<u8>> {
+        self.call_python_graph_api_bytes("/api/category", to_python_graph_circle)
+            .await
+    }
+
+    async fn find_python_matplot_asset_pie(&self, assets: Assets) -> anyhow::Result<Vec<u8>> {
+        self.call_python_graph_api_bytes("/api/asset_pie_image_app", assets)
+            .await
     }
 }

@@ -1,13 +1,9 @@
 use crate::common::*;
 
-use crate::service_traits::cache_service::*;
-use crate::service_traits::elastic_query_service::*;
-use crate::service_traits::graph_api_service::*;
-use crate::service_traits::mysql_query_service::*;
-use crate::service_traits::process_service::*;
-use crate::service_traits::producer_service::*;
-use crate::service_traits::redis_service::*;
-use crate::service_traits::telebot_service::*;
+use crate::service_traits::{
+    cache_service::*, elastic_query_service::*, graph_api_service::*, mysql_query_service::*,
+    process_service::*, producer_service::*, redis_service::*, telebot_service::*,
+};
 
 use crate::models::per_datetime::*;
 
@@ -56,7 +52,7 @@ impl<
             1 => {
                 let date_start: DateTime<Utc> = find_current_kor_naivedate_first_date()?;
                 let date_end: DateTime<Utc> = find_lastday_naivedate(date_start)?;
-                
+
                 self.process_service
                     .find_nmonth_to_current_date(date_start, date_end, -1)?
             }
@@ -75,7 +71,8 @@ impl<
                     .parse()?;
 
                 // KST month start: YYYY-MM-01 00:00:00 KST
-                let kor_date_start: DateTime<chrono_tz::Tz> = find_kst_datetime(kor_year, kor_month, 1)?;
+                let kor_date_start: DateTime<chrono_tz::Tz> =
+                    find_kst_datetime(kor_year, kor_month, 1)?;
 
                 // Find last day of KST month first
                 let last_day_num: u32 = NaiveDate::from_ymd_opt(kor_year, kor_month, 1)
@@ -85,19 +82,22 @@ impl<
                     .pred_opt()
                     .ok_or_else(|| anyhow!("[command_consumption_per_mon] Cannot get last day"))?
                     .day();
-                
+
                 // KST month end: YYYY-MM-LAST 23:59:59 KST
-                let kor_date_end: DateTime<chrono_tz::Tz> = NaiveDate::from_ymd_opt(kor_year, kor_month, last_day_num)
-                    .ok_or_else(|| anyhow!("[command_consumption_per_mon] Invalid last day"))?
-                    .and_time(NaiveTime::from_hms_opt(23, 59, 59).unwrap())
-                    .and_local_timezone(Seoul)
-                    .single()
-                    .ok_or_else(|| anyhow!("[command_consumption_per_mon] Invalid KST datetime"))?;
+                let kor_date_end: DateTime<chrono_tz::Tz> =
+                    NaiveDate::from_ymd_opt(kor_year, kor_month, last_day_num)
+                        .ok_or_else(|| anyhow!("[command_consumption_per_mon] Invalid last day"))?
+                        .and_time(NaiveTime::from_hms_opt(23, 59, 59).unwrap())
+                        .and_local_timezone(Seoul)
+                        .single()
+                        .ok_or_else(|| {
+                            anyhow!("[command_consumption_per_mon] Invalid KST datetime")
+                        })?;
 
                 // Convert to UTC for Elasticsearch query
                 let date_start: DateTime<Utc> = kor_date_start.with_timezone(&Utc);
                 let date_end: DateTime<Utc> = kor_date_end.with_timezone(&Utc);
-                
+
                 self.process_service
                     .find_nmonth_to_current_date(date_start, date_end, -1)?
             }
@@ -477,7 +477,7 @@ impl<
         let permon_datetime: PerDatetime = match args.len() {
             1 => {
                 let today: DateTime<Utc> = find_current_kor_naivedate();
-                
+
                 let (year, month, day) = (today.year(), today.month(), today.day());
                 let cur_date_start: DateTime<Utc> = if day < 25 {
                     find_add_month_from_naivedate(find_naivedate(year, month, 25)?, -1)?

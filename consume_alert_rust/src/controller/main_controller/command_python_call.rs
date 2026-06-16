@@ -1,24 +1,16 @@
 use crate::common::*;
-use crate::service_traits::cache_service::*;
-use crate::service_traits::elastic_query_service::*;
-use crate::service_traits::graph_api_service::*;
-use crate::service_traits::mysql_query_service::*;
-use crate::service_traits::process_service::*;
-use crate::service_traits::producer_service::*;
-use crate::service_traits::redis_service::*;
-use crate::service_traits::telebot_service::*;
+use crate::service_traits::{
+    cache_service::*, elastic_query_service::*, graph_api_service::*, mysql_query_service::*,
+    process_service::*, producer_service::*, redis_service::*, telebot_service::*,
+};
 
-use crate::models::agg_result_set::*;
-use crate::models::consume_result_by_type::*;
-use crate::models::per_datetime::*;
-use crate::models::spent_detail_by_es::*;
-use crate::models::spent_detail_by_es_kst::*;
-use crate::models::to_python_graph_circle::*;
-use crate::models::to_python_graph_line::*;
+use crate::models::{
+    agg_result_set::*, consume_result_by_type::*, document_with_id::*, file_info::*,
+    per_datetime::*, spent_detail_by_es::*, spent_detail_by_es_kst::*, to_python_graph_circle::*,
+    to_python_graph_line::*,
+};
 
 use crate::enums::range_operator::*;
-
-use crate::utils_modules::io_utils::*;
 
 use super::MainController;
 
@@ -159,11 +151,7 @@ impl<
                         item.source.room_seq,
                         item.source.produced_at.map(|dt| dt.with_timezone(&Seoul)),
                     );
-                    crate::models::document_with_id::DocumentWithId::new(
-                        item.id.clone(),
-                        item.score,
-                        source_kst,
-                    )
+                    DocumentWithId::new(item.id.clone(), item.score, source_kst)
                 })
                 .collect(),
         );
@@ -218,18 +206,19 @@ impl<
                 .await?;
         }
 
-        let consume_detail_img_path: String = self
+        let consume_detail_graph: Vec<u8> = self
             .graph_api_service
             .find_python_matplot_consume_detail_double(
                 &cur_python_graph_info,
                 &versus_python_graph_info,
             )
             .await?;
+        let consume_detail_graph_img: FileInfo =
+            FileInfo::new(String::from("consume_detail"), consume_detail_graph);
 
         let consume_result_by_type: Vec<ConsumeResultByType> = self
             .process_service
             .find_consumption_result_by_category(&spent_detail_info_kst)?;
-
         let circle_graph: ToPythonGraphCircle = self
             .process_service
             .to_python_graph_circle_by_consume_type(
@@ -238,17 +227,15 @@ impl<
                 permon_datetime.date_start,
                 permon_datetime.date_end,
             )?;
-
-        let circle_graph_path: String = self
+        let circle_graph_img: Vec<u8> = self
             .graph_api_service
             .find_python_matplot_consume_type(&circle_graph)
             .await?;
+        let circle_img: FileInfo = FileInfo::new(String::from("consume_type"), circle_graph_img);
 
-        let img_files: Vec<String> = vec![consume_detail_img_path, circle_graph_path];
+        let img_files: Vec<FileInfo> = vec![consume_detail_graph_img, circle_img];
 
-        self.tele_bot_service
-            .input_photo_confirm(&img_files)
-            .await?;
+        self.tele_bot_service.input_photo_confirm(img_files).await?;
 
         self.tele_bot_service
             .input_message_consume_info_by_typelist(
@@ -258,8 +245,6 @@ impl<
                 *spent_detail_info_kst.agg_result(),
             )
             .await?;
-
-        delete_file(img_files)?;
 
         Ok(())
     }

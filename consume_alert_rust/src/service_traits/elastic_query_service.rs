@@ -1,8 +1,6 @@
 use crate::common::*;
 
-use crate::models::agg_result_set::*;
-use crate::models::consume_index_prodt_type::*;
-use crate::models::document_with_id::*;
+use crate::models::{agg_result_set::*, consume_index_prodt_type::*, document_with_id::*};
 
 use crate::enums::range_operator::*;
 

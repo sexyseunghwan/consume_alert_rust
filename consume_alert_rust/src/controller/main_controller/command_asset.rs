@@ -1,16 +1,12 @@
 use crate::common::*;
 
-use crate::service_traits::cache_service::*;
-use crate::service_traits::elastic_query_service::*;
-use crate::service_traits::graph_api_service::*;
-use crate::service_traits::mysql_query_service::*;
-use crate::service_traits::process_service::*;
-use crate::service_traits::producer_service::*;
-use crate::service_traits::redis_service::*;
-use crate::service_traits::telebot_service::*;
+use crate::service_traits::{
+    cache_service::*, elastic_query_service::*, graph_api_service::*, mysql_query_service::*,
+    process_service::*, producer_service::*, redis_service::*, telebot_service::*,
+};
 
 use crate::models::{
-    asset_resp::*, cash_asset::*, crypto_resp::*, deposit_asset::*, earned_detail::*,
+    asset_resp::*, assets::*, cash_asset::*, crypto_resp::*, deposit_asset::*, earned_detail::*,
     per_datetime::*, saving_asset::*, stock_resp::*,
 };
 
@@ -38,6 +34,7 @@ fn push_asset(
     is_krw: bool,
     rates: ExchangeRates,
 ) {
+    /* 해당 자산의 달러/원화 가치 모두 저장하고 있음. */
     let (krw, usd) = if is_krw {
         totals.krw += amount;
         (amount, amount * rates.krw_to_usd)
@@ -67,8 +64,6 @@ fn build_asset_message(
         ("Crypto", "크립토성 자산"),
         ("Cash", "현금성 자산"),
     ];
-    let empty_vec: Vec<AssetResp> = Vec::new();
-
     let mut msg: String = format!(
         "총자산 = {}₩ // {:.2}$\n",
         grand_krw_i64.to_formatted_string(&Locale::en),
@@ -77,7 +72,7 @@ fn build_asset_message(
 
     for (key, label) in sections {
         msg.push_str(&format!("{}\n[{}]\n", sep, label));
-        let assets: &Vec<AssetResp> = asset_map.get(*key).unwrap_or(&empty_vec);
+        let assets: &[AssetResp] = asset_map.get(*key).map(Vec::as_slice).unwrap_or(&[]);
 
         let mut section_krw: Decimal = Decimal::ZERO;
         let mut section_usd: Decimal = Decimal::ZERO;
@@ -430,11 +425,11 @@ impl<
                 let krw_to_usd: Decimal =
                     fetch_exchange_rate(self.mysql_query_service.as_ref(), "KRW", "USD").await?;
 
-                let mut totals = AssetTotals {
+                let mut totals: AssetTotals = AssetTotals {
                     krw: Decimal::ZERO,
                     usd: Decimal::ZERO,
                 };
-                let rates = ExchangeRates {
+                let rates: ExchangeRates = ExchangeRates {
                     usd_to_krw,
                     krw_to_usd,
                 };
@@ -477,11 +472,13 @@ impl<
                         );
                     }
 
+                    // 여기 이상하다... 통일이 안되어있음
                     let stocks: Vec<StockResp> = self
                         .mysql_query_service
                         .find_stock_response(user_seq, currency_code)
                         .await
                         .inspect_err(|e| error!("[command_show_all_asset] stocks: {:#}", e))?;
+
                     for s in &stocks {
                         push_asset(
                             &mut asset_map,
@@ -494,11 +491,13 @@ impl<
                         );
                     }
 
+                    // 여기 이상하다... 통일이 안되어있음
                     let cryptos: Vec<CryptoResp> = self
                         .mysql_query_service
                         .find_crypto_response(user_seq, currency_code)
                         .await
                         .inspect_err(|e| error!("[command_show_all_asset] cryptos: {:#}", e))?;
+
                     for c in &cryptos {
                         push_asset(
                             &mut asset_map,
@@ -536,6 +535,30 @@ impl<
                     .await
                     .inspect_err(|e| {
                         error!("[command_show_all_asset] Failed to send message: {:#}", e)
+                    })?;
+
+                let total_asset_amount_krw: Decimal = totals.krw + (totals.usd * usd_to_krw);
+                let assets: Assets = Assets::new(total_asset_amount_krw, asset_map);
+
+                let pie_image_bytes: Vec<u8> = self
+                    .graph_api_service
+                    .find_python_matplot_asset_pie(assets)
+                    .await
+                    .inspect_err(|e| {
+                        error!(
+                            "[command_show_all_asset] Failed to get asset pie image: {:#}",
+                            e
+                        )
+                    })?;
+
+                self.tele_bot_service
+                    .input_photo_from_bytes(pie_image_bytes, "asset_pie.png")
+                    .await
+                    .inspect_err(|e| {
+                        error!(
+                            "[command_show_all_asset] Failed to send asset pie image: {:#}",
+                            e
+                        )
                     })?;
             }
             _ => {

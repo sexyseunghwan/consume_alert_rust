@@ -1,19 +1,14 @@
 use crate::common::*;
 
-use crate::service_traits::cache_service::*;
-use crate::service_traits::elastic_query_service::*;
-use crate::service_traits::graph_api_service::*;
-use crate::service_traits::mysql_query_service::*;
-use crate::service_traits::process_service::*;
-use crate::service_traits::producer_service::*;
-use crate::service_traits::redis_service::*;
-use crate::service_traits::telebot_service::*;
+use crate::service_traits::{
+    cache_service::*, elastic_query_service::*, graph_api_service::*, mysql_query_service::*,
+    process_service::*, producer_service::*, redis_service::*, telebot_service::*,
+};
 
-use crate::models::consume_index_prodt_type::*;
-use crate::models::spent_detail::*;
-use crate::models::spent_detail_to_kafka::*;
-use crate::models::spent_detail_with_info::*;
-use crate::models::user_payment_methods::*;
+use crate::models::{
+    consume_index_prodt_type::*, spent_detail::*, spent_detail_to_kafka::*,
+    spent_detail_with_info::*, user_payment_methods::*,
+};
 
 use crate::utils_modules::io_utils::*;
 

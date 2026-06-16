@@ -1,6 +1,7 @@
 pub mod agg_group;
 pub mod agg_result_set;
 pub mod asset_resp;
+pub mod assets;
 pub mod cash_asset;
 pub mod consume_index_prodt_type;
 pub mod consume_prodt_info;
@@ -13,6 +14,7 @@ pub mod currency_exchange_rate_snapshot;
 pub mod deposit_asset;
 pub mod document_with_id;
 pub mod earned_detail;
+pub mod file_info;
 pub mod kis_api_token;
 pub mod per_datetime;
 pub mod saving_asset;

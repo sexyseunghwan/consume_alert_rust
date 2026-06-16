@@ -1,24 +1,29 @@
 use crate::common::*;
 
-use crate::models::to_python_graph_circle::*;
-use crate::models::to_python_graph_line::*;
+use crate::models::{assets::*, to_python_graph_circle::*, to_python_graph_line::*};
 
 #[async_trait]
 pub trait GraphApiService {
-    async fn input_api<T: Serialize + Send>(
-        &self,
-        uri: &str,
-        to_python_graph: T,
-    ) -> Result<String, anyhow::Error>;
-
+    // async fn find_python_matplot_consume_detail_double(
+    //     &self,
+    //     cur_python_graph_info: &ToPythonGraphLine,
+    //     versus_python_graph_info: &ToPythonGraphLine,
+    // ) -> anyhow::Result<String>;
     async fn find_python_matplot_consume_detail_double(
         &self,
         cur_python_graph_info: &ToPythonGraphLine,
         versus_python_graph_info: &ToPythonGraphLine,
-    ) -> Result<String, anyhow::Error>;
+    ) -> anyhow::Result<Vec<u8>>;
+
+    // async fn find_python_matplot_consume_type(
+    //     &self,
+    //     to_python_graph_circle: &ToPythonGraphCircle,
+    // ) -> Result<String, anyhow::Error>;
 
     async fn find_python_matplot_consume_type(
         &self,
         to_python_graph_circle: &ToPythonGraphCircle,
-    ) -> Result<String, anyhow::Error>;
+    ) -> anyhow::Result<Vec<u8>>;
+
+    async fn find_python_matplot_asset_pie(&self, assets: Assets) -> anyhow::Result<Vec<u8>>;
 }

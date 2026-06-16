@@ -1,8 +1,6 @@
 use crate::common::*;
 
-use crate::models::agg_result_set::*;
-use crate::models::spent_detail_by_es::*;
-use crate::models::spent_detail_by_es_kst::*;
+use crate::models::{agg_result_set::*, spent_detail_by_es::*, spent_detail_by_es_kst::*};
 
 /// Trait for spent detail types that can be used in graph generation and display
 pub trait SpentDetailSource {
@@ -11,7 +9,6 @@ pub trait SpentDetailSource {
     fn spent_at_kst(&self) -> DateTime<chrono_tz::Tz>;
     fn spent_name(&self) -> &str;
     fn consume_keyword_type(&self) -> &str;
-    fn consume_keyword_type_id(&self) -> i64;
 }
 
 impl SpentDetailSource for SpentDetailByEs {
@@ -34,10 +31,6 @@ impl SpentDetailSource for SpentDetailByEs {
     fn consume_keyword_type(&self) -> &str {
         &self.consume_keyword_type
     }
-
-    fn consume_keyword_type_id(&self) -> i64 {
-        self.consume_keyword_type_id
-    }
 }
 
 impl SpentDetailSource for SpentDetailByEsKst {
@@ -59,10 +52,6 @@ impl SpentDetailSource for SpentDetailByEsKst {
 
     fn consume_keyword_type(&self) -> &str {
         &self.consume_keyword_type
-    }
-
-    fn consume_keyword_type_id(&self) -> i64 {
-        self.consume_keyword_type_id
     }
 }
 
@@ -108,7 +97,7 @@ impl ToPythonGraphLine {
             // Extract KST date (trait method handles UTC→KST conversion if needed)
             let kst_date: NaiveDate = elem.source.spent_at_kst().date_naive();
             let spent_money: i64 = elem.source.spent_money();
-            
+
             date_consume
                 .entry(kst_date)
                 .and_modify(|e| *e += spent_money)

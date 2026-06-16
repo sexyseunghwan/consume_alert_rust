@@ -2,10 +2,9 @@ use crate::common::*;
 
 use crate::repository::es_repository::*;
 
-use crate::models::agg_result_set::*;
-use crate::models::consume_index_prodt_type::*;
-use crate::models::document_with_id::*;
-use crate::models::score_manager::*;
+use crate::models::{
+    agg_result_set::*, consume_index_prodt_type::*, document_with_id::*, score_manager::*,
+};
 
 use crate::configuration::elasitc_index_name::*;
 
@@ -55,7 +54,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                         e
                     )
                 })?;
-                
+
                 let score: f64 = hit
                     .get("_score")
                     .and_then(|score| score.as_f64())

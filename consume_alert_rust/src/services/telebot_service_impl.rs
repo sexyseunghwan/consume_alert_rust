@@ -2,10 +2,9 @@ use crate::common::*;
 
 use crate::AppConfig;
 
-use crate::models::consume_result_by_type::*;
-use crate::models::document_with_id::*;
-use crate::models::spent_detail_by_es::*;
-use crate::models::to_python_graph_line::*;
+use crate::models::{
+    consume_result_by_type::*, document_with_id::*, file_info::*, to_python_graph_line::*,
+};
 
 use crate::service_traits::telebot_service::*;
 
@@ -110,15 +109,18 @@ impl TelebotServiceImpl {
         Ok(())
     }
 
-    #[doc = "tele_bot_send_photo"]
-    async fn tele_bot_input_photo(&self, image_path: &str) -> Result<(), anyhow::Error> {
-        let photo: InputFile = InputFile::file(Path::new(image_path));
+    async fn tele_bot_input_photo_from_bytes(
+        &self,
+        bytes: Vec<u8>,
+        filename: &str,
+    ) -> anyhow::Result<()> {
+        let photo: InputFile = InputFile::memory(bytes).file_name(filename.to_string());
         self.bot
             .send_photo(self.chat_id, photo)
             .await
             .inspect_err(|e| {
                 error!(
-                    "[Telebot Error][tele_bot_input_photo()] Failed to send Photo: {:#}",
+                    "[TelebotServiceImpl::tele_bot_input_photo_from_bytes()] Failed to send Photo: {:#}",
                     e
                 )
             })?;
@@ -135,23 +137,29 @@ impl TelebotService for TelebotServiceImpl {
             .await
     }
 
-    #[doc = "Function that transfers pictures"]
-    /// # Arguments
-    /// * `image_path_vec` - Vector that elements the paths of a photo file
-    ///
-    /// # Returns
-    /// * Result<(), anyhow::Error>
-    async fn input_photo_confirm(&self, image_path_vec: &[String]) -> Result<(), anyhow::Error> {
-        for image_path in image_path_vec {
-            self.try_send_operation(
-                || self.tele_bot_input_photo(image_path),
-                6,
-                Duration::from_secs(40),
-            )
-            .await?;
+    async fn input_photo_confirm(&self, image_vecs: Vec<FileInfo>) -> anyhow::Result<()> {
+        for image in &image_vecs {
+            self.input_photo_from_bytes(image.file_bytes().clone(), image.file_name())
+                .await
+                .inspect_err(|e| {
+                    error!("[TelebotServiceImpl::input_photo_confirm] {:#}", e);
+                })?
         }
 
         Ok(())
+    }
+
+    async fn input_photo_from_bytes(
+        &self,
+        bytes: Vec<u8>,
+        filename: &str,
+    ) -> Result<(), anyhow::Error> {
+        self.try_send_operation(
+            || self.tele_bot_input_photo_from_bytes(bytes.clone(), filename),
+            6,
+            Duration::from_secs(40),
+        )
+        .await
     }
 
     #[doc = "Functions that send messages related to consumption details"]

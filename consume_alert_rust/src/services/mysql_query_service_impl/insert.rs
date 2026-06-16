@@ -1,8 +1,7 @@
 use crate::common::*;
 
 use crate::entity::{earned_detail, spent_detail};
-use crate::models::earned_detail::*;
-use crate::models::spent_detail::*;
+use crate::models::{earned_detail::*, spent_detail::*};
 use crate::repository::mysql_repository::*;
 
 use super::MysqlQueryServiceImpl;

@@ -30,23 +30,23 @@ where
     })
 }
 
-#[doc = "Function that deletes files from the given path list"]
-/// # Arguments
-/// * `path_vec` - Vector of file paths to delete
-///
-/// # Returns
-/// * Result<(), anyhow::Error>
-pub fn delete_file(path_vec: Vec<String>) -> Result<(), anyhow::Error> {
-    for path in path_vec {
-        if std::path::Path::new(&path).exists() {
-            std::fs::remove_file(&path).map_err(|e| {
-                anyhow!(
-                    "[Error][delete_file()] Failed to delete file '{}': {:?}",
-                    path,
-                    e
-                )
-            })?;
-        }
-    }
-    Ok(())
-}
+// #[doc = "Function that deletes files from the given path list"]
+// /// # Arguments
+// /// * `path_vec` - Vector of file paths to delete
+// ///
+// /// # Returns
+// /// * Result<(), anyhow::Error>
+// pub fn delete_file(path_vec: Vec<String>) -> Result<(), anyhow::Error> {
+//     for path in path_vec {
+//         if std::path::Path::new(&path).exists() {
+//             std::fs::remove_file(&path).map_err(|e| {
+//                 anyhow!(
+//                     "[Error][delete_file()] Failed to delete file '{}': {:?}",
+//                     path,
+//                     e
+//                 )
+//             })?;
+//         }
+//     }
+//     Ok(())
+// }

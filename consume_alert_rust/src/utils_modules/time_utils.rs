@@ -43,14 +43,14 @@ pub fn find_lastday_naivedate(dt: DateTime<Utc>) -> Result<DateTime<Utc>, anyhow
     let naive_date: NaiveDate = dt.date_naive();
 
     println!("naive_date: {:?}", naive_date);
-    
+
     let next_month: NaiveDate = if naive_date.month() == 12 {
         NaiveDate::from_ymd_opt(naive_date.year() + 1, 1, 1)
     } else {
         NaiveDate::from_ymd_opt(naive_date.year(), naive_date.month() + 2, 1)
     }
     .ok_or_else(|| anyhow!("[time_utils::find_lastday_naivedate] Invalid date when calculating the first day of the next month."))?;
-    
+
     println!("next_month: {:?}", next_month);
 
     let last_day_of_month: NaiveDate = next_month.pred_opt()
@@ -74,7 +74,11 @@ pub fn find_naivedate(year: i32, month: u32, date: u32) -> Result<DateTime<Utc>,
 }
 
 /// Returns a `DateTime<chrono_tz::Tz>` for midnight Korean time on the given year/month/day.
-pub fn find_kst_datetime(year: i32, month: u32, date: u32) -> Result<DateTime<chrono_tz::Tz>, anyhow::Error> {
+pub fn find_kst_datetime(
+    year: i32,
+    month: u32,
+    date: u32,
+) -> Result<DateTime<chrono_tz::Tz>, anyhow::Error> {
     let naive_date = NaiveDate::from_ymd_opt(year, month, date)
         .ok_or_else(|| anyhow!("[Datetime Parsing Error][find_kst_datetime()] Invalid date => year: {}, month: {}, day: {}", year, month, date))?;
 
@@ -82,7 +86,9 @@ pub fn find_kst_datetime(year: i32, month: u32, date: u32) -> Result<DateTime<ch
     let kst_datetime = naive_datetime
         .and_local_timezone(Seoul)
         .single()
-        .ok_or_else(|| anyhow!("[time_utils::find_kst_datetime] Invalid or ambiguous Seoul datetime"))?;
+        .ok_or_else(|| {
+            anyhow!("[time_utils::find_kst_datetime] Invalid or ambiguous Seoul datetime")
+        })?;
 
     Ok(kst_datetime)
 }

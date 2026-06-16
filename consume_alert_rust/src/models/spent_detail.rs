@@ -2,8 +2,7 @@ use crate::common::*;
 
 use crate::views::spent_detail_view::*;
 
-use crate::entity::spent_detail;
-use crate::entity::spent_detail::ActiveModel;
+use crate::entity::spent_detail::{self, ActiveModel};
 
 use crate::models::consume_index_prodt_type::*;
 

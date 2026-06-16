@@ -2,8 +2,7 @@ use crate::common::*;
 
 use rust_decimal::Decimal;
 
-use crate::entity::earned_detail;
-use crate::entity::earned_detail::ActiveModel;
+use crate::entity::earned_detail::{self, ActiveModel};
 
 #[allow(clippy::too_many_arguments)]
 #[derive(Debug, Serialize, Deserialize, Clone, Getters, Setters, new)]

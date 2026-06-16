@@ -2,15 +2,11 @@ use crate::common::*;
 
 use crate::utils_modules::time_utils::*;
 
-use crate::models::agg_result_set::*;
-use crate::models::consume_result_by_type::*;
-use crate::models::document_with_id::*;
-use crate::models::per_datetime::*;
-use crate::models::spent_detail::*;
-use crate::models::spent_detail_by_es::*;
-use crate::models::spent_detail_by_installment::*;
-use crate::models::to_python_graph_circle::*;
-use crate::models::user_payment_methods::*;
+use crate::models::{
+    agg_result_set::*, consume_result_by_type::*, document_with_id::*, per_datetime::*,
+    spent_detail::*, spent_detail_by_installment::*, to_python_graph_circle::*,
+    user_payment_methods::*,
+};
 
 use crate::service_traits::process_service::*;
 
@@ -458,7 +454,9 @@ impl ProcessService for ProcessServiceImpl {
     ///
     /// # Returns
     /// * Result<Vec<ConsumeResultByType>, anyhow::Error>
-    fn find_consumption_result_by_category<T: crate::models::to_python_graph_line::SpentDetailSource>(
+    fn find_consumption_result_by_category<
+        T: crate::models::to_python_graph_line::SpentDetailSource,
+    >(
         &self,
         spent_details: &AggResultSet<T>,
     ) -> Result<Vec<ConsumeResultByType>, anyhow::Error> {

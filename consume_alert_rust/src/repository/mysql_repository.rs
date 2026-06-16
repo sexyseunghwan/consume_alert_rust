@@ -1,6 +1,5 @@
 use crate::common::*;
-use crate::entity::earned_detail;
-use crate::entity::spent_detail;
+use crate::entity::{earned_detail, spent_detail};
 
 #[async_trait]
 pub trait MysqlRepository {
