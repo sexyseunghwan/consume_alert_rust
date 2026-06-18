@@ -229,17 +229,17 @@ impl ProcessServiceImpl {
                 (spent_money, spent_at, spent_name)
             };
 
-        let spent_detail: SpentDetail = SpentDetail::new(
+        let spent_detail: SpentDetail = SpentDetail {
             spent_name,
             spent_money,
             spent_at,
-            1,
+            should_index: 1,
             user_seq,
-            0,
-            0,
+            spent_group_id: 0,
+            consume_keyword_type_id: 0,
             room_seq,
             payment_method_id,
-        );
+        };
 
         Ok(spent_detail)
     }
@@ -304,17 +304,17 @@ impl ProcessServiceImpl {
             .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Product name not found in time field"))?
             .to_string();
 
-        let spent_detail: SpentDetail = SpentDetail::new(
+        let spent_detail: SpentDetail = SpentDetail {
             spent_name,
             spent_money,
             spent_at,
-            1,
+            should_index: 1,
             user_seq,
-            0,
-            0,
+            spent_group_id: 0,
+            consume_keyword_type_id: 0,
             room_seq,
             payment_method_id,
-        );
+        };
 
         Ok(spent_detail)
     }

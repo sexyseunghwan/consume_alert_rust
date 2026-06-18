@@ -2,13 +2,12 @@ use crate::common::*;
 
 use crate::repository::es_repository::*;
 
+use crate::dtos::{EsRangeGroupSeqQueryDto, EsRangeRoomSeqQueryDto};
 use crate::models::{
     agg_result_set::*, consume_index_prodt_type::*, document_with_id::*, score_manager::*,
 };
 
 use crate::configuration::elasitc_index_name::*;
-
-use crate::enums::range_operator::*;
 
 use crate::service_traits::elastic_query_service::*;
 
@@ -203,21 +202,15 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
     ///
     /// # Returns
     /// * Result<AggResultSet<T>, anyhow::Error>
-    #[allow(clippy::too_many_arguments)]
     async fn find_info_filter_roomseq_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
         &self,
-        index_name: &str,
-        range_field: &str,
-        start_date: DateTime<Utc>,
-        end_date: DateTime<Utc>,
-        start_op: RangeOperator,
-        end_op: RangeOperator,
-        order_by_field: &str,
-        asc_yn: bool,
-        aggs_field: &str,
-        room_seq: i64,
+        dto: EsRangeRoomSeqQueryDto,
     ) -> Result<AggResultSet<T>, anyhow::Error> {
-        let order_by_asc: &str = if asc_yn { "asc" } else { "desc" };
+        let order_by_asc: &str = if dto.asc_yn { "asc" } else { "desc" };
+        let index_name = dto.index_name.as_str();
+        let range_field = dto.range_field.as_str();
+        let order_by_field = dto.order_by_field.as_str();
+        let aggs_field = dto.aggs_field.as_str();
 
         let query: Value = json!({
             "size": 10000,
@@ -227,14 +220,14 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                         {
                             "range": {
                                 range_field: {
-                                    start_op.to_str() : start_date.format("%Y-%m-%dT%H:%M:%S").to_string(),
-                                    end_op.to_str() : end_date.format("%Y-%m-%dT%H:%M:%S").to_string()
+                                    dto.start_op.to_str() : dto.start_date.format("%Y-%m-%dT%H:%M:%S").to_string(),
+                                    dto.end_op.to_str() : dto.end_date.format("%Y-%m-%dT%H:%M:%S").to_string()
                                 }
                             }
                         },
                         {
                             "term": {
-                                "room_seq": room_seq
+                                "room_seq": dto.room_seq
                             }
                         }
                     ]
@@ -300,18 +293,13 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
     /// Returns an error if the Elasticsearch query fails or the aggregation result is missing.
     async fn find_info_filter_groupseq_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
         &self,
-        index_name: &str,
-        range_field: &str,
-        start_date: DateTime<Utc>,
-        end_date: DateTime<Utc>,
-        start_op: RangeOperator,
-        end_op: RangeOperator,
-        order_by_field: &str,
-        asc_yn: bool,
-        aggs_field: &str,
-        group_seq: i64,
+        dto: EsRangeGroupSeqQueryDto,
     ) -> Result<AggResultSet<T>, anyhow::Error> {
-        let order_by_asc: &str = if asc_yn { "asc" } else { "desc" };
+        let order_by_asc: &str = if dto.asc_yn { "asc" } else { "desc" };
+        let index_name = dto.index_name.as_str();
+        let range_field = dto.range_field.as_str();
+        let order_by_field = dto.order_by_field.as_str();
+        let aggs_field = dto.aggs_field.as_str();
 
         let query: Value = json!({
             "size": 10000,
@@ -321,14 +309,14 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                         {
                             "range": {
                                 range_field: {
-                                    start_op.to_str(): start_date.format("%Y-%m-%d").to_string(),
-                                    end_op.to_str(): end_date.format("%Y-%m-%d").to_string()
+                                    dto.start_op.to_str(): dto.start_date.format("%Y-%m-%d").to_string(),
+                                    dto.end_op.to_str(): dto.end_date.format("%Y-%m-%d").to_string()
                                 }
                             }
                         },
                         {
                             "term": {
-                                "agg_group_seq": group_seq
+                                "agg_group_seq": dto.group_seq
                             }
                         }
                     ]

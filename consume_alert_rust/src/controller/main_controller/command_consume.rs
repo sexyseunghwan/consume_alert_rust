@@ -123,17 +123,17 @@ impl<
                 }
             };
 
-        let spent_detail: SpentDetail = SpentDetail::new(
+        let spent_detail: SpentDetail = SpentDetail {
             spent_name,
             spent_money,
-            Utc::now().with_timezone(&Seoul).fixed_offset(),
-            1,
+            spent_at: Utc::now().with_timezone(&Seoul).fixed_offset(),
+            should_index: 1,
             user_seq,
-            0,
-            spent_type.consume_keyword_type_id,
+            spent_group_id: 0,
+            consume_keyword_type_id: spent_type.consume_keyword_type_id,
             room_seq,
-            default_payment_method.payment_method_id,
-        );
+            payment_method_id: default_payment_method.payment_method_id,
+        };
 
         let spent_detail_view: SpentDetailView = spent_detail
             .to_spent_detail_view(&spent_type)

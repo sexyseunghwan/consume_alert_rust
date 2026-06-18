@@ -1,8 +1,7 @@
-#![allow(clippy::too_many_arguments)]
 use crate::common::*;
 use crate::entity::user_payment_methods;
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromQueryResult, Getters, new)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromQueryResult, Getters)]
 #[getset(get = "pub")]
 pub struct UserPaymentMethods {
     pub payment_method_id: i64,
@@ -22,22 +21,22 @@ pub struct UserPaymentMethods {
 
 impl From<user_payment_methods::Model> for UserPaymentMethods {
     fn from(model: user_payment_methods::Model) -> Self {
-        UserPaymentMethods::new(
-            model.payment_method_id,
-            model.payment_type_cd,
-            model.payment_category_cd,
-            model.card_id,
-            model.card_alias,
-            model.is_active,
-            DateTime::from_naive_utc_and_offset(model.created_at, Utc),
-            model
+        UserPaymentMethods {
+            payment_method_id: model.payment_method_id,
+            payment_type_cd: model.payment_type_cd,
+            payment_category_cd: model.payment_category_cd,
+            card_id: model.card_id,
+            card_alias: model.card_alias,
+            is_active: model.is_active,
+            created_at: DateTime::from_naive_utc_and_offset(model.created_at, Utc),
+            updated_at: model
                 .updated_at
                 .map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
-            model.created_by,
-            model.updated_by,
-            model.is_default,
-            model.user_seq,
-            model.card_company_nm,
-        )
+            created_by: model.created_by,
+            updated_by: model.updated_by,
+            is_default: model.is_default,
+            user_seq: model.user_seq,
+            card_company_nm: model.card_company_nm,
+        }
     }
 }

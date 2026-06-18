@@ -1,8 +1,7 @@
 use crate::common::*;
 
+use crate::dtos::{EsRangeGroupSeqQueryDto, EsRangeRoomSeqQueryDto};
 use crate::models::{agg_result_set::*, consume_index_prodt_type::*, document_with_id::*};
-
-use crate::enums::range_operator::*;
 
 #[async_trait]
 pub trait ElasticQueryService {
@@ -22,33 +21,13 @@ pub trait ElasticQueryService {
         top_size: i64,
         asc_yn: bool,
     ) -> Result<Vec<DocumentWithId<T>>, anyhow::Error>;
-    #[allow(clippy::too_many_arguments)]
     async fn find_info_filter_roomseq_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
         &self,
-        index_name: &str,
-        range_field: &str,
-        start_date: DateTime<Utc>,
-        end_date: DateTime<Utc>,
-        start_op: RangeOperator,
-        end_op: RangeOperator,
-        order_by_field: &str,
-        asc_yn: bool,
-        aggs_field: &str,
-        room_seq: i64,
+        query: EsRangeRoomSeqQueryDto,
     ) -> Result<AggResultSet<T>, anyhow::Error>;
-    #[allow(clippy::too_many_arguments)]
     async fn find_info_filter_groupseq_orderby_aggs_range<T: Send + Sync + DeserializeOwned>(
         &self,
-        index_name: &str,
-        range_field: &str,
-        start_date: DateTime<Utc>,
-        end_date: DateTime<Utc>,
-        start_op: RangeOperator,
-        end_op: RangeOperator,
-        order_by_field: &str,
-        asc_yn: bool,
-        aggs_field: &str,
-        group_seq: i64,
+        query: EsRangeGroupSeqQueryDto,
     ) -> Result<AggResultSet<T>, anyhow::Error>;
     #[allow(dead_code)]
     async fn delete_es_doc<T: Send + Sync>(

@@ -5,8 +5,7 @@
 
 use crate::common::*;
 
-#[allow(clippy::too_many_arguments)]
-#[derive(Debug, Clone, Serialize, Getters, new)]
+#[derive(Debug, Clone, Serialize, Getters)]
 #[getset(get = "pub")]
 pub struct SpentDetailByEsKst {
     /// Primary key of the spent detail

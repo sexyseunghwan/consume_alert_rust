@@ -3,8 +3,7 @@ use rust_decimal::Decimal;
 use crate::common::*;
 use crate::entity::currency_exchange_rate_snapshot;
 
-#[allow(clippy::too_many_arguments)]
-#[derive(Debug, Clone, Serialize, Deserialize, FromQueryResult, Getters, new)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromQueryResult, Getters)]
 #[getset(get = "pub")]
 pub struct CurrencyExchangeRateSnapshot {
     pub exchange_rate_snapshot_seq: i64,
@@ -21,19 +20,19 @@ pub struct CurrencyExchangeRateSnapshot {
 
 impl From<currency_exchange_rate_snapshot::Model> for CurrencyExchangeRateSnapshot {
     fn from(model: currency_exchange_rate_snapshot::Model) -> Self {
-        CurrencyExchangeRateSnapshot::new(
-            model.exchange_rate_snapshot_seq,
-            model.base_currency_code,
-            model.target_currency_code,
-            model.base_amount,
-            model.exchange_rate,
-            model.is_active,
-            DateTime::from_naive_utc_and_offset(model.created_at, Utc),
-            model
+        CurrencyExchangeRateSnapshot {
+            exchange_rate_snapshot_seq: model.exchange_rate_snapshot_seq,
+            base_currency_code: model.base_currency_code,
+            target_currency_code: model.target_currency_code,
+            base_amount: model.base_amount,
+            exchange_rate: model.exchange_rate,
+            is_active: model.is_active,
+            created_at: DateTime::from_naive_utc_and_offset(model.created_at, Utc),
+            updated_at: model
                 .updated_at
                 .map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
-            model.created_by,
-            model.updated_by,
-        )
+            created_by: model.created_by,
+            updated_by: model.updated_by,
+        }
     }
 }

@@ -4,13 +4,16 @@ use crate::service_traits::{
     process_service::*, producer_service::*, redis_service::*, telebot_service::*,
 };
 
+use crate::dtos::*;
 use crate::models::{
     agg_result_set::*, consume_result_by_type::*, document_with_id::*, file_info::*,
-    per_datetime::*, spent_detail_by_es::*, spent_detail_by_es_kst::*, to_python_graph_circle::*,
-    to_python_graph_line::*,
+    spent_detail_by_es::*, spent_detail_by_es_kst::*, to_python_graph_circle::*,
+    to_python_graph_line::*, per_datetime::*
 };
 
-use crate::enums::range_operator::*;
+use crate::enums::{
+    range_operator::*, 
+};
 
 use super::MainController;
 
@@ -44,17 +47,18 @@ impl<
     /// # Errors
     ///
     /// Returns an error if the Elasticsearch query, graph API call, or Telegram send fails.
-    #[allow(clippy::too_many_arguments)]
     pub(super) async fn common_process_python_double(
         &self,
-        index_name: &str,
-        permon_datetime: PerDatetime,
-        start_op: RangeOperator,
-        end_op: RangeOperator,
-        room_seq: Option<i64>,
-        group_seq: Option<i64>,
-        detail_yn: bool,
+        dto: CommonProcessPythonDoubleDto,
     ) -> anyhow::Result<()> {
+        let index_name: &str = dto.index_name.as_str();
+        let permon_datetime: PerDatetime = dto.permon_datetime;
+        let start_op: RangeOperator = dto.start_op;
+        let end_op: RangeOperator = dto.end_op;
+        let room_seq: Option<i64> = dto.room_seq;
+        let group_seq: Option<i64> = dto.group_seq;
+        let detail_yn: bool = dto.detail_yn;
+        
         let (spent_detail_info, versus_spent_detail_info): (
             AggResultSet<SpentDetailByEs>,
             AggResultSet<SpentDetailByEs>,
@@ -62,66 +66,66 @@ impl<
             (Some(rs), _) => {
                 let cur: AggResultSet<SpentDetailByEs> = self
                     .elastic_query_service
-                    .find_info_filter_roomseq_orderby_aggs_range(
-                        index_name,
-                        "spent_at",
-                        permon_datetime.date_start,
-                        permon_datetime.date_end,
+                    .find_info_filter_roomseq_orderby_aggs_range(EsRangeRoomSeqQueryDto {
+                        index_name: index_name.to_string(),
+                        range_field: "spent_at".to_string(),
+                        start_date: permon_datetime.date_start,
+                        end_date: permon_datetime.date_end,
                         start_op,
                         end_op,
-                        "spent_at",
-                        true,
-                        "spent_money",
-                        rs,
-                    )
+                        order_by_field: "spent_at".to_string(),
+                        asc_yn: true,
+                        aggs_field: "spent_money".to_string(),
+                        room_seq: rs,
+                    })
                     .await?;
                 let versus: AggResultSet<SpentDetailByEs> = self
                     .elastic_query_service
-                    .find_info_filter_roomseq_orderby_aggs_range(
-                        index_name,
-                        "spent_at",
-                        permon_datetime.n_date_start,
-                        permon_datetime.n_date_end,
+                    .find_info_filter_roomseq_orderby_aggs_range(EsRangeRoomSeqQueryDto {
+                        index_name: index_name.to_string(),
+                        range_field: "spent_at".to_string(),
+                        start_date: permon_datetime.n_date_start,
+                        end_date: permon_datetime.n_date_end,
                         start_op,
                         end_op,
-                        "spent_at",
-                        true,
-                        "spent_money",
-                        rs,
-                    )
+                        order_by_field: "spent_at".to_string(),
+                        asc_yn: true,
+                        aggs_field: "spent_money".to_string(),
+                        room_seq: rs,
+                    })
                     .await?;
                 (cur, versus)
             }
             (None, Some(gs)) => {
                 let cur: AggResultSet<SpentDetailByEs> = self
                     .elastic_query_service
-                    .find_info_filter_groupseq_orderby_aggs_range(
-                        index_name,
-                        "spent_at",
-                        permon_datetime.date_start,
-                        permon_datetime.date_end,
+                    .find_info_filter_groupseq_orderby_aggs_range(EsRangeGroupSeqQueryDto {
+                        index_name: index_name.to_string(),
+                        range_field: "spent_at".to_string(),
+                        start_date: permon_datetime.date_start,
+                        end_date: permon_datetime.date_end,
                         start_op,
                         end_op,
-                        "spent_at",
-                        true,
-                        "spent_money",
-                        gs,
-                    )
+                        order_by_field: "spent_at".to_string(),
+                        asc_yn: true,
+                        aggs_field: "spent_money".to_string(),
+                        group_seq: gs,
+                    })
                     .await?;
                 let versus: AggResultSet<SpentDetailByEs> = self
                     .elastic_query_service
-                    .find_info_filter_groupseq_orderby_aggs_range(
-                        index_name,
-                        "spent_at",
-                        permon_datetime.n_date_start,
-                        permon_datetime.n_date_end,
+                    .find_info_filter_groupseq_orderby_aggs_range(EsRangeGroupSeqQueryDto {
+                        index_name: index_name.to_string(),
+                        range_field: "spent_at".to_string(),
+                        start_date: permon_datetime.n_date_start,
+                        end_date: permon_datetime.n_date_end,
                         start_op,
                         end_op,
-                        "spent_at",
-                        true,
-                        "spent_money",
-                        gs,
-                    )
+                        order_by_field: "spent_at".to_string(),
+                        asc_yn: true,
+                        aggs_field: "spent_money".to_string(),
+                        group_seq: gs,
+                    })
                     .await?;
                 (cur, versus)
             }
@@ -139,18 +143,18 @@ impl<
                 .source_list()
                 .iter()
                 .map(|item| {
-                    let source_kst = SpentDetailByEsKst::new(
-                        item.source.spent_idx,
-                        item.source.spent_name.clone(),
-                        item.source.spent_money,
-                        item.source.spent_at.with_timezone(&Seoul),
-                        item.source.created_at.with_timezone(&Seoul),
-                        item.source.user_seq,
-                        item.source.consume_keyword_type_id,
-                        item.source.consume_keyword_type.clone(),
-                        item.source.room_seq,
-                        item.source.produced_at.map(|dt| dt.with_timezone(&Seoul)),
-                    );
+                    let source_kst = SpentDetailByEsKst {
+                        spent_idx: item.source.spent_idx,
+                        spent_name: item.source.spent_name.clone(),
+                        spent_money: item.source.spent_money,
+                        spent_at: item.source.spent_at.with_timezone(&Seoul),
+                        created_at: item.source.created_at.with_timezone(&Seoul),
+                        user_seq: item.source.user_seq,
+                        consume_keyword_type_id: item.source.consume_keyword_type_id,
+                        consume_keyword_type: item.source.consume_keyword_type.clone(),
+                        room_seq: item.source.room_seq,
+                        produced_at: item.source.produced_at.map(|dt| dt.with_timezone(&Seoul)),
+                    };
                     DocumentWithId::new(item.id.clone(), item.score, source_kst)
                 })
                 .collect(),
@@ -162,18 +166,18 @@ impl<
                 .source_list()
                 .iter()
                 .map(|item| {
-                    let source_kst = SpentDetailByEsKst::new(
-                        item.source.spent_idx,
-                        item.source.spent_name.clone(),
-                        item.source.spent_money,
-                        item.source.spent_at.with_timezone(&Seoul),
-                        item.source.created_at.with_timezone(&Seoul),
-                        item.source.user_seq,
-                        item.source.consume_keyword_type_id,
-                        item.source.consume_keyword_type.clone(),
-                        item.source.room_seq,
-                        item.source.produced_at.map(|dt| dt.with_timezone(&Seoul)),
-                    );
+                    let source_kst = SpentDetailByEsKst {
+                        spent_idx: item.source.spent_idx,
+                        spent_name: item.source.spent_name.clone(),
+                        spent_money: item.source.spent_money,
+                        spent_at: item.source.spent_at.with_timezone(&Seoul),
+                        created_at: item.source.created_at.with_timezone(&Seoul),
+                        user_seq: item.source.user_seq,
+                        consume_keyword_type_id: item.source.consume_keyword_type_id,
+                        consume_keyword_type: item.source.consume_keyword_type.clone(),
+                        room_seq: item.source.room_seq,
+                        produced_at: item.source.produced_at.map(|dt| dt.with_timezone(&Seoul)),
+                    };
                     crate::models::document_with_id::DocumentWithId::new(
                         item.id.clone(),
                         item.score,

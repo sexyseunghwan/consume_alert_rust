@@ -1,5 +1,6 @@
 use crate::common::*;
 
+use crate::dtos::MainControllerServicesDto;
 use crate::service_traits::{
     cache_service::*, elastic_query_service::*, graph_api_service::*, mysql_query_service::*,
     process_service::*, producer_service::*, redis_service::*, telebot_service::*,
@@ -43,42 +44,16 @@ impl<
         C: CacheService,
     > MainController<G, E, M, T, P, KP, R, C>
 {
-    /// Creates a new `MainController` wiring all service dependencies together.
-    ///
-    /// # Arguments
-    ///
-    /// * `graph_api_service` - Service for calling the Python graph API
-    /// * `elastic_query_service` - Service for querying Elasticsearch
-    /// * `mysql_query_service` - Service for querying MySQL
-    /// * `tele_bot_service` - Service for sending Telegram messages
-    /// * `process_service` - Service for business-logic processing
-    /// * `producer_service` - Service for producing Kafka messages
-    /// * `redis_service` - Service for Redis cache operations
-    /// * `cache_service` - Service for cached user and room lookups
-    ///
-    /// # Returns
-    ///
-    /// Returns a new `MainController` instance.
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        graph_api_service: Arc<G>,
-        elastic_query_service: Arc<E>,
-        mysql_query_service: Arc<M>,
-        tele_bot_service: T,
-        process_service: Arc<P>,
-        producer_service: Arc<KP>,
-        redis_service: Arc<R>,
-        cache_service: Arc<C>,
-    ) -> Self {
+    pub fn new(services: MainControllerServicesDto<G, E, M, T, P, KP, R, C>) -> Self {
         Self {
-            graph_api_service,
-            elastic_query_service,
-            mysql_query_service,
-            tele_bot_service,
-            process_service,
-            producer_service,
-            redis_service,
-            cache_service,
+            graph_api_service: services.graph_api_service,
+            elastic_query_service: services.elastic_query_service,
+            mysql_query_service: services.mysql_query_service,
+            tele_bot_service: services.tele_bot_service,
+            process_service: services.process_service,
+            producer_service: services.producer_service,
+            redis_service: services.redis_service,
+            cache_service: services.cache_service,
         }
     }
 

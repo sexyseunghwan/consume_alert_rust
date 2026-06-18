@@ -6,8 +6,7 @@ use crate::entity::spent_detail::{self, ActiveModel};
 
 use crate::models::consume_index_prodt_type::*;
 
-#[allow(clippy::too_many_arguments)]
-#[derive(Debug, Serialize, Deserialize, Clone, Getters, Setters, new)]
+#[derive(Debug, Serialize, Deserialize, Clone, Getters, Setters)]
 #[getset(get = "pub", set = "pub")]
 pub struct SpentDetail {
     pub spent_name: String,

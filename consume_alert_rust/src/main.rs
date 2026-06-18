@@ -103,6 +103,9 @@ use controller::main_controller::*;
 
 mod configuration;
 
+mod dtos;
+use dtos::*;
+
 mod models;
 
 mod enums;
@@ -236,7 +239,7 @@ async fn main() {
                     async move {
                         let tele_bot_service: TelebotServiceImpl =
                             TelebotServiceImpl::new(bot, message);
-                        let main_controller = MainController::new(
+                        let main_controller = MainController::new(MainControllerServicesDto {
                             graph_api_service,
                             elastic_query_service,
                             mysql_query_service,
@@ -245,7 +248,7 @@ async fn main() {
                             producer_service,
                             redis_service,
                             cache_service,
-                        );
+                        });
 
                         match main_controller.main_call_function().await {
                             Ok(_) => {

@@ -194,14 +194,14 @@ impl<
             )
         })?;
 
-        let earned_detail: EarnedDetail = EarnedDetail::new(
-            earned_name.clone(),
+        let earned_detail: EarnedDetail = EarnedDetail {
+            earned_name: earned_name.clone(),
             earned_money,
             earned_money_dollor,
-            Utc::now().into(),
+            earned_at: Utc::now().into(),
             user_seq,
             room_seq,
-        );
+        };
 
         self.mysql_query_service
             .input_earned_detail_with_transaction(&earned_detail)
@@ -310,14 +310,14 @@ impl<
             )
         })?;
 
-        let earned_detail: EarnedDetail = EarnedDetail::new(
-            earned_name.clone(),
+        let earned_detail: EarnedDetail = EarnedDetail {
+            earned_name: earned_name.clone(),
             earned_money,
             earned_money_dollor,
-            Utc::now().into(),
+            earned_at: Utc::now().into(),
             user_seq,
             room_seq,
-        );
+        };
 
         self.mysql_query_service
             .input_earned_detail_with_transaction(&earned_detail)

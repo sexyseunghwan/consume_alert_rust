@@ -4,8 +4,7 @@ use rust_decimal::Decimal;
 
 use crate::entity::earned_detail::{self, ActiveModel};
 
-#[allow(clippy::too_many_arguments)]
-#[derive(Debug, Serialize, Deserialize, Clone, Getters, Setters, new)]
+#[derive(Debug, Serialize, Deserialize, Clone, Getters, Setters)]
 #[getset(get = "pub", set = "pub")]
 pub struct EarnedDetail {
     pub earned_name: String,

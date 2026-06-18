@@ -4,8 +4,7 @@ use rust_decimal::Decimal;
 
 use crate::common::*;
 
-#[allow(clippy::too_many_arguments)]
-#[derive(Debug, Clone, Serialize, Deserialize, FromQueryResult, Getters, new)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromQueryResult, Getters)]
 #[getset(get = "pub")]
 pub struct Crypto {
     pub crypto_seq: i64,

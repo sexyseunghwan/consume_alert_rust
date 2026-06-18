@@ -8,6 +8,7 @@ use crate::service_traits::{
 use crate::models::per_datetime::*;
 
 use crate::configuration::elasitc_index_name::*;
+use crate::dtos::*;
 use crate::enums::range_operator::*;
 use crate::utils_modules::time_utils::*;
 
@@ -122,15 +123,15 @@ impl<
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
 
-        self.common_process_python_double(
-            &CONSUME_DETAIL,
+        self.common_process_python_double(CommonProcessPythonDoubleDto {
+            index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
-            RangeOperator::GreaterThanOrEqual,
-            RangeOperator::LessThanOrEqual,
-            Some(room_seq),
-            None,
-            true,
-        )
+            start_op: RangeOperator::GreaterThanOrEqual,
+            end_op: RangeOperator::LessThanOrEqual,
+            room_seq: Some(room_seq),
+            group_seq: None,
+            detail_yn: true,
+        })
         .await
     }
 
@@ -218,15 +219,15 @@ impl<
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
 
-        self.common_process_python_double(
-            &CONSUME_DETAIL,
+        self.common_process_python_double(CommonProcessPythonDoubleDto {
+            index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
-            RangeOperator::GreaterThanOrEqual,
-            RangeOperator::LessThanOrEqual,
-            Some(room_seq),
-            None,
-            true,
-        )
+            start_op: RangeOperator::GreaterThanOrEqual,
+            end_op: RangeOperator::LessThanOrEqual,
+            room_seq: Some(room_seq),
+            group_seq: None,
+            detail_yn: true,
+        })
         .await
     }
 
@@ -292,15 +293,15 @@ impl<
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
 
-        self.common_process_python_double(
-            &CONSUME_DETAIL,
+        self.common_process_python_double(CommonProcessPythonDoubleDto {
+            index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
-            RangeOperator::GreaterThanOrEqual,
-            RangeOperator::LessThanOrEqual,
-            Some(room_seq),
-            None,
-            true,
-        )
+            start_op: RangeOperator::GreaterThanOrEqual,
+            end_op: RangeOperator::LessThanOrEqual,
+            room_seq: Some(room_seq),
+            group_seq: None,
+            detail_yn: true,
+        })
         .await
     }
 
@@ -359,15 +360,15 @@ impl<
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
 
-        self.common_process_python_double(
-            &CONSUME_DETAIL,
+        self.common_process_python_double(CommonProcessPythonDoubleDto {
+            index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
-            RangeOperator::GreaterThanOrEqual,
-            RangeOperator::LessThanOrEqual,
-            Some(room_seq),
-            None,
-            true,
-        )
+            start_op: RangeOperator::GreaterThanOrEqual,
+            end_op: RangeOperator::LessThanOrEqual,
+            room_seq: Some(room_seq),
+            group_seq: None,
+            detail_yn: true,
+        })
         .await
     }
 
@@ -436,15 +437,15 @@ impl<
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
 
-        self.common_process_python_double(
-            &CONSUME_DETAIL,
+        self.common_process_python_double(CommonProcessPythonDoubleDto {
+            index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
-            RangeOperator::GreaterThanOrEqual,
-            RangeOperator::LessThanOrEqual,
-            Some(room_seq),
-            None,
-            false,
-        )
+            start_op: RangeOperator::GreaterThanOrEqual,
+            end_op: RangeOperator::LessThanOrEqual,
+            room_seq: Some(room_seq),
+            group_seq: None,
+            detail_yn: false,
+        })
         .await
     }
 
@@ -537,15 +538,15 @@ impl<
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
 
-        self.common_process_python_double(
-            &CONSUME_DETAIL,
+        self.common_process_python_double(CommonProcessPythonDoubleDto {
+            index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
-            RangeOperator::GreaterThanOrEqual,
-            RangeOperator::LessThan,
-            Some(room_seq),
-            None,
-            true,
-        )
+            start_op: RangeOperator::GreaterThanOrEqual,
+            end_op: RangeOperator::LessThan,
+            room_seq: Some(room_seq),
+            group_seq: None,
+            detail_yn: true,
+        })
         .await
     }
 
@@ -637,15 +638,15 @@ impl<
             .resolve_telegram_group_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
 
-        self.common_process_python_double(
-            &CONSUME_DETAIL,
+        self.common_process_python_double(CommonProcessPythonDoubleDto {
+            index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
-            RangeOperator::GreaterThanOrEqual,
-            RangeOperator::LessThan,
-            None,
-            Some(group_seq),
-            true,
-        )
+            start_op: RangeOperator::GreaterThanOrEqual,
+            end_op: RangeOperator::LessThan,
+            room_seq: None,
+            group_seq: Some(group_seq),
+            detail_yn: true,
+        })
         .await
     }
 
@@ -719,15 +720,15 @@ impl<
             .resolve_telegram_group_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
 
-        self.common_process_python_double(
-            &CONSUME_DETAIL,
+        self.common_process_python_double(CommonProcessPythonDoubleDto {
+            index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
-            RangeOperator::GreaterThanOrEqual,
-            RangeOperator::LessThanOrEqual,
-            None,
-            Some(group_seq),
-            true,
-        )
+            start_op: RangeOperator::GreaterThanOrEqual,
+            end_op: RangeOperator::LessThanOrEqual,
+            room_seq: None,
+            group_seq: Some(group_seq),
+            detail_yn: true,
+        })
         .await
     }
 
@@ -796,15 +797,15 @@ impl<
             .resolve_telegram_group_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
 
-        self.common_process_python_double(
-            &CONSUME_DETAIL,
+        self.common_process_python_double(CommonProcessPythonDoubleDto {
+            index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
-            RangeOperator::GreaterThanOrEqual,
-            RangeOperator::LessThanOrEqual,
-            None,
-            Some(group_seq),
-            true,
-        )
+            start_op: RangeOperator::GreaterThanOrEqual,
+            end_op: RangeOperator::LessThanOrEqual,
+            room_seq: None,
+            group_seq: Some(group_seq),
+            detail_yn: true,
+        })
         .await
     }
 
@@ -863,15 +864,15 @@ impl<
             .resolve_telegram_group_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
 
-        self.common_process_python_double(
-            &CONSUME_DETAIL,
+        self.common_process_python_double(CommonProcessPythonDoubleDto {
+            index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
-            RangeOperator::GreaterThanOrEqual,
-            RangeOperator::LessThanOrEqual,
-            None,
-            Some(group_seq),
-            true,
-        )
+            start_op: RangeOperator::GreaterThanOrEqual,
+            end_op: RangeOperator::LessThanOrEqual,
+            room_seq: None,
+            group_seq: Some(group_seq),
+            detail_yn: true,
+        })
         .await
     }
 
@@ -939,15 +940,15 @@ impl<
             .resolve_telegram_group_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
 
-        self.common_process_python_double(
-            &CONSUME_DETAIL,
+        self.common_process_python_double(CommonProcessPythonDoubleDto {
+            index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
-            RangeOperator::GreaterThanOrEqual,
-            RangeOperator::LessThanOrEqual,
-            None,
-            Some(group_seq),
-            false,
-        )
+            start_op: RangeOperator::GreaterThanOrEqual,
+            end_op: RangeOperator::LessThanOrEqual,
+            room_seq: None,
+            group_seq: Some(group_seq),
+            detail_yn: false,
+        })
         .await
     }
 }
