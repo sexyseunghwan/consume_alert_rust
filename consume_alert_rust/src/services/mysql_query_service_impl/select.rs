@@ -1,9 +1,11 @@
 use crate::common::*;
 
 use crate::entity::{
-    cash_asset, common_consume_keyword_type, currency_exchange_rate_snapshot, deposit_asset,
-    saving_asset, spent_detail, telegram_room, user_payment_methods, users,
+    cash_asset, common_consume_keyword_type, crypto, crypto_asset, currency_exchange_rate_snapshot,
+    deposit_asset, saving_asset, spent_detail, stock, stock_asset, stock_type, telegram_room,
+    user_payment_methods, users,
 };
+
 use crate::models::{
     cash_asset::*, crypto_resp::*, currency_exchange_rate_snapshot::*, deposit_asset::*,
     saving_asset::*, spent_detail_with_info::*, stock_resp::*, user_payment_methods::*,
@@ -283,24 +285,14 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {
         user_seq: i64,
         currency_code: &str,
     ) -> anyhow::Result<Vec<StockResp>> {
-        use crate::entity::{stock, stock_asset, stock_type};
-        use sea_orm::sea_query::Expr;
-
         let rows: Vec<StockResp> = stock_asset::Entity::find()
             .select_only()
-            .column_as(
-                Expr::col((stock::Entity, stock::Column::StockName)),
-                "stock_name",
-            )
-            .column_as(
-                Expr::col((stock::Entity, stock::Column::StockPrice))
-                    .if_null(Decimal::ZERO)
-                    .mul(Expr::col((
-                        stock_asset::Entity,
-                        stock_asset::Column::StockCnt,
-                    ))),
-                "stock_total_price",
-            )
+            .column(stock::Column::StockSeq)
+            .column(stock::Column::StockName)
+            .column(stock::Column::StockPrice)
+            .column(stock_asset::Column::StockCnt)
+            .column(stock_asset::Column::AvgPurchasePrice)
+            .column(stock_type::Column::CurrencyCode)
             .join(JoinType::InnerJoin, stock_asset::Relation::Stock.def())
             .join(JoinType::InnerJoin, stock::Relation::StockType.def())
             .filter(stock_type::Column::CurrencyCode.eq(currency_code))
@@ -324,7 +316,6 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {
         user_seq: i64,
         currency_code: &str,
     ) -> anyhow::Result<Vec<CryptoResp>> {
-        use crate::entity::{crypto, crypto_asset};
         use sea_orm::sea_query::Expr;
 
         let results: Vec<CryptoResp> = crypto_asset::Entity::find()

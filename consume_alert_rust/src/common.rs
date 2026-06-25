@@ -70,12 +70,11 @@ pub use strsim::levenshtein;
 pub use rayon::prelude::*;
 
 pub use sea_orm::{
-    ActiveModelBehavior, ActiveModelTrait, ColumnTrait, Database, DatabaseConnection,
-    DatabaseTransaction, EntityTrait, FromQueryResult, InsertResult, JoinType, NotSet, QueryFilter,
-    QueryOrder, QuerySelect, RelationTrait, Set, TransactionTrait,
+    prelude::Expr, ActiveModelBehavior, ActiveModelTrait, ColumnTrait, Database,
+    DatabaseConnection, DatabaseTransaction, EntityTrait, FromQueryResult, InsertResult, JoinType,
+    NotSet, QueryFilter, QueryOrder, QuerySelect, RelationTrait, Set, TransactionTrait,
 };
 
-//pub use redis::AsyncCommands;
 pub use redis::{
     aio::MultiplexedConnection, cluster::ClusterClient, cluster_async::ClusterConnection,
     AsyncCommands, Client as redisClient, RedisError,

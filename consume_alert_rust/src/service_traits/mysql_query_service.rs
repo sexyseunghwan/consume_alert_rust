@@ -77,7 +77,20 @@ pub trait MysqlQueryService {
         user_seq: i64,
         currency_code: &str,
     ) -> anyhow::Result<Vec<SavingAsset>>;
-
+    /*
+        SELECT
+            s.stock_seq,
+            s.stock_name,
+            s.stock_price,
+            sa.stock_cnt,
+            sa.avg_purchase_price
+        FROM STOCK_ASSET sa
+        INNER JOIN STOCK s ON sa.stock_seq = s.stock_seq
+        INNER JOIN STOCK_TYPE st ON s.market_seq = st.market_seq
+        WHERE st.currency_code = 'USD'
+        AND sa.user_seq = 1
+        AND sa.stock_cnt > 0;
+    */
     async fn find_stock_response(
         &self,
         user_seq: i64,

@@ -29,6 +29,7 @@ pub mod spent_detail_to_kafka;
 pub mod spent_detail_with_info;
 pub mod stock;
 pub mod stock_asset;
+pub mod stock_pie_data;
 pub mod stock_resp;
 pub mod stock_type;
 pub mod to_python_graph_circle;

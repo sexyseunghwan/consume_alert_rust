@@ -42,7 +42,7 @@ pub fn find_current_kor_naivedate_first_date() -> Result<DateTime<Utc>, anyhow::
 pub fn find_lastday_naivedate(dt: DateTime<Utc>) -> Result<DateTime<Utc>, anyhow::Error> {
     let naive_date: NaiveDate = dt.date_naive();
 
-    println!("naive_date: {:?}", naive_date);
+    //println!("naive_date: {:?}", naive_date);
 
     let next_month: NaiveDate = if naive_date.month() == 12 {
         NaiveDate::from_ymd_opt(naive_date.year() + 1, 1, 1)
@@ -51,7 +51,7 @@ pub fn find_lastday_naivedate(dt: DateTime<Utc>) -> Result<DateTime<Utc>, anyhow
     }
     .ok_or_else(|| anyhow!("[time_utils::find_lastday_naivedate] Invalid date when calculating the first day of the next month."))?;
 
-    println!("next_month: {:?}", next_month);
+    //println!("next_month: {:?}", next_month);
 
     let last_day_of_month: NaiveDate = next_month.pred_opt()
         .ok_or_else(|| anyhow!("[time_utils::find_lastday_naivedate] Unable to import the previous date for that date."))?;
@@ -60,8 +60,8 @@ pub fn find_lastday_naivedate(dt: DateTime<Utc>) -> Result<DateTime<Utc>, anyhow
         anyhow!("[time_utils::find_lastday_naivedate] Unable to create end-of-day time.")
     })?;
 
-    println!("last_day_of_month: {:?}", last_day_of_month);
-    println!("end_of_day: {:?}", end_of_day);
+    //println!("last_day_of_month: {:?}", last_day_of_month);
+    //println!("end_of_day: {:?}", end_of_day);
 
     Ok(last_day_of_month.and_time(end_of_day).and_utc())
 }

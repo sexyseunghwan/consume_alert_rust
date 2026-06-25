@@ -1,5 +1,5 @@
-use crate::models::per_datetime::*;
 use crate::enums::range_operator::*;
+use crate::models::per_datetime::*;
 
 pub struct CommonProcessPythonDoubleDto {
     pub index_name: String,

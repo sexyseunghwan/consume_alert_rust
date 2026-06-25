@@ -7,13 +7,11 @@ use crate::service_traits::{
 use crate::dtos::*;
 use crate::models::{
     agg_result_set::*, consume_result_by_type::*, document_with_id::*, file_info::*,
-    spent_detail_by_es::*, spent_detail_by_es_kst::*, to_python_graph_circle::*,
-    to_python_graph_line::*, per_datetime::*
+    per_datetime::*, spent_detail_by_es::*, spent_detail_by_es_kst::*, to_python_graph_circle::*,
+    to_python_graph_line::*,
 };
 
-use crate::enums::{
-    range_operator::*, 
-};
+use crate::enums::range_operator::*;
 
 use super::MainController;
 
@@ -58,7 +56,7 @@ impl<
         let room_seq: Option<i64> = dto.room_seq;
         let group_seq: Option<i64> = dto.group_seq;
         let detail_yn: bool = dto.detail_yn;
-        
+
         let (spent_detail_info, versus_spent_detail_info): (
             AggResultSet<SpentDetailByEs>,
             AggResultSet<SpentDetailByEs>,

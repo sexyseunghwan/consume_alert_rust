@@ -678,6 +678,7 @@ impl<
             1 => {
                 let date_start: DateTime<Utc> = find_current_kor_naivedate_first_date()?;
                 let date_end: DateTime<Utc> = find_lastday_naivedate(date_start)?;
+
                 self.process_service
                     .find_nmonth_to_current_date(date_start, date_end, -1)?
             }

@@ -7,7 +7,7 @@ use crate::service_traits::{
 
 use crate::models::{
     asset_resp::*, assets::*, cash_asset::*, crypto_resp::*, deposit_asset::*, earned_detail::*,
-    per_datetime::*, saving_asset::*, stock_resp::*,
+    per_datetime::*, saving_asset::*, stock_pie_data::*, stock_resp::*,
 };
 
 use crate::utils_modules::{currency_utils::*, io_utils::*, numeric_utils::*, time_utils::*};
@@ -102,6 +102,44 @@ fn build_asset_message(
         ));
     }
 
+    msg.push_str(sep);
+    msg
+}
+
+fn build_stock_message(
+    stock_resp_details: &[StockRespDetail],
+    total_stock_amount_krw: Decimal,
+    rates: ExchangeRates,
+) -> String {
+    let sep: &str = "--------------------------------------------";
+    let total_stock_amount_usd: Decimal = total_stock_amount_krw * rates.krw_to_usd;
+    let total_krw_i64: i64 = total_stock_amount_krw.round().to_string().parse().unwrap_or(0);
+
+    let mut msg: String = format!("{}\n[주식 포트폴리오]\n", sep);
+
+    if stock_resp_details.is_empty() {
+        msg.push_str("  (없음)\n");
+    } else {
+        for stock in stock_resp_details {
+            let krw_i64: i64 = stock.stock_total_price_krw.round().to_string().parse().unwrap_or(0);
+            let profit_krw_i64: i64 = stock.stock_invest_profit_krw.round().to_string().parse().unwrap_or(0);
+            let weight_pct: Decimal = stock.stock_portfolio_weight * Decimal::from(100);
+            msg.push_str(&format!(
+                "*  {} : \n      {}₩ ({:.2}$) | ROI: {:.3}%\n",
+                stock.stock_name(),
+                krw_i64.to_formatted_string(&Locale::en),
+                stock.stock_total_price_usd.round_dp(2),
+                stock.stock_roi
+            ));
+        }
+    }
+
+    msg.push_str(&format!(
+        "{}\n총 주식: {}₩ ({:.2}$)\n",
+        sep,
+        total_krw_i64.to_formatted_string(&Locale::en),
+        total_stock_amount_usd.round_dp(2),
+    ));
     msg.push_str(sep);
     msg
 }
@@ -433,7 +471,12 @@ impl<
                     usd_to_krw,
                     krw_to_usd,
                 };
+
                 let mut asset_map: HashMap<String, Vec<AssetResp>> = HashMap::new();
+                let mut stock_list: Vec<StockResp> = Vec::new();
+
+                let mut total_stock_amount_krw: Decimal = Decimal::ZERO;
+                //let mut total_stock_amount_usd: Decimal = Decimal::ZERO;
 
                 for currency_code in &["KRW", "USD"] {
                     let is_krw: bool = *currency_code == "KRW";
@@ -443,6 +486,7 @@ impl<
                         .find_deposit_asset(user_seq, currency_code)
                         .await
                         .inspect_err(|e| error!("[command_show_all_asset] deposits: {:#}", e))?;
+
                     for d in &deposits {
                         push_asset(
                             &mut asset_map,
@@ -460,6 +504,7 @@ impl<
                         .find_saving_asset(user_seq, currency_code)
                         .await
                         .inspect_err(|e| error!("[command_show_all_asset] savings: {:#}", e))?;
+
                     for s in &savings {
                         push_asset(
                             &mut asset_map,
@@ -472,26 +517,34 @@ impl<
                         );
                     }
 
-                    // 여기 이상하다... 통일이 안되어있음
-                    let stocks: Vec<StockResp> = self
+                    let stock_resps: Vec<StockResp> = self
                         .mysql_query_service
                         .find_stock_response(user_seq, currency_code)
                         .await
                         .inspect_err(|e| error!("[command_show_all_asset] stocks: {:#}", e))?;
 
-                    for s in &stocks {
+                    for s in &stock_resps {
+                        let stock_amount: Decimal = s.stock_price * Decimal::from(*s.stock_cnt());
                         push_asset(
                             &mut asset_map,
                             &mut totals,
                             "Stock",
                             s.stock_name().to_string(),
-                            *s.stock_total_price(),
+                            stock_amount,
                             is_krw,
                             rates,
                         );
+
+                        if is_krw {
+                            //total_stock_amount_usd += stock_amount * krw_to_usd;
+                            total_stock_amount_krw += stock_amount;
+                        } else {
+                            //total_stock_amount_usd += stock_amount;
+                            total_stock_amount_krw += stock_amount * usd_to_krw;
+                        }
+                        stock_list.push(s.clone());
                     }
 
-                    // 여기 이상하다... 통일이 안되어있음
                     let cryptos: Vec<CryptoResp> = self
                         .mysql_query_service
                         .find_crypto_response(user_seq, currency_code)
@@ -527,7 +580,7 @@ impl<
                         );
                     }
                 }
-
+                
                 let msg: String = build_asset_message(&asset_map, &totals, rates);
 
                 self.tele_bot_service
@@ -536,7 +589,7 @@ impl<
                     .inspect_err(|e| {
                         error!("[command_show_all_asset] Failed to send message: {:#}", e)
                     })?;
-
+                
                 let total_asset_amount_krw: Decimal = totals.krw + (totals.usd * usd_to_krw);
                 let assets: Assets = Assets::new(total_asset_amount_krw, asset_map);
 
@@ -560,6 +613,49 @@ impl<
                             e
                         )
                     })?;
+
+                let stock_resp_details: Vec<StockRespDetail> = stock_list
+                    .iter()
+                    .map(|stock| {
+                        stock.convert_to_stock_resp_detail(
+                            total_stock_amount_krw,
+                            stock.currency_code().to_string(),
+                            usd_to_krw,
+                            krw_to_usd,
+                        )
+                    })
+                    .collect();
+
+                let stock_msg: String = build_stock_message(&stock_resp_details, total_stock_amount_krw, rates);
+                
+                self.tele_bot_service
+                    .input_message_confirm(&stock_msg)
+                    .await
+                    .inspect_err(|e| {
+                        error!("[command_show_all_asset] Failed to send stock message: {:#}", e)
+                    })?;
+
+                // let stock_pie_data = StockPieData::new(
+                //     stock_resp_details.iter().map(|s| s.stock_name().to_string()).collect(),
+                //     stock_resp_details.iter().map(|s| *s.stock_portfolio_weight()).collect(),
+                //     total_stock_amount_krw,
+                // );
+
+                // let stock_pie_bytes: Vec<u8> = self
+                //     .graph_api_service
+                //     .find_python_matplot_stock_pie(stock_pie_data)
+                //     .await
+                //     .inspect_err(|e| {
+                //         error!("[command_show_all_asset] Failed to get stock pie image: {:#}", e)
+                //     })?;
+
+                // self.tele_bot_service
+                //     .input_photo_from_bytes(stock_pie_bytes, "stock_pie.png")
+                //     .await
+                //     .inspect_err(|e| {
+                //         error!("[command_show_all_asset] Failed to send stock pie image: {:#}", e)
+                //     })?;
+
             }
             _ => {
                 self.tele_bot_service

@@ -1,6 +1,6 @@
 use crate::common::*;
 
-use crate::models::{assets::*, to_python_graph_circle::*, to_python_graph_line::*};
+use crate::models::{assets::*, stock_pie_data::*, to_python_graph_circle::*, to_python_graph_line::*};
 
 use crate::service_traits::graph_api_service::*;
 
@@ -99,6 +99,11 @@ impl GraphApiService for GraphApiServiceImpl {
 
     async fn find_python_matplot_asset_pie(&self, assets: Assets) -> anyhow::Result<Vec<u8>> {
         self.call_python_graph_api_bytes("/api/asset_pie_image_app", assets)
+            .await
+    }
+
+    async fn find_python_matplot_stock_pie(&self, stock_pie_data: StockPieData) -> anyhow::Result<Vec<u8>> {
+        self.call_python_graph_api_bytes("/api/stock_pie_image", stock_pie_data)
             .await
     }
 }
