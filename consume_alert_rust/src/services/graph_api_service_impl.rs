@@ -1,6 +1,8 @@
 use crate::common::*;
 
-use crate::models::{assets::*, stock_pie_data::*, to_python_graph_circle::*, to_python_graph_line::*};
+use crate::models::{
+    assets::*, stock_pie_data::*, to_python_graph_circle::*, to_python_graph_line::*,
+};
 
 use crate::service_traits::graph_api_service::*;
 
@@ -46,7 +48,7 @@ impl GraphApiServiceImpl {
         uri: &str,
         body: T,
     ) -> anyhow::Result<Vec<u8>> {
-        let post_uri = self.graph_api_url.join(uri).map_err(|e| {
+        let post_uri: Url = self.graph_api_url.join(uri).map_err(|e| {
             anyhow!(
                 "[GraphApiServiceImpl::call_python_graph_api_bytes] Invalid URI '{}': {}",
                 uri,
@@ -61,7 +63,7 @@ impl GraphApiServiceImpl {
         if res.status().is_success() {
             Ok(res.bytes().await?.to_vec())
         } else {
-            let status = res.status();
+            let status: reqwest::StatusCode = res.status();
             let error_body: String = res.text().await.unwrap_or_default();
             Err(anyhow!(
                 "[GraphApiServiceImpl::call_python_graph_api_bytes] Request for '{}' failed. Status: {}, Body: {}",
@@ -102,7 +104,10 @@ impl GraphApiService for GraphApiServiceImpl {
             .await
     }
 
-    async fn find_python_matplot_stock_pie(&self, stock_pie_data: StockPieData) -> anyhow::Result<Vec<u8>> {
+    async fn find_python_matplot_stock_pie(
+        &self,
+        stock_pie_data: StockPieData,
+    ) -> anyhow::Result<Vec<u8>> {
         self.call_python_graph_api_bytes("/api/stock_pie_image", stock_pie_data)
             .await
     }

@@ -289,6 +289,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {
             .select_only()
             .column(stock::Column::StockSeq)
             .column(stock::Column::StockName)
+            .column(stock::Column::StockAlias)
             .column(stock::Column::StockPrice)
             .column(stock_asset::Column::StockCnt)
             .column(stock_asset::Column::AvgPurchasePrice)

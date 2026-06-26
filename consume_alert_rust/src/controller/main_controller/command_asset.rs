@@ -109,11 +109,16 @@ fn build_asset_message(
 fn build_stock_message(
     stock_resp_details: &[StockRespDetail],
     total_stock_amount_krw: Decimal,
+    stock_avg_purchase_price_krw: Decimal,
     rates: ExchangeRates,
 ) -> String {
     let sep: &str = "--------------------------------------------";
     let total_stock_amount_usd: Decimal = total_stock_amount_krw * rates.krw_to_usd;
-    let total_krw_i64: i64 = total_stock_amount_krw.round().to_string().parse().unwrap_or(0);
+    let total_krw_i64: i64 = total_stock_amount_krw
+        .round()
+        .to_string()
+        .parse()
+        .unwrap_or(0);
 
     let mut msg: String = format!("{}\n[주식 포트폴리오]\n", sep);
 
@@ -121,12 +126,16 @@ fn build_stock_message(
         msg.push_str("  (없음)\n");
     } else {
         for stock in stock_resp_details {
-            let krw_i64: i64 = stock.stock_total_price_krw.round().to_string().parse().unwrap_or(0);
-            let profit_krw_i64: i64 = stock.stock_invest_profit_krw.round().to_string().parse().unwrap_or(0);
-            let weight_pct: Decimal = stock.stock_portfolio_weight * Decimal::from(100);
+            let krw_i64: i64 = stock
+                .stock_total_price_krw
+                .round()
+                .to_string()
+                .parse()
+                .unwrap_or(0);
+
             msg.push_str(&format!(
                 "*  {} : \n      {}₩ ({:.2}$) | ROI: {:.3}%\n",
-                stock.stock_name(),
+                stock.stock_alias(),
                 krw_i64.to_formatted_string(&Locale::en),
                 stock.stock_total_price_usd.round_dp(2),
                 stock.stock_roi
@@ -134,12 +143,18 @@ fn build_stock_message(
         }
     }
 
+    let total_stock_roi: Decimal = (total_stock_amount_krw - stock_avg_purchase_price_krw)
+        / stock_avg_purchase_price_krw
+        * Decimal::from(100);
+
     msg.push_str(&format!(
-        "{}\n총 주식: {}₩ ({:.2}$)\n",
+        "{}\n총 주식: \n{}₩ ({:.2}$) | ROI: {:.3}%\n",
         sep,
         total_krw_i64.to_formatted_string(&Locale::en),
         total_stock_amount_usd.round_dp(2),
+        total_stock_roi.round_dp(2)
     ));
+
     msg.push_str(sep);
     msg
 }
@@ -580,7 +595,7 @@ impl<
                         );
                     }
                 }
-                
+
                 let msg: String = build_asset_message(&asset_map, &totals, rates);
 
                 self.tele_bot_service
@@ -589,7 +604,7 @@ impl<
                     .inspect_err(|e| {
                         error!("[command_show_all_asset] Failed to send message: {:#}", e)
                     })?;
-                
+
                 let total_asset_amount_krw: Decimal = totals.krw + (totals.usd * usd_to_krw);
                 let assets: Assets = Assets::new(total_asset_amount_krw, asset_map);
 
@@ -626,36 +641,48 @@ impl<
                     })
                     .collect();
 
-                let stock_msg: String = build_stock_message(&stock_resp_details, total_stock_amount_krw, rates);
-                
+                let stock_avg_purchase_price_krw: Decimal = stock_resp_details
+                    .iter()
+                    .map(|stock| stock.avg_purchase_price_krw)
+                    .sum();
+
+                let stock_msg: String = build_stock_message(
+                    &stock_resp_details,
+                    total_stock_amount_krw,
+                    stock_avg_purchase_price_krw,
+                    rates,
+                );
+
                 self.tele_bot_service
                     .input_message_confirm(&stock_msg)
                     .await
                     .inspect_err(|e| {
-                        error!("[command_show_all_asset] Failed to send stock message: {:#}", e)
+                        error!(
+                            "[command_show_all_asset] Failed to send stock message: {:#}",
+                            e
+                        )
+                    })?;
+                
+                let stock_pie_data: StockPieData = StockPieData::new(
+                    stock_resp_details.iter().map(|s| s.stock_alias().to_string()).collect(),
+                    stock_resp_details.iter().map(|s| *s.stock_total_price_krw()).collect(),
+                    total_stock_amount_krw,
+                );
+
+                let stock_pie_bytes: Vec<u8> = self
+                    .graph_api_service
+                    .find_python_matplot_stock_pie(stock_pie_data)
+                    .await
+                    .inspect_err(|e| {
+                        error!("[command_show_all_asset] Failed to get stock pie image: {:#}", e)
                     })?;
 
-                // let stock_pie_data = StockPieData::new(
-                //     stock_resp_details.iter().map(|s| s.stock_name().to_string()).collect(),
-                //     stock_resp_details.iter().map(|s| *s.stock_portfolio_weight()).collect(),
-                //     total_stock_amount_krw,
-                // );
-
-                // let stock_pie_bytes: Vec<u8> = self
-                //     .graph_api_service
-                //     .find_python_matplot_stock_pie(stock_pie_data)
-                //     .await
-                //     .inspect_err(|e| {
-                //         error!("[command_show_all_asset] Failed to get stock pie image: {:#}", e)
-                //     })?;
-
-                // self.tele_bot_service
-                //     .input_photo_from_bytes(stock_pie_bytes, "stock_pie.png")
-                //     .await
-                //     .inspect_err(|e| {
-                //         error!("[command_show_all_asset] Failed to send stock pie image: {:#}", e)
-                //     })?;
-
+                self.tele_bot_service
+                    .input_photo_from_bytes(stock_pie_bytes, "stock_pie.png")
+                    .await
+                    .inspect_err(|e| {
+                        error!("[command_show_all_asset] Failed to send stock pie image: {:#}", e)
+                    })?;
             }
             _ => {
                 self.tele_bot_service

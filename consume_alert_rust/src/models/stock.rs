@@ -10,6 +10,7 @@ pub struct Stock {
     pub stock_seq: i64,
     pub market_seq: i64,
     pub stock_name: String,
+    pub stock_alias: String,
     pub api_symbol: String,
     pub stock_price: Option<Decimal>,
     pub currency_code: String,

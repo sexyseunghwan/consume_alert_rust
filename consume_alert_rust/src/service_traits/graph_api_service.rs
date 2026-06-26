@@ -1,6 +1,8 @@
 use crate::common::*;
 
-use crate::models::{assets::*, stock_pie_data::*, to_python_graph_circle::*, to_python_graph_line::*};
+use crate::models::{
+    assets::*, stock_pie_data::*, to_python_graph_circle::*, to_python_graph_line::*,
+};
 
 #[async_trait]
 pub trait GraphApiService {
@@ -27,5 +29,8 @@ pub trait GraphApiService {
 
     async fn find_python_matplot_asset_pie(&self, assets: Assets) -> anyhow::Result<Vec<u8>>;
 
-    async fn find_python_matplot_stock_pie(&self, stock_pie_data: StockPieData) -> anyhow::Result<Vec<u8>>;
+    async fn find_python_matplot_stock_pie(
+        &self,
+        stock_pie_data: StockPieData,
+    ) -> anyhow::Result<Vec<u8>>;
 }

@@ -4,6 +4,6 @@ use crate::common::*;
 #[getset(get = "pub")]
 pub struct StockPieData {
     pub stock_names: Vec<String>,
-    pub stock_weights: Vec<Decimal>,
+    pub stock_amount_krw: Vec<Decimal>,
     pub total_stock_amount_krw: Decimal,
 }
