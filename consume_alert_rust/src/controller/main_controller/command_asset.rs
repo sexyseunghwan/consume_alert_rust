@@ -544,7 +544,7 @@ impl<
                             &mut asset_map,
                             &mut totals,
                             "Stock",
-                            s.stock_name().to_string(),
+                            s.stock_alias().to_string(),
                             stock_amount,
                             is_krw,
                             rates,
