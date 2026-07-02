@@ -76,6 +76,7 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
                                               # 7) Added group-level query commands: gm, gt, gw, gy, gs (group counterparts of cm, ct, cw, cy, cs)
               2026-05-12 Seunghwan Shin       # [v.4.4.0] Modified modify_nh_card to handle multiple payment notification formats and persist all cases to the database
               2026-06-16 Seunghwan Shin       # [v.4.5.0] Removed image file storage and changed the API to return image bytes directly.
+              2026-07-02 Seunghwan Shin       # [v.4.5.1] Fix Elasticsearch query filter issue caused by incomplete date format
 */
 mod common;
 use common::*;
@@ -178,7 +179,7 @@ async fn main() {
         }
     };
     let arc_graph_api_service: Arc<GraphApiServiceImpl> = Arc::new(graph_api_service);
-
+    
     let elastic_query_service: Arc<AppElasticService> =
         Arc::new(AppElasticService::new(elastic_conn));
     let mysql_query_service: Arc<AppMysqlService> = Arc::new(AppMysqlService::new(mysql_conn));

@@ -544,7 +544,7 @@ impl<
                             &mut asset_map,
                             &mut totals,
                             "Stock",
-                            s.stock_alias().to_string(),
+                            s.stock_alias().to_string(), // 이거 왜 안되는거냐
                             stock_amount,
                             is_krw,
                             rates,

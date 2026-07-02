@@ -713,6 +713,7 @@ impl<
             }
         };
 
+
         let user_seq: i64 = self
             .resolve_user_seq(telegram_token, telegram_user_id)
             .await?;

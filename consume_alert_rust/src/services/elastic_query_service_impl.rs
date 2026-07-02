@@ -109,8 +109,6 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                 )
             })?;
 
-        //println!("results= {:?}", results);
-
         if results.is_empty() {
             return Ok(ConsumingIndexProdtType::new(
                 21,
@@ -207,10 +205,10 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
         dto: EsRangeRoomSeqQueryDto,
     ) -> Result<AggResultSet<T>, anyhow::Error> {
         let order_by_asc: &str = if dto.asc_yn { "asc" } else { "desc" };
-        let index_name = dto.index_name.as_str();
-        let range_field = dto.range_field.as_str();
-        let order_by_field = dto.order_by_field.as_str();
-        let aggs_field = dto.aggs_field.as_str();
+        let index_name: &str = dto.index_name.as_str();
+        let range_field: &str = dto.range_field.as_str();
+        let order_by_field: &str = dto.order_by_field.as_str();
+        let aggs_field: &str = dto.aggs_field.as_str();
 
         let query: Value = json!({
             "size": 10000,
@@ -245,7 +243,8 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
             }
         });
 
-        // println!("query: {}", query);
+        /* Query Debug */
+        //println!("query: {}", query);
 
         let response_body: Value = self
             .elastic_conn
@@ -298,10 +297,10 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
         dto: EsRangeGroupSeqQueryDto,
     ) -> Result<AggResultSet<T>, anyhow::Error> {
         let order_by_asc: &str = if dto.asc_yn { "asc" } else { "desc" };
-        let index_name = dto.index_name.as_str();
-        let range_field = dto.range_field.as_str();
-        let order_by_field = dto.order_by_field.as_str();
-        let aggs_field = dto.aggs_field.as_str();
+        let index_name: &str = dto.index_name.as_str();
+        let range_field: &str = dto.range_field.as_str();
+        let order_by_field: &str = dto.order_by_field.as_str();
+        let aggs_field: &str = dto.aggs_field.as_str();
 
         let query: Value = json!({
             "size": 10000,
@@ -311,8 +310,8 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                         {
                             "range": {
                                 range_field: {
-                                    dto.start_op.to_str(): dto.start_date.format("%Y-%m-%d").to_string(),
-                                    dto.end_op.to_str(): dto.end_date.format("%Y-%m-%d").to_string()
+                                    dto.start_op.to_str(): dto.start_date.format("%Y-%m-%dT%H:%M:%S").to_string(),
+                                    dto.end_op.to_str(): dto.end_date.format("%Y-%m-%dT%H:%M:%S").to_string()
                                 }
                             }
                         },
@@ -335,6 +334,9 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
                 order_by_field: { "order": order_by_asc }
             }
         });
+
+        /* Query Debug */
+        //println!("query: {}", query);
 
         let response_body: Value = self
             .elastic_conn
