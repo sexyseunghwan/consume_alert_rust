@@ -10,6 +10,10 @@ use crate::models::{
     per_datetime::*, saving_asset::*, stock_pie_data::*, stock_resp::*,
 };
 
+use crate::dtos::{
+    StockPieDataDto
+};
+
 use crate::utils_modules::{currency_utils::*, io_utils::*, numeric_utils::*, time_utils::*};
 
 use super::MainController;
@@ -134,25 +138,26 @@ fn build_stock_message(
                 .unwrap_or(0);
 
             msg.push_str(&format!(
-                "*  {} : \n      {}₩ ({:.2}$) | ROI: {:.3}%\n",
+                "*  {} : \n      {}₩ ({:.2}$) \n            ROI: {:.3}%\n            PROFIT(₩): {}\n",
                 stock.stock_alias(),
                 krw_i64.to_formatted_string(&Locale::en),
                 stock.stock_total_price_usd.round_dp(2),
-                stock.stock_roi
+                stock.stock_roi,
+                format_decimal_with_commas(stock.stock_invest_profit_krw, 0)
             ));
         }
     }
 
-    let total_stock_roi: Decimal = (total_stock_amount_krw - stock_avg_purchase_price_krw)
-        / stock_avg_purchase_price_krw
-        * Decimal::from(100);
+    let total_stock_profit: Decimal = total_stock_amount_krw - stock_avg_purchase_price_krw;
+    let total_stock_roi: Decimal = total_stock_profit / stock_avg_purchase_price_krw * Decimal::from(100);
 
     msg.push_str(&format!(
-        "{}\n총 주식: \n{}₩ ({:.2}$) | ROI: {:.3}%\n",
+        "{}\n총 주식: \n      {}₩ ({:.2}$)\n            ROI: {:.3}%\n            PROFIT(₩): {}\n",
         sep,
         total_krw_i64.to_formatted_string(&Locale::en),
         total_stock_amount_usd.round_dp(2),
-        total_stock_roi.round_dp(2)
+        total_stock_roi.round_dp(2),
+        format_decimal_with_commas(total_stock_profit, 0)
     ));
 
     msg.push_str(sep);
@@ -607,7 +612,7 @@ impl<
 
                 let total_asset_amount_krw: Decimal = totals.krw + (totals.usd * usd_to_krw);
                 let assets: Assets = Assets::new(total_asset_amount_krw, asset_map);
-
+                
                 let pie_image_bytes: Vec<u8> = self
                     .graph_api_service
                     .find_python_matplot_asset_pie(assets)
@@ -628,7 +633,8 @@ impl<
                             e
                         )
                     })?;
-
+                
+                /* 이걸 기준으로 봐야함!! */
                 let stock_resp_details: Vec<StockRespDetail> = stock_list
                     .iter()
                     .map(|stock| {
@@ -663,9 +669,31 @@ impl<
                         )
                     })?;
                 
+                let etc_threshold: Decimal = Decimal::new(3, 2);
+                let mut stock_pie_data_dtos: Vec<StockPieDataDto> = Vec::new();
+                let mut etc_amount_krw: Decimal = Decimal::ZERO;
+
+                for resp in &stock_resp_details {
+                    if resp.stock_portfolio_weight <= etc_threshold {
+                        etc_amount_krw += *resp.stock_total_price_krw();
+                    } else {
+                        stock_pie_data_dtos.push(StockPieDataDto {
+                            stock_alias: resp.stock_alias.clone(),
+                            stock_amount_krw: *resp.stock_total_price_krw(),
+                        });
+                    }
+                }
+
+                if etc_amount_krw != Decimal::ZERO {
+                    stock_pie_data_dtos.push(StockPieDataDto {
+                        stock_alias: "ETC".to_string(),
+                        stock_amount_krw: etc_amount_krw,
+                    });
+                }
+                
                 let stock_pie_data: StockPieData = StockPieData::new(
-                    stock_resp_details.iter().map(|s| s.stock_alias().to_string()).collect(),
-                    stock_resp_details.iter().map(|s| *s.stock_total_price_krw()).collect(),
+                    stock_pie_data_dtos.iter().map(|s| s.stock_alias().to_string()).collect(),
+                    stock_pie_data_dtos.iter().map(|s| *s.stock_amount_krw()).collect(),
                     total_stock_amount_krw,
                 );
 
