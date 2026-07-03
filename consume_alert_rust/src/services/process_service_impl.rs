@@ -369,7 +369,7 @@ impl ProcessService for ProcessServiceImpl {
                 acc.entry(nm).or_default().push(elem);
                 acc
             });
-
+        
         if card_company_nms.contains_key("nh") && split_first.contains("nh") {
             let user_payment_methods: &Vec<UserPaymentMethods> = card_company_nms
                 .get("nh")
@@ -383,7 +383,7 @@ impl ProcessService for ProcessServiceImpl {
 
             self.modify_samsung_card(split_args_vec, user_seq, room_seq, user_payment_methods, currency_usd_to_krw)
         } else {
-            Err(anyhow!("[Error][modify_by_consume_filter_v1] Variable 'consume_type' contains an undefined string: {}", split_first))
+            Err(anyhow!("[ProcessServiceImpl::modify_by_consume_filter_v1] Variable 'consume_type' contains an undefined string: {}", split_first))
         }
     }
 

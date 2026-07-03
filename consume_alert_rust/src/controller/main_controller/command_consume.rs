@@ -231,6 +231,10 @@ impl<
             .map(|s| s.replace("[", "").replace("]", "").replace("web발신", "").trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
+        
+        println!("==================================================================");
+        println!("lines: {:?}", lines);
+        println!("==================================================================");
 
         if lines.is_empty() {
             return Ok(());
