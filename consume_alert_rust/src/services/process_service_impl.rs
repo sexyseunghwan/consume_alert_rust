@@ -296,7 +296,7 @@ impl ProcessServiceImpl {
             self.to_string_vector_by_replace(price_str, &split_val)?;
         
         let spent_money: i64 = match consume_price_vec
-            .get(0)
+            .first()
             .map(|cp| cp.as_str()) {
                 Some("usd") => {
                     let usd_decimal: Decimal = consume_price_vec

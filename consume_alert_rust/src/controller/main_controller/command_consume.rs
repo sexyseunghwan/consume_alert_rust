@@ -8,7 +8,6 @@ use crate::service_traits::{
 use crate::models::{
     consume_index_prodt_type::*, spent_detail::*, spent_detail_to_kafka::*,
     spent_detail_with_info::*, user_payment_methods::*,
-    currency_exchange_rate_snapshot::*
 };
 
 use crate::utils_modules::io_utils::*;
@@ -260,7 +259,7 @@ impl<
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption_auto] Failed to get currency exchange data. {:#}", e);
             })?
-            .get(0)
+            .first()
             .ok_or_else(|| anyhow!("[main_controller::command_consumption_auto] The `currency_snapshots` list is empty."))?
             .exchange_rate;
 
