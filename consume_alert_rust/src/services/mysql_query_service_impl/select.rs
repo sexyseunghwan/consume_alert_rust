@@ -187,7 +187,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {
 
         Ok(result)
     }
-
+    
     pub async fn find_user_payment_methods(
         &self,
         user_seq: i64,

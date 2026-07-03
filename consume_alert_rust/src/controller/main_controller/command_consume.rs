@@ -8,6 +8,7 @@ use crate::service_traits::{
 use crate::models::{
     consume_index_prodt_type::*, spent_detail::*, spent_detail_to_kafka::*,
     spent_detail_with_info::*, user_payment_methods::*,
+    currency_exchange_rate_snapshot::*
 };
 
 use crate::utils_modules::io_utils::*;
@@ -220,24 +221,15 @@ impl<
     ) -> anyhow::Result<()> {
         let args: String = self.tele_bot_service.get_input_text();
 
-        // let bracket_re: Regex = Regex::new(r"\[.*?\]\n?").map_err(|e| {
-        //     anyhow!(
-        //         "[main_controller::command_consumption_auto] Bad regex: {:?}",
-        //         e
-        //     )
-        // })?;
-
-        let bracket_re: Regex = Regex::new(r"\.*?\\n?").map_err(|e| {
-            anyhow!(
-                "[main_controller::command_consumption_auto] Bad regex: {:?}",
-                e
-            )
-        })?;
+        let bracket_re: Regex = Regex::new(r"\.*?\\n?")
+            .inspect_err(|e| {
+                error!("[main_controller::command_consumption_auto] Bad regex: {:#}", e);
+            })?;
 
         let lines: Vec<String> = bracket_re
             .replace_all(&args, "")
             .split('\n')
-            .map(|s| s.replace("[", "").replace("]", "").trim().to_string())
+            .map(|s| s.replace("[", "").replace("]", "").replace("web발신", "").trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
 
@@ -260,10 +252,21 @@ impl<
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption_auto] Failed to get user payment methods: {:#}", e);
             })?;
+        
+        let currency_usd_to_krw: Decimal = self
+            .mysql_query_service
+            .find_currency_exchange_rate_snapshot("USD", "KRW")
+            .await
+            .inspect_err(|e| {
+                error!("[main_controller::command_consumption_auto] Failed to get currency exchange data. {:#}", e);
+            })?
+            .get(0)
+            .ok_or_else(|| anyhow!("[main_controller::command_consumption_auto] The `currency_snapshots` list is empty."))?
+            .exchange_rate;
 
         let mut spent_detail: SpentDetail = self
             .process_service
-            .modify_by_consume_filter(&lines, user_seq, room_seq, user_payment_methods)
+            .modify_by_consume_filter(&lines, user_seq, room_seq, user_payment_methods, currency_usd_to_krw)
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption_auto] {:#}", e);
             })?;

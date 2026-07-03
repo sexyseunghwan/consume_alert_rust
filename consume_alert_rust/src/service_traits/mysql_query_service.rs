@@ -55,11 +55,27 @@ pub trait MysqlQueryService {
         spent_idx: i64,
     ) -> anyhow::Result<Option<SpentDetailWithInfo>>;
     async fn delete_spent_detail_with_transaction(&self, spent_idx: i64) -> anyhow::Result<()>;
+    
+    /*
+        select 
+            *
+        from USER_PAYMENT_METHODS
+        where user_seq = 1
+        and is_default = true;
+    */
     async fn find_user_payment_methods(
         &self,
         user_seq: i64,
         is_default: bool,
     ) -> anyhow::Result<Vec<UserPaymentMethods>>;
+    /*
+        select
+            *
+        from CURRENCY_EXCHANGE_RATE_SNAPSHOT
+        where is_active = true
+        and base_currency_code = 'USD'
+        and target_currency_code = 'KRW'; 
+    */
     async fn find_currency_exchange_rate_snapshot(
         &self,
         base_currency_code: &str,

@@ -4,8 +4,8 @@
   "settings": {
     "width": 2000,
     "height": 2000,
-    "scrollTop": 0,
-    "scrollLeft": -511,
+    "scrollTop": -361,
+    "scrollLeft": -492,
     "zoomLevel": 0.82,
     "show": 431,
     "database": 4,
@@ -667,40 +667,6 @@
         "meta": {
           "updateAt": 1782442952185,
           "createAt": 1780359097437
-        }
-      },
-      "npJqIue4kU9dkTj2NyoZ2": {
-        "id": "npJqIue4kU9dkTj2NyoZ2",
-        "name": "STOCK_ALIAS",
-        "comment": "주식 사용자 별칭",
-        "columnIds": [
-          "wnLoxo0_ulwsGvAMoHsar",
-          "iwqEcgvpxdGwWrpRv-cwe",
-          "zyyb5Y6kvAbY1kDm_c0Ja",
-          "P_39xs0chp1iV_GEqDcg8",
-          "uZl6QvTeO-ToVMZzu_BDF",
-          "JrAMoJtW1so1pjalWThkj"
-        ],
-        "seqColumnIds": [
-          "a-kSw3mOo_4qgMwOScvsM",
-          "wnLoxo0_ulwsGvAMoHsar",
-          "iwqEcgvpxdGwWrpRv-cwe",
-          "zyyb5Y6kvAbY1kDm_c0Ja",
-          "P_39xs0chp1iV_GEqDcg8",
-          "uZl6QvTeO-ToVMZzu_BDF",
-          "JrAMoJtW1so1pjalWThkj"
-        ],
-        "ui": {
-          "x": 1112.6907,
-          "y": 323.1707,
-          "zIndex": 1493,
-          "widthName": 73,
-          "widthComment": 93,
-          "color": ""
-        },
-        "meta": {
-          "updateAt": 1782443073540,
-          "createAt": 1782443022770
         }
       }
     },
@@ -3985,146 +3951,6 @@
           "createAt": 1780389977353
         }
       },
-      "a-kSw3mOo_4qgMwOScvsM": {
-        "id": "a-kSw3mOo_4qgMwOScvsM",
-        "tableId": "npJqIue4kU9dkTj2NyoZ2",
-        "name": "",
-        "comment": "",
-        "dataType": "",
-        "default": "",
-        "options": 0,
-        "ui": {
-          "keys": 0,
-          "widthName": 60,
-          "widthComment": 60,
-          "widthDataType": 60,
-          "widthDefault": 60
-        },
-        "meta": {
-          "updateAt": 1782443041838,
-          "createAt": 1782443041838
-        }
-      },
-      "wnLoxo0_ulwsGvAMoHsar": {
-        "id": "wnLoxo0_ulwsGvAMoHsar",
-        "tableId": "npJqIue4kU9dkTj2NyoZ2",
-        "name": "stock_seq",
-        "comment": "주식 식별자",
-        "dataType": "BIGINT",
-        "default": "",
-        "options": 10,
-        "ui": {
-          "keys": 1,
-          "widthName": 60,
-          "widthComment": 65,
-          "widthDataType": 60,
-          "widthDefault": 60
-        },
-        "meta": {
-          "updateAt": 1782443060142,
-          "createAt": 1782443054027
-        }
-      },
-      "zyyb5Y6kvAbY1kDm_c0Ja": {
-        "id": "zyyb5Y6kvAbY1kDm_c0Ja",
-        "tableId": "npJqIue4kU9dkTj2NyoZ2",
-        "name": "created_at",
-        "comment": "생성시각",
-        "dataType": "DATETIME",
-        "default": "",
-        "options": 8,
-        "ui": {
-          "keys": 0,
-          "widthName": 60,
-          "widthComment": 60,
-          "widthDataType": 60,
-          "widthDefault": 60
-        },
-        "meta": {
-          "updateAt": 1782443070234,
-          "createAt": 1782443070234
-        }
-      },
-      "P_39xs0chp1iV_GEqDcg8": {
-        "id": "P_39xs0chp1iV_GEqDcg8",
-        "tableId": "npJqIue4kU9dkTj2NyoZ2",
-        "name": "updated_at",
-        "comment": "수정시각",
-        "dataType": "DATETIME",
-        "default": "",
-        "options": 0,
-        "ui": {
-          "keys": 0,
-          "widthName": 62,
-          "widthComment": 60,
-          "widthDataType": 60,
-          "widthDefault": 60
-        },
-        "meta": {
-          "updateAt": 1782443070234,
-          "createAt": 1782443070234
-        }
-      },
-      "uZl6QvTeO-ToVMZzu_BDF": {
-        "id": "uZl6QvTeO-ToVMZzu_BDF",
-        "tableId": "npJqIue4kU9dkTj2NyoZ2",
-        "name": "created_by",
-        "comment": "생성자",
-        "dataType": "VARCHAR(100)",
-        "default": "",
-        "options": 8,
-        "ui": {
-          "keys": 0,
-          "widthName": 60,
-          "widthComment": 60,
-          "widthDataType": 81,
-          "widthDefault": 60
-        },
-        "meta": {
-          "updateAt": 1782443070234,
-          "createAt": 1782443070234
-        }
-      },
-      "JrAMoJtW1so1pjalWThkj": {
-        "id": "JrAMoJtW1so1pjalWThkj",
-        "tableId": "npJqIue4kU9dkTj2NyoZ2",
-        "name": "updated_by",
-        "comment": "수정자",
-        "dataType": "VARCHAR(100)",
-        "default": "",
-        "options": 0,
-        "ui": {
-          "keys": 0,
-          "widthName": 64,
-          "widthComment": 60,
-          "widthDataType": 81,
-          "widthDefault": 60
-        },
-        "meta": {
-          "updateAt": 1782443070234,
-          "createAt": 1782443070234
-        }
-      },
-      "iwqEcgvpxdGwWrpRv-cwe": {
-        "id": "iwqEcgvpxdGwWrpRv-cwe",
-        "tableId": "npJqIue4kU9dkTj2NyoZ2",
-        "name": "stock_alias",
-        "comment": "",
-        "dataType": "",
-        "default": "",
-        "options": 0,
-        "ui": {
-          "keys": 0,
-          "widthName": 60,
-          "widthComment": 60,
-          "widthDataType": 60,
-          "widthDefault": 60
-        },
-        "meta": {
-          "updateAt": 1782443082487,
-          "createAt": 1782443072331
-        }
-      },
       "5WDh0moGgWLi8EdfnfOs-": {
         "id": "5WDh0moGgWLi8EdfnfOs-",
         "tableId": "nHrnZlsenWOAET9J1rs-O",
@@ -4669,34 +4495,6 @@
         "meta": {
           "updateAt": 1778812077204,
           "createAt": 1778812077204
-        }
-      },
-      "UlIO3r-7X_KSJRz2Nh7dh": {
-        "id": "UlIO3r-7X_KSJRz2Nh7dh",
-        "identification": true,
-        "relationshipType": 16,
-        "startRelationshipType": 2,
-        "start": {
-          "tableId": "nHrnZlsenWOAET9J1rs-O",
-          "columnIds": [
-            "oE9vImeA3yszN7EGcxEqY"
-          ],
-          "x": 1040.8125,
-          "y": 280.7805,
-          "direction": 8
-        },
-        "end": {
-          "tableId": "npJqIue4kU9dkTj2NyoZ2",
-          "columnIds": [
-            "wnLoxo0_ulwsGvAMoHsar"
-          ],
-          "x": 1112.6907,
-          "y": 423.1707,
-          "direction": 1
-        },
-        "meta": {
-          "updateAt": 1782443054027,
-          "createAt": 1782443054027
         }
       }
     },

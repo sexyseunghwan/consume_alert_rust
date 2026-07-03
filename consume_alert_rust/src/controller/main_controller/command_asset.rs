@@ -29,6 +29,16 @@ struct AssetTotals {
     usd: Decimal,
 }
 
+const SEP: &str = "--------------------------------------------";
+
+/// Awaits `fut`, logging `ctx` alongside the error before propagating it.
+async fn log_ctx<T>(
+    ctx: &str,
+    fut: impl std::future::Future<Output = anyhow::Result<T>>,
+) -> anyhow::Result<T> {
+    fut.await.inspect_err(|e| error!("{}: {:#}", ctx, e))
+}
+
 fn push_asset(
     map: &mut HashMap<String, Vec<AssetResp>>,
     totals: &mut AssetTotals,
@@ -58,9 +68,7 @@ fn build_asset_message(
 ) -> String {
     let grand_krw: Decimal = totals.krw + (totals.usd * rates.usd_to_krw);
     let grand_usd: Decimal = totals.usd + (totals.krw * rates.krw_to_usd);
-    let grand_krw_i64: i64 = grand_krw.round().to_string().parse().unwrap_or(0);
 
-    let sep: &str = "--------------------------------------------";
     let sections: &[(&str, &str)] = &[
         ("Deposit", "예금성 자산"),
         ("Saving", "적금성 자산"),
@@ -70,12 +78,12 @@ fn build_asset_message(
     ];
     let mut msg: String = format!(
         "총자산 = {}₩ // {:.2}$\n",
-        grand_krw_i64.to_formatted_string(&Locale::en),
+        format_decimal_with_commas(grand_krw, 0),
         grand_usd.round_dp(2),
     );
 
     for (key, label) in sections {
-        msg.push_str(&format!("{}\n[{}]\n", sep, label));
+        msg.push_str(&format!("{}\n[{}]\n", SEP, label));
         let assets: &[AssetResp] = asset_map.get(*key).map(Vec::as_slice).unwrap_or(&[]);
 
         let mut section_krw: Decimal = Decimal::ZERO;
@@ -85,11 +93,10 @@ fn build_asset_message(
             msg.push_str("  (없음)\n");
         } else {
             for asset in assets {
-                let krw_i64: i64 = asset.asset_krw.round().to_string().parse().unwrap_or(0);
                 msg.push_str(&format!(
                     "*  {} : {}₩ ({:.2}$)\n",
                     asset.asset_name(),
-                    krw_i64.to_formatted_string(&Locale::en),
+                    format_decimal_with_commas(asset.asset_krw, 0),
                     asset.asset_usd.round_dp(2),
                 ));
                 section_krw += asset.asset_krw;
@@ -97,16 +104,15 @@ fn build_asset_message(
             }
         }
 
-        let section_krw_i64: i64 = section_krw.round().to_string().parse().unwrap_or(0);
         msg.push_str(&format!(
             "{} 총계 : {}₩ ({:.2}$)\n",
             label,
-            section_krw_i64.to_formatted_string(&Locale::en),
+            format_decimal_with_commas(section_krw, 0),
             section_usd.round_dp(2),
         ));
     }
 
-    msg.push_str(sep);
+    msg.push_str(SEP);
     msg
 }
 
@@ -116,31 +122,18 @@ fn build_stock_message(
     stock_avg_purchase_price_krw: Decimal,
     rates: ExchangeRates,
 ) -> String {
-    let sep: &str = "--------------------------------------------";
     let total_stock_amount_usd: Decimal = total_stock_amount_krw * rates.krw_to_usd;
-    let total_krw_i64: i64 = total_stock_amount_krw
-        .round()
-        .to_string()
-        .parse()
-        .unwrap_or(0);
 
-    let mut msg: String = format!("{}\n[주식 포트폴리오]\n", sep);
+    let mut msg: String = format!("{}\n[주식 포트폴리오]\n", SEP);
 
     if stock_resp_details.is_empty() {
         msg.push_str("  (없음)\n");
     } else {
         for stock in stock_resp_details {
-            let krw_i64: i64 = stock
-                .stock_total_price_krw
-                .round()
-                .to_string()
-                .parse()
-                .unwrap_or(0);
-
             msg.push_str(&format!(
                 "*  {} : \n      {}₩ ({:.2}$) \n            ROI: {:.3}%\n            PROFIT(₩): {}\n",
                 stock.stock_alias(),
-                krw_i64.to_formatted_string(&Locale::en),
+                format_decimal_with_commas(stock.stock_total_price_krw, 0),
                 stock.stock_total_price_usd.round_dp(2),
                 stock.stock_roi,
                 format_decimal_with_commas(stock.stock_invest_profit_krw, 0)
@@ -153,14 +146,14 @@ fn build_stock_message(
 
     msg.push_str(&format!(
         "{}\n총 주식: \n      {}₩ ({:.2}$)\n            ROI: {:.3}%\n            PROFIT(₩): {}\n",
-        sep,
-        total_krw_i64.to_formatted_string(&Locale::en),
+        SEP,
+        format_decimal_with_commas(total_stock_amount_krw, 0),
         total_stock_amount_usd.round_dp(2),
         total_stock_roi.round_dp(2),
         format_decimal_with_commas(total_stock_profit, 0)
     ));
 
-    msg.push_str(sep);
+    msg.push_str(SEP);
     msg
 }
 
@@ -175,6 +168,23 @@ impl<
         C: CacheService,
     > MainController<G, E, M, T, P, KP, R, C>
 {
+    /// Resolves the caller's user sequence and telegram room sequence together.
+    async fn resolve_identity(
+        &self,
+        telegram_token: &str,
+        telegram_user_id: &str,
+    ) -> anyhow::Result<(i64, i64)> {
+        let user_seq: i64 = self
+            .resolve_user_seq(telegram_token, telegram_user_id)
+            .await?;
+
+        let room_seq: i64 = self
+            .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
+            .await?;
+
+        Ok((user_seq, room_seq))
+    }
+
     /// Saves an earned-detail record entered in Korean won (`ew name:amount`).
     ///
     /// Parses the Telegram command payload, resolves the caller's user sequence,
@@ -212,12 +222,8 @@ impl<
             ));
         }
 
-        let user_seq: i64 = self
-            .resolve_user_seq(telegram_token, telegram_user_id)
-            .await?;
-
-        let room_seq: i64 = self
-            .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
+        let (user_seq, room_seq) = self
+            .resolve_identity(telegram_token, telegram_user_id)
             .await?;
 
         let earned_name: String = args[0].clone();
@@ -236,14 +242,11 @@ impl<
             }
         };
 
-        let usd_amount: f64 = krw_to_usd(earned_money)
-            .await
-            .inspect_err(|e| {
-                error!(
-                    "[main_controller::command_earend_detail_by_won] Failed to convert KRW to USD: {:#}",
-                    e
-                )
-            })?;
+        let usd_amount: f64 = log_ctx(
+            "[main_controller::command_earend_detail_by_won] Failed to convert KRW to USD",
+            krw_to_usd(earned_money),
+        )
+        .await?;
 
         let earned_money_dollor: Decimal = Decimal::try_from(usd_amount).map_err(|e| {
             anyhow!(
@@ -261,15 +264,12 @@ impl<
             room_seq,
         };
 
-        self.mysql_query_service
-            .input_earned_detail_with_transaction(&earned_detail)
-            .await
-            .inspect_err(|e| {
-                error!(
-                    "[main_controller::command_earend_detail_by_won] Failed to insert to MySQL: {:#}",
-                    e
-                )
-            })?;
+        log_ctx(
+            "[main_controller::command_earend_detail_by_won] Failed to insert to MySQL",
+            self.mysql_query_service
+                .input_earned_detail_with_transaction(&earned_detail),
+        )
+        .await?;
 
         let confirm_msg: String = format!(
             "Earned detail saved!\nName  : {}\nKRW   : {} 원\nUSD   : $ {:.2}",
@@ -278,15 +278,11 @@ impl<
             usd_amount,
         );
 
-        self.tele_bot_service
-            .input_message_confirm(&confirm_msg)
-            .await
-            .inspect_err(|e| {
-                error!(
-                    "[main_controller::command_earend_detail_by_won] Failed to send Telegram message: {:#}",
-                    e
-                )
-            })?;
+        log_ctx(
+            "[main_controller::command_earend_detail_by_won] Failed to send Telegram message",
+            self.tele_bot_service.input_message_confirm(&confirm_msg),
+        )
+        .await?;
 
         Ok(())
     }
@@ -328,12 +324,8 @@ impl<
             ));
         }
 
-        let user_seq: i64 = self
-            .resolve_user_seq(telegram_token, telegram_user_id)
-            .await?;
-
-        let room_seq: i64 = self
-            .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
+        let (user_seq, room_seq) = self
+            .resolve_identity(telegram_token, telegram_user_id)
             .await?;
 
         let earned_name: String = args[0].clone();
@@ -352,14 +344,11 @@ impl<
             }
         };
 
-        let earned_money: i64 = usd_to_krw(usd_amount)
-            .await
-            .inspect_err(|e| {
-                error!(
-                    "[main_controller::command_earend_detail_by_dollor] Failed to convert USD to KRW: {:#}",
-                    e
-                )
-            })?;
+        let earned_money: i64 = log_ctx(
+            "[main_controller::command_earend_detail_by_dollor] Failed to convert USD to KRW",
+            usd_to_krw(usd_amount),
+        )
+        .await?;
 
         let earned_money_dollor: Decimal = Decimal::try_from(usd_amount).map_err(|e| {
             anyhow!(
@@ -377,15 +366,12 @@ impl<
             room_seq,
         };
 
-        self.mysql_query_service
-            .input_earned_detail_with_transaction(&earned_detail)
-            .await
-            .inspect_err(|e| {
-                error!(
-                    "[main_controller::command_earend_detail_by_dollor] Failed to insert to MySQL: {:#}",
-                    e
-                )
-            })?;
+        log_ctx(
+            "[main_controller::command_earend_detail_by_dollor] Failed to insert to MySQL",
+            self.mysql_query_service
+                .input_earned_detail_with_transaction(&earned_detail),
+        )
+        .await?;
 
         let confirm_msg: String = format!(
             "Earned detail saved!\nName  : {}\nUSD   : $ {:.2}\nKRW   : {} 원",
@@ -394,15 +380,11 @@ impl<
             earned_money.to_formatted_string(&Locale::en),
         );
 
-        self.tele_bot_service
-            .input_message_confirm(&confirm_msg)
-            .await
-            .inspect_err(|e| {
-                error!(
-                    "[main_controller::command_earend_detail_by_dollor] Failed to send Telegram message: {:#}",
-                    e
-                )
-            })?;
+        log_ctx(
+            "[main_controller::command_earend_detail_by_dollor] Failed to send Telegram message",
+            self.tele_bot_service.input_message_confirm(&confirm_msg),
+        )
+        .await?;
 
         Ok(())
     }
@@ -501,11 +483,12 @@ impl<
                 for currency_code in &["KRW", "USD"] {
                     let is_krw: bool = *currency_code == "KRW";
 
-                    let deposits: Vec<DepositAsset> = self
-                        .mysql_query_service
-                        .find_deposit_asset(user_seq, currency_code)
-                        .await
-                        .inspect_err(|e| error!("[command_show_all_asset] deposits: {:#}", e))?;
+                    let deposits: Vec<DepositAsset> = log_ctx(
+                        "[command_show_all_asset] deposits",
+                        self.mysql_query_service
+                            .find_deposit_asset(user_seq, currency_code),
+                    )
+                    .await?;
 
                     for d in &deposits {
                         push_asset(
@@ -519,11 +502,12 @@ impl<
                         );
                     }
 
-                    let savings: Vec<SavingAsset> = self
-                        .mysql_query_service
-                        .find_saving_asset(user_seq, currency_code)
-                        .await
-                        .inspect_err(|e| error!("[command_show_all_asset] savings: {:#}", e))?;
+                    let savings: Vec<SavingAsset> = log_ctx(
+                        "[command_show_all_asset] savings",
+                        self.mysql_query_service
+                            .find_saving_asset(user_seq, currency_code),
+                    )
+                    .await?;
 
                     for s in &savings {
                         push_asset(
@@ -537,11 +521,12 @@ impl<
                         );
                     }
 
-                    let stock_resps: Vec<StockResp> = self
-                        .mysql_query_service
-                        .find_stock_response(user_seq, currency_code)
-                        .await
-                        .inspect_err(|e| error!("[command_show_all_asset] stocks: {:#}", e))?;
+                    let stock_resps: Vec<StockResp> = log_ctx(
+                        "[command_show_all_asset] stocks",
+                        self.mysql_query_service
+                            .find_stock_response(user_seq, currency_code),
+                    )
+                    .await?;
 
                     for s in &stock_resps {
                         let stock_amount: Decimal = s.stock_price * Decimal::from(*s.stock_cnt());
@@ -565,11 +550,12 @@ impl<
                         stock_list.push(s.clone());
                     }
 
-                    let cryptos: Vec<CryptoResp> = self
-                        .mysql_query_service
-                        .find_crypto_response(user_seq, currency_code)
-                        .await
-                        .inspect_err(|e| error!("[command_show_all_asset] cryptos: {:#}", e))?;
+                    let cryptos: Vec<CryptoResp> = log_ctx(
+                        "[command_show_all_asset] cryptos",
+                        self.mysql_query_service
+                            .find_crypto_response(user_seq, currency_code),
+                    )
+                    .await?;
 
                     for c in &cryptos {
                         push_asset(
@@ -583,11 +569,11 @@ impl<
                         );
                     }
 
-                    let cashes: Vec<CashAsset> = self
-                        .mysql_query_service
-                        .find_cash_asset(user_seq, currency_code)
-                        .await
-                        .inspect_err(|e| error!("[command_show_all_asset] cashes: {:#}", e))?;
+                    let cashes: Vec<CashAsset> = log_ctx(
+                        "[command_show_all_asset] cashes",
+                        self.mysql_query_service.find_cash_asset(user_seq, currency_code),
+                    )
+                    .await?;
                     for c in &cashes {
                         push_asset(
                             &mut asset_map,
@@ -603,36 +589,27 @@ impl<
 
                 let msg: String = build_asset_message(&asset_map, &totals, rates);
 
-                self.tele_bot_service
-                    .input_message_confirm(&msg)
-                    .await
-                    .inspect_err(|e| {
-                        error!("[command_show_all_asset] Failed to send message: {:#}", e)
-                    })?;
+                log_ctx(
+                    "[command_show_all_asset] Failed to send message",
+                    self.tele_bot_service.input_message_confirm(&msg),
+                )
+                .await?;
 
                 let total_asset_amount_krw: Decimal = totals.krw + (totals.usd * usd_to_krw);
                 let assets: Assets = Assets::new(total_asset_amount_krw, asset_map);
-                
-                let pie_image_bytes: Vec<u8> = self
-                    .graph_api_service
-                    .find_python_matplot_asset_pie(assets)
-                    .await
-                    .inspect_err(|e| {
-                        error!(
-                            "[command_show_all_asset] Failed to get asset pie image: {:#}",
-                            e
-                        )
-                    })?;
 
-                self.tele_bot_service
-                    .input_photo_from_bytes(pie_image_bytes, "asset_pie.png")
-                    .await
-                    .inspect_err(|e| {
-                        error!(
-                            "[command_show_all_asset] Failed to send asset pie image: {:#}",
-                            e
-                        )
-                    })?;
+                let pie_image_bytes: Vec<u8> = log_ctx(
+                    "[command_show_all_asset] Failed to get asset pie image",
+                    self.graph_api_service.find_python_matplot_asset_pie(assets),
+                )
+                .await?;
+
+                log_ctx(
+                    "[command_show_all_asset] Failed to send asset pie image",
+                    self.tele_bot_service
+                        .input_photo_from_bytes(pie_image_bytes, "asset_pie.png"),
+                )
+                .await?;
                 
                 /* 이걸 기준으로 봐야함!! */
                 let stock_resp_details: Vec<StockRespDetail> = stock_list
@@ -651,7 +628,7 @@ impl<
                     .iter()
                     .map(|stock| stock.avg_purchase_price_krw)
                     .sum();
-
+                
                 let stock_msg: String = build_stock_message(
                     &stock_resp_details,
                     total_stock_amount_krw,
@@ -659,15 +636,11 @@ impl<
                     rates,
                 );
 
-                self.tele_bot_service
-                    .input_message_confirm(&stock_msg)
-                    .await
-                    .inspect_err(|e| {
-                        error!(
-                            "[command_show_all_asset] Failed to send stock message: {:#}",
-                            e
-                        )
-                    })?;
+                log_ctx(
+                    "[command_show_all_asset] Failed to send stock message",
+                    self.tele_bot_service.input_message_confirm(&stock_msg),
+                )
+                .await?;
                 
                 let etc_threshold: Decimal = Decimal::new(3, 2);
                 let mut stock_pie_data_dtos: Vec<StockPieDataDto> = Vec::new();
@@ -697,20 +670,19 @@ impl<
                     total_stock_amount_krw,
                 );
 
-                let stock_pie_bytes: Vec<u8> = self
-                    .graph_api_service
-                    .find_python_matplot_stock_pie(stock_pie_data)
-                    .await
-                    .inspect_err(|e| {
-                        error!("[command_show_all_asset] Failed to get stock pie image: {:#}", e)
-                    })?;
+                let stock_pie_bytes: Vec<u8> = log_ctx(
+                    "[command_show_all_asset] Failed to get stock pie image",
+                    self.graph_api_service
+                        .find_python_matplot_stock_pie(stock_pie_data),
+                )
+                .await?;
 
-                self.tele_bot_service
-                    .input_photo_from_bytes(stock_pie_bytes, "stock_pie.png")
-                    .await
-                    .inspect_err(|e| {
-                        error!("[command_show_all_asset] Failed to send stock pie image: {:#}", e)
-                    })?;
+                log_ctx(
+                    "[command_show_all_asset] Failed to send stock pie image",
+                    self.tele_bot_service
+                        .input_photo_from_bytes(stock_pie_bytes, "stock_pie.png"),
+                )
+                .await?;
             }
             _ => {
                 self.tele_bot_service

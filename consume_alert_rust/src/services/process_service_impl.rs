@@ -1,3 +1,5 @@
+use rust_decimal::prelude::ToPrimitive;
+
 use crate::common::*;
 
 use crate::utils_modules::time_utils::*;
@@ -252,6 +254,7 @@ impl ProcessServiceImpl {
     /// * `user_seq` - Unique identifier of the user
     /// * `room_seq` - Unique identifier of the Telegram room
     /// * `user_payment_methods` - Slice of payment methods registered by the user
+    /// * `currency_usd_to_krw` - USD to KRW exchange rate.
     ///
     /// # Returns
     ///
@@ -266,21 +269,22 @@ impl ProcessServiceImpl {
         user_seq: i64,
         room_seq: i64,
         user_payment_methods: &[UserPaymentMethods],
+        currency_usd_to_krw: Decimal
     ) -> anyhow::Result<SpentDetail> {
         let split_val: Vec<&str> = vec![",", "원"];
 
-        let card_name: &str = split_args_vec.first().ok_or_else(|| {
-            anyhow!("[ProcessServiceImpl::process_samsung_card] Price field (index 0) not found")
+        let split_val_first: &str = split_args_vec.first().ok_or_else(|| {
+            anyhow!("[ProcessServiceImpl::process_samsung_card] First field (index 0) not found")
         })?;
 
         let payment_method_id: i64 = user_payment_methods
             .iter()
-            .find(|elem| card_name.contains(elem.card_alias().as_str()))
+            .find(|elem| split_val_first.contains(elem.card_alias().as_str()))
             .map(|elem| *elem.payment_method_id())
             .ok_or_else(|| {
                 anyhow!(
-                    "[ProcessServiceImpl::process_samsung_card] No matching payment method found for card_name: {}",
-                    card_name
+                    "[ProcessServiceImpl::process_samsung_card] No matching payment method found for split_val_first: {}",
+                    split_val_first
                 )
             })?;
 
@@ -290,7 +294,28 @@ impl ProcessServiceImpl {
         })?;
         let consume_price_vec: Vec<String> =
             self.to_string_vector_by_replace(price_str, &split_val)?;
-        let spent_money: i64 = self.find_consume_prodt_money(&consume_price_vec, 0)?;
+        
+        let spent_money: i64 = match consume_price_vec
+            .get(0)
+            .map(|cp| cp.as_str()) {
+                Some("usd") => {
+                    let usd_decimal: Decimal = consume_price_vec
+                        .get(1)
+                        .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Failed to find the value at index 1."))?
+                        .parse::<Decimal>()
+                        .inspect_err(|e| {
+                            error!("[ProcessServiceImpl::process_samsung_card] Failed to parse the string as a Decimal: {:#}", e);
+                        })?;
+                    let spent_amount: Decimal = usd_decimal * currency_usd_to_krw;
+                    let spent_amount_i64: i64 = spent_amount
+                        .to_i64()
+                        .ok_or_else(|| { anyhow!("[ProcessServiceImpl::process_samsung_card] Failed to convert a Decimal to i64.") })?;
+
+                    spent_amount_i64
+                },
+                _ => self.find_consume_prodt_money(&consume_price_vec, 0)?
+            };
+    
 
         // Extract time and product name
         let time_str: &str = split_args_vec.get(2).ok_or_else(|| {
@@ -322,33 +347,17 @@ impl ProcessServiceImpl {
 
 #[async_trait]
 impl ProcessService for ProcessServiceImpl {
-    /// Dispatches the card payment notification to the appropriate card-specific parser.
-    ///
-    /// # Arguments
-    ///
-    /// * `split_args_vec` - Tokenized fields extracted from the notification text
-    /// * `user_seq` - Unique identifier of the user
-    /// * `room_seq` - Unique identifier of the Telegram room
-    /// * `user_payment_methods` - List of payment methods registered by the user
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(SpentDetail)` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the card company cannot be identified or parsing fails.
-    // 새로운 버전
     fn modify_by_consume_filter(
         &self,
         split_args_vec: &[String],
         user_seq: i64,
         room_seq: i64,
         user_payment_methods: Vec<UserPaymentMethods>,
+        currency_usd_to_krw: Decimal
     ) -> anyhow::Result<SpentDetail> {
-        let consume_type: &String = split_args_vec
+        let split_first: &String = split_args_vec
             .first()
-            .ok_or_else(|| anyhow!("[Parameter Error][process_by_consume_filter] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_by_consume_filter] Invalid format of 'text' variable entered as parameter : {:?}", split_args_vec))?;
 
         let card_company_nms: HashMap<String, Vec<UserPaymentMethods>> = user_payment_methods
             .into_iter()
@@ -361,20 +370,20 @@ impl ProcessService for ProcessServiceImpl {
                 acc
             });
 
-        if card_company_nms.contains_key("nh") && consume_type.contains("nh") {
+        if card_company_nms.contains_key("nh") && split_first.contains("nh") {
             let user_payment_methods: &Vec<UserPaymentMethods> = card_company_nms
                 .get("nh")
-                .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_by_consume_filter_v1] The word ‘NH’ does not exist in the HashMap."))?;
+                .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_by_consume_filter_v1] The word `NH` does not exist in the HashMap."))?;
 
             self.modify_nh_card(split_args_vec, user_seq, room_seq, user_payment_methods)
-        } else if card_company_nms.contains_key("삼성") && consume_type.contains("삼성") {
+        } else if card_company_nms.contains_key("삼성") && split_first.contains("삼성") {
             let user_payment_methods: &Vec<UserPaymentMethods> = card_company_nms
                 .get("삼성")
-                .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_by_consume_filter_v1] The word ‘NH’ does not exist in the HashMap."))?;
+                .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_by_consume_filter_v1] The word `삼성` does not exist in the HashMap."))?;
 
-            self.modify_samsung_card(split_args_vec, user_seq, room_seq, user_payment_methods)
+            self.modify_samsung_card(split_args_vec, user_seq, room_seq, user_payment_methods, currency_usd_to_krw)
         } else {
-            Err(anyhow!("[Error][modify_by_consume_filter_v1] Variable 'consume_type' contains an undefined string: {}", consume_type))
+            Err(anyhow!("[Error][modify_by_consume_filter_v1] Variable 'consume_type' contains an undefined string: {}", split_first))
         }
     }
 

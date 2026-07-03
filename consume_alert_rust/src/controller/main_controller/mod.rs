@@ -142,7 +142,7 @@ impl<
                     .await?
             }
             _ => {
-                self.command_consumption_auto(&telegram_token, &telegram_user_id)
+                self.command_consumption_auto(&telegram_token, &telegram_user_id, )
                     .await?
             }
         }
