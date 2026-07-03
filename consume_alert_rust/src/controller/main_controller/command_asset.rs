@@ -78,7 +78,7 @@ fn build_asset_message(
     ];
     let mut msg: String = format!(
         "총자산 = {}₩ // {:.2}$\n",
-        format_decimal_with_commas(grand_krw, 0),
+        format_decimal_with_commas(grand_krw, 0, false),
         grand_usd.round_dp(2),
     );
 
@@ -96,7 +96,7 @@ fn build_asset_message(
                 msg.push_str(&format!(
                     "*  {} : {}₩ ({:.2}$)\n",
                     asset.asset_name(),
-                    format_decimal_with_commas(asset.asset_krw, 0),
+                    format_decimal_with_commas(asset.asset_krw, 0, false),
                     asset.asset_usd.round_dp(2),
                 ));
                 section_krw += asset.asset_krw;
@@ -107,7 +107,7 @@ fn build_asset_message(
         msg.push_str(&format!(
             "{} 총계 : {}₩ ({:.2}$)\n",
             label,
-            format_decimal_with_commas(section_krw, 0),
+            format_decimal_with_commas(section_krw, 0, false),
             section_usd.round_dp(2),
         ));
     }
@@ -133,10 +133,10 @@ fn build_stock_message(
             msg.push_str(&format!(
                 "*  {} : \n      {}₩ ({:.2}$) \n            ROI: {:.3}%\n            PROFIT(₩): {}\n",
                 stock.stock_alias(),
-                format_decimal_with_commas(stock.stock_total_price_krw, 0),
+                format_decimal_with_commas(stock.stock_total_price_krw, 0, false),
                 stock.stock_total_price_usd.round_dp(2),
                 stock.stock_roi,
-                format_decimal_with_commas(stock.stock_invest_profit_krw, 0)
+                format_decimal_with_commas(stock.stock_invest_profit_krw, 0, true)
             ));
         }
     }
@@ -147,10 +147,10 @@ fn build_stock_message(
     msg.push_str(&format!(
         "{}\n총 주식: \n      {}₩ ({:.2}$)\n            ROI: {:.3}%\n            PROFIT(₩): {}\n",
         SEP,
-        format_decimal_with_commas(total_stock_amount_krw, 0),
+        format_decimal_with_commas(total_stock_amount_krw, 0, false),
         total_stock_amount_usd.round_dp(2),
         total_stock_roi.round_dp(2),
-        format_decimal_with_commas(total_stock_profit, 0)
+        format_decimal_with_commas(total_stock_profit, 0, true)
     ));
 
     msg.push_str(SEP);
