@@ -19,7 +19,7 @@ pub trait ProcessService {
         user_seq: i64,
         room_seq: i64,
         user_payment_methods: Vec<UserPaymentMethods>,
-        currency_usd_to_krw: Decimal
+        currency_usd_to_krw: Decimal,
     ) -> anyhow::Result<SpentDetail>;
     //) -> anyhow::Result<SpentDetail>;
     #[allow(dead_code)]

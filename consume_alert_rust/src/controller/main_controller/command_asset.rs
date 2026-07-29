@@ -6,156 +6,16 @@ use crate::service_traits::{
 };
 
 use crate::models::{
-    asset_resp::*, assets::*, cash_asset::*, crypto_resp::*, deposit_asset::*, earned_detail::*,
-    per_datetime::*, saving_asset::*, stock_pie_data::*, stock_resp::*,
+    asset_collection::*, asset_resp::*, assets::*, cash_asset::*, crypto_resp::*, deposit_asset::*,
+    earned_detail::*, file_info::*, per_datetime::*, saving_asset::*, stock_pie_data::*,
+    stock_resp::*, to_python_graph_line::*, user_asset_snapshot_summary::*,
 };
 
-use crate::dtos::{
-    StockPieDataDto
+use crate::utils_modules::{
+    common_function::log_ctx, currency_utils::*, io_utils::*, numeric_utils::*, time_utils::*,
 };
-
-use crate::utils_modules::{currency_utils::*, io_utils::*, numeric_utils::*, time_utils::*};
 
 use super::MainController;
-
-#[derive(Clone, Copy)]
-struct ExchangeRates {
-    usd_to_krw: Decimal,
-    krw_to_usd: Decimal,
-}
-
-struct AssetTotals {
-    krw: Decimal,
-    usd: Decimal,
-}
-
-const SEP: &str = "--------------------------------------------";
-
-/// Awaits `fut`, logging `ctx` alongside the error before propagating it.
-async fn log_ctx<T>(
-    ctx: &str,
-    fut: impl std::future::Future<Output = anyhow::Result<T>>,
-) -> anyhow::Result<T> {
-    fut.await.inspect_err(|e| error!("{}: {:#}", ctx, e))
-}
-
-fn push_asset(
-    map: &mut HashMap<String, Vec<AssetResp>>,
-    totals: &mut AssetTotals,
-    asset_type: &str,
-    name: String,
-    amount: Decimal,
-    is_krw: bool,
-    rates: ExchangeRates,
-) {
-    /* 해당 자산의 달러/원화 가치 모두 저장하고 있음. */
-    let (krw, usd) = if is_krw {
-        totals.krw += amount;
-        (amount, amount * rates.krw_to_usd)
-    } else {
-        totals.usd += amount;
-        (amount * rates.usd_to_krw, amount)
-    };
-    map.entry(asset_type.to_string())
-        .or_default()
-        .push(AssetResp::new(asset_type.to_string(), name, krw, usd));
-}
-
-fn build_asset_message(
-    asset_map: &HashMap<String, Vec<AssetResp>>,
-    totals: &AssetTotals,
-    rates: ExchangeRates,
-) -> String {
-    let grand_krw: Decimal = totals.krw + (totals.usd * rates.usd_to_krw);
-    let grand_usd: Decimal = totals.usd + (totals.krw * rates.krw_to_usd);
-
-    let sections: &[(&str, &str)] = &[
-        ("Deposit", "예금성 자산"),
-        ("Saving", "적금성 자산"),
-        ("Stock", "주식성 자산"),
-        ("Crypto", "크립토성 자산"),
-        ("Cash", "현금성 자산"),
-    ];
-    let mut msg: String = format!(
-        "총자산 = {}₩ // {:.2}$\n",
-        format_decimal_with_commas(grand_krw, 0, false),
-        grand_usd.round_dp(2),
-    );
-
-    for (key, label) in sections {
-        msg.push_str(&format!("{}\n[{}]\n", SEP, label));
-        let assets: &[AssetResp] = asset_map.get(*key).map(Vec::as_slice).unwrap_or(&[]);
-
-        let mut section_krw: Decimal = Decimal::ZERO;
-        let mut section_usd: Decimal = Decimal::ZERO;
-
-        if assets.is_empty() {
-            msg.push_str("  (없음)\n");
-        } else {
-            for asset in assets {
-                msg.push_str(&format!(
-                    "*  {} : {}₩ ({:.2}$)\n",
-                    asset.asset_name(),
-                    format_decimal_with_commas(asset.asset_krw, 0, false),
-                    asset.asset_usd.round_dp(2),
-                ));
-                section_krw += asset.asset_krw;
-                section_usd += asset.asset_usd;
-            }
-        }
-
-        msg.push_str(&format!(
-            "{} 총계 : {}₩ ({:.2}$)\n",
-            label,
-            format_decimal_with_commas(section_krw, 0, false),
-            section_usd.round_dp(2),
-        ));
-    }
-
-    msg.push_str(SEP);
-    msg
-}
-
-fn build_stock_message(
-    stock_resp_details: &[StockRespDetail],
-    total_stock_amount_krw: Decimal,
-    stock_avg_purchase_price_krw: Decimal,
-    rates: ExchangeRates,
-) -> String {
-    let total_stock_amount_usd: Decimal = total_stock_amount_krw * rates.krw_to_usd;
-
-    let mut msg: String = format!("{}\n[주식 포트폴리오]\n", SEP);
-
-    if stock_resp_details.is_empty() {
-        msg.push_str("  (없음)\n");
-    } else {
-        for stock in stock_resp_details {
-            msg.push_str(&format!(
-                "*  {} : \n      {}₩ ({:.2}$) \n            ROI: {:.3}%\n            PROFIT(₩): {}\n",
-                stock.stock_alias(),
-                format_decimal_with_commas(stock.stock_total_price_krw, 0, false),
-                stock.stock_total_price_usd.round_dp(2),
-                stock.stock_roi,
-                format_decimal_with_commas(stock.stock_invest_profit_krw, 0, true)
-            ));
-        }
-    }
-
-    let total_stock_profit: Decimal = total_stock_amount_krw - stock_avg_purchase_price_krw;
-    let total_stock_roi: Decimal = total_stock_profit / stock_avg_purchase_price_krw * Decimal::from(100);
-
-    msg.push_str(&format!(
-        "{}\n총 주식: \n      {}₩ ({:.2}$)\n            ROI: {:.3}%\n            PROFIT(₩): {}\n",
-        SEP,
-        format_decimal_with_commas(total_stock_amount_krw, 0, false),
-        total_stock_amount_usd.round_dp(2),
-        total_stock_roi.round_dp(2),
-        format_decimal_with_commas(total_stock_profit, 0, true)
-    ));
-
-    msg.push_str(SEP);
-    msg
-}
 
 impl<
         G: GraphApiService,
@@ -447,6 +307,318 @@ impl<
         Ok(())
     }
 
+    /// Fetches the USD/KRW and KRW/USD exchange rates used to normalize every asset amount.
+    async fn fetch_exchange_rates(&self) -> anyhow::Result<ExchangeRates> {
+        let usd_to_krw: Decimal =
+            fetch_exchange_rate(self.mysql_query_service.as_ref(), "USD", "KRW").await?;
+        let krw_to_usd: Decimal =
+            fetch_exchange_rate(self.mysql_query_service.as_ref(), "KRW", "USD").await?;
+
+        Ok(ExchangeRates {
+            usd_to_krw,
+            krw_to_usd,
+        })
+    }
+
+    /// Gathers every asset type (deposit/saving/stock/crypto/cash) in both KRW and USD for `user_seq`.
+    async fn collect_all_assets(
+        &self,
+        user_seq: i64,
+        rates: ExchangeRates,
+    ) -> anyhow::Result<AssetCollection> {
+        let mut totals: AssetTotals = AssetTotals {
+            krw: Decimal::ZERO,
+            usd: Decimal::ZERO,
+        };
+
+        let mut asset_map: HashMap<String, Vec<AssetResp>> = HashMap::new();
+        let mut stock_list: Vec<StockResp> = Vec::new();
+
+        let mut total_stock_amount_krw: Decimal = Decimal::ZERO;
+
+        for currency_code in &["KRW", "USD"] {
+            let is_krw: bool = *currency_code == "KRW";
+
+            let deposits: Vec<DepositAsset> = log_ctx(
+                "[command_show_all_asset] deposits",
+                self.mysql_query_service
+                    .find_deposit_asset(user_seq, currency_code),
+            )
+            .await?;
+
+            for d in &deposits {
+                push_asset(
+                    &mut asset_map,
+                    &mut totals,
+                    "Deposit",
+                    d.deposit_name().to_string(),
+                    *d.deposit_amount(),
+                    is_krw,
+                    rates,
+                );
+            }
+
+            let savings: Vec<SavingAsset> = log_ctx(
+                "[command_show_all_asset] savings",
+                self.mysql_query_service
+                    .find_saving_asset(user_seq, currency_code),
+            )
+            .await?;
+
+            for s in &savings {
+                push_asset(
+                    &mut asset_map,
+                    &mut totals,
+                    "Saving",
+                    s.saving_name().to_string(),
+                    *s.accum_saving_amount(),
+                    is_krw,
+                    rates,
+                );
+            }
+
+            let stock_resps: Vec<StockResp> = log_ctx(
+                "[command_show_all_asset] stocks",
+                self.mysql_query_service
+                    .find_stock_response(user_seq, currency_code),
+            )
+            .await?;
+
+            for s in &stock_resps {
+                let stock_amount: Decimal = s.stock_price * Decimal::from(*s.stock_cnt());
+                push_asset(
+                    &mut asset_map,
+                    &mut totals,
+                    "Stock",
+                    s.stock_alias().to_string(),
+                    stock_amount,
+                    is_krw,
+                    rates,
+                );
+
+                if is_krw {
+                    total_stock_amount_krw += stock_amount;
+                } else {
+                    total_stock_amount_krw += stock_amount * rates.usd_to_krw;
+                }
+                stock_list.push(s.clone());
+            }
+
+            let cryptos: Vec<CryptoResp> = log_ctx(
+                "[command_show_all_asset] cryptos",
+                self.mysql_query_service
+                    .find_crypto_response(user_seq, currency_code),
+            )
+            .await?;
+
+            for c in &cryptos {
+                push_asset(
+                    &mut asset_map,
+                    &mut totals,
+                    "Crypto",
+                    c.crypto_name().to_string(),
+                    *c.crypto_total_price(),
+                    is_krw,
+                    rates,
+                );
+            }
+
+            let cashes: Vec<CashAsset> = log_ctx(
+                "[command_show_all_asset] cashes",
+                self.mysql_query_service
+                    .find_cash_asset(user_seq, currency_code),
+            )
+            .await?;
+            for c in &cashes {
+                push_asset(
+                    &mut asset_map,
+                    &mut totals,
+                    "Cash",
+                    c.cash_name().to_string(),
+                    *c.cash(),
+                    is_krw,
+                    rates,
+                );
+            }
+        }
+
+        Ok(AssetCollection {
+            asset_map,
+            totals,
+            stock_list,
+            total_stock_amount_krw,
+        })
+    }
+
+    /* 1. 총자산 요약 정보 */
+    async fn send_asset_summary_message(
+        &self,
+        asset_map: &HashMap<String, Vec<AssetResp>>,
+        totals: &AssetTotals,
+        rates: ExchangeRates,
+    ) -> anyhow::Result<()> {
+        let msg: String = build_asset_message(asset_map, totals, rates);
+
+        log_ctx(
+            "[command_show_all_asset] Failed to send message",
+            self.tele_bot_service.input_message_confirm(&msg),
+        )
+        .await
+    }
+
+    /* 2. 총자산 요약 정보 - 파이 그래프 */
+    async fn send_asset_summary_pie(
+        &self,
+        asset_map: HashMap<String, Vec<AssetResp>>,
+        total_asset_amount_krw: Decimal,
+    ) -> anyhow::Result<()> {
+        let assets: Assets = Assets::new(total_asset_amount_krw, asset_map);
+
+        let pie_image_bytes: Vec<u8> = log_ctx(
+            "[command_show_all_asset] Failed to get asset pie image",
+            self.graph_api_service.find_python_matplot_asset_pie(assets),
+        )
+        .await?;
+
+        log_ctx(
+            "[command_show_all_asset] Failed to send asset pie image",
+            self.tele_bot_service
+                .input_photo_from_bytes(pie_image_bytes, "asset_pie.png"),
+        )
+        .await
+    }
+
+    /* 3. 주식 포트폴리오 정보 */
+    async fn send_stock_summary_message(
+        &self,
+        stock_resp_details: &[StockRespDetail],
+        total_stock_amount_krw: Decimal,
+        stock_avg_purchase_price_krw: Decimal,
+        rates: ExchangeRates,
+    ) -> anyhow::Result<()> {
+        let stock_msg: String = build_stock_message(
+            stock_resp_details,
+            total_stock_amount_krw,
+            stock_avg_purchase_price_krw,
+            rates,
+        );
+
+        log_ctx(
+            "[command_show_all_asset] Failed to send stock message",
+            self.tele_bot_service.input_message_confirm(&stock_msg),
+        )
+        .await
+    }
+
+    /* 4. 주식 포트폴리오 정보 - 파이 그래프 */
+    async fn send_stock_pie(&self, stock_pie_data: StockPieData) -> anyhow::Result<()> {
+        let stock_pie_bytes: Vec<u8> = log_ctx(
+            "[command_show_all_asset] Failed to get stock pie image",
+            self.graph_api_service
+                .find_python_matplot_stock_pie(stock_pie_data),
+        )
+        .await?;
+
+        log_ctx(
+            "[command_show_all_asset] Failed to send stock pie image",
+            self.tele_bot_service
+                .input_photo_from_bytes(stock_pie_bytes, "stock_pie.png"),
+        )
+        .await
+    }
+
+    /// Fetches asset snapshots in `[start, end)` for `user_seq`, logging the KST/UTC range for `label`.
+    async fn fetch_asset_snapshot_range(
+        &self,
+        user_seq: i64,
+        label: &str,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> anyhow::Result<Vec<UserAssetSnapshotSummary>> {
+        info!(
+            "[command_show_all_asset] {} range - KST: [{}, {}) / UTC: [{}, {})",
+            label,
+            start.with_timezone(&Seoul),
+            end.with_timezone(&Seoul),
+            start,
+            end
+        );
+
+        log_ctx(
+            &format!("[command_show_all_asset] {} asset snapshot summary", label),
+            self.mysql_query_service
+                .find_user_asset_snapshot_summary(user_seq, start, end),
+        )
+        .await
+    }
+
+    /// Fetches one period's snapshots, renders the Python line graph, and wraps it as a `FileInfo`.
+    async fn render_asset_history_graph(
+        &self,
+        user_seq: i64,
+        label: &str,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> anyhow::Result<FileInfo> {
+        let snapshots: Vec<UserAssetSnapshotSummary> = self
+            .fetch_asset_snapshot_range(user_seq, label, start, end)
+            .await?;
+
+        let python_graph: ToPythonGraphLine =
+            ToPythonGraphLine::new("", start, end, 0.0, &snapshots, LineAggregation::Raw)?;
+
+        let graph_bytes: Vec<u8> = self
+            .graph_api_service
+            .find_python_matplot_asset_history(&python_graph)
+            .await?;
+
+        Ok(FileInfo::new(format!("{label}_asset_history"), graph_bytes))
+    }
+
+    /* 5. 총자산 변동 그래프 (일/주/월/분기/반기/년)
+       자산 스냅샷은 UTC로 저장되어 있지만, 조회 구간은 사용자가 인식하는
+       KST(UTC+9) 날짜 경계를 기준으로 계산한 뒤 UTC로 변환해야 한다.
+       끝점 유실을 막기 위해 `start_at <= aggregated_at < end_at` 반개구간으로 조회한다.
+
+       ex) KST 오늘 2026-07-10 하루
+           KST: 2026-07-10 00:00:00 +09:00 ~ 2026-07-11 00:00:00 +09:00
+           UTC: 2026-07-09 15:00:00 UTC     ~ 2026-07-10 15:00:00 UTC */
+    async fn send_asset_history_graphs(&self, user_seq: i64) -> anyhow::Result<()> {
+        let now_kst: DateTime<chrono_tz::Tz> = Utc::now().with_timezone(&Seoul);
+        info!("[command_show_all_asset] now_kst: {:?}", now_kst);
+
+        /* KST 오늘 날짜 (달력 상의 날짜이므로 월 연산은 반드시 이 날짜를 기준으로 수행한다) */
+        let kst_today: NaiveDate = now_kst.date_naive();
+
+        /* 내일 KST 00:00:00 을 UTC 로 환산한 값 (반개구간의 끝점, 모든 기간이 공통으로 사용) */
+        let tomorrow_start_utc: DateTime<Utc> =
+            kst_midnight_to_utc(kst_today.succ_opt().ok_or_else(|| {
+                anyhow!("[command_show_all_asset] Date overflow computing tomorrow")
+            })?)?;
+
+        let periods: [(&str, DateTime<Utc>); 6] = [
+            ("daily", kst_midnight_to_utc(kst_today)?),
+            ("weekly", kst_days_ago(kst_today, 6)?),
+            ("monthly", kst_months_ago(kst_today, 1)?),
+            ("quarterly", kst_months_ago(kst_today, 3)?),
+            ("half_yearly", kst_months_ago(kst_today, 6)?),
+            ("yearly", kst_months_ago(kst_today, 12)?),
+        ];
+
+        let mut img_files: Vec<FileInfo> = Vec::with_capacity(periods.len());
+
+        for (label, start_utc) in periods {
+            let file: FileInfo = self
+                .render_asset_history_graph(user_seq, label, start_utc, tomorrow_start_utc)
+                .await?;
+            img_files.push(file);
+        }
+
+        self.tele_bot_service.input_photo_confirm(img_files).await?;
+
+        Ok(())
+    }
+
     pub(super) async fn command_show_all_asset(
         &self,
         telegram_token: &str,
@@ -460,229 +632,45 @@ impl<
                     .resolve_user_seq(telegram_token, telegram_user_id)
                     .await?;
 
-                let usd_to_krw: Decimal =
-                    fetch_exchange_rate(self.mysql_query_service.as_ref(), "USD", "KRW").await?;
-                let krw_to_usd: Decimal =
-                    fetch_exchange_rate(self.mysql_query_service.as_ref(), "KRW", "USD").await?;
+                let rates: ExchangeRates = self.fetch_exchange_rates().await?;
+                let collection: AssetCollection = self.collect_all_assets(user_seq, rates).await?;
 
-                let mut totals: AssetTotals = AssetTotals {
-                    krw: Decimal::ZERO,
-                    usd: Decimal::ZERO,
-                };
-                let rates: ExchangeRates = ExchangeRates {
-                    usd_to_krw,
-                    krw_to_usd,
-                };
-
-                let mut asset_map: HashMap<String, Vec<AssetResp>> = HashMap::new();
-                let mut stock_list: Vec<StockResp> = Vec::new();
-
-                let mut total_stock_amount_krw: Decimal = Decimal::ZERO;
-                //let mut total_stock_amount_usd: Decimal = Decimal::ZERO;
-
-                for currency_code in &["KRW", "USD"] {
-                    let is_krw: bool = *currency_code == "KRW";
-
-                    let deposits: Vec<DepositAsset> = log_ctx(
-                        "[command_show_all_asset] deposits",
-                        self.mysql_query_service
-                            .find_deposit_asset(user_seq, currency_code),
-                    )
+                /* 1. 총자산 요약 정보 */
+                self.send_asset_summary_message(&collection.asset_map, &collection.totals, rates)
                     .await?;
 
-                    for d in &deposits {
-                        push_asset(
-                            &mut asset_map,
-                            &mut totals,
-                            "Deposit",
-                            d.deposit_name().to_string(),
-                            *d.deposit_amount(),
-                            is_krw,
-                            rates,
-                        );
-                    }
-
-                    let savings: Vec<SavingAsset> = log_ctx(
-                        "[command_show_all_asset] savings",
-                        self.mysql_query_service
-                            .find_saving_asset(user_seq, currency_code),
-                    )
+                /* 2. 총자산 요약 정보 - 파이 그래프 */
+                let total_asset_amount_krw: Decimal =
+                    collection.totals.krw + (collection.totals.usd * rates.usd_to_krw);
+                self.send_asset_summary_pie(collection.asset_map, total_asset_amount_krw)
                     .await?;
 
-                    for s in &savings {
-                        push_asset(
-                            &mut asset_map,
-                            &mut totals,
-                            "Saving",
-                            s.saving_name().to_string(),
-                            *s.accum_saving_amount(),
-                            is_krw,
-                            rates,
-                        );
-                    }
-
-                    let stock_resps: Vec<StockResp> = log_ctx(
-                        "[command_show_all_asset] stocks",
-                        self.mysql_query_service
-                            .find_stock_response(user_seq, currency_code),
-                    )
-                    .await?;
-
-                    for s in &stock_resps {
-                        let stock_amount: Decimal = s.stock_price * Decimal::from(*s.stock_cnt());
-                        push_asset(
-                            &mut asset_map,
-                            &mut totals,
-                            "Stock",
-                            s.stock_alias().to_string(), // 이거 왜 안되는거냐
-                            stock_amount,
-                            is_krw,
-                            rates,
-                        );
-
-                        if is_krw {
-                            //total_stock_amount_usd += stock_amount * krw_to_usd;
-                            total_stock_amount_krw += stock_amount;
-                        } else {
-                            //total_stock_amount_usd += stock_amount;
-                            total_stock_amount_krw += stock_amount * usd_to_krw;
-                        }
-                        stock_list.push(s.clone());
-                    }
-
-                    let cryptos: Vec<CryptoResp> = log_ctx(
-                        "[command_show_all_asset] cryptos",
-                        self.mysql_query_service
-                            .find_crypto_response(user_seq, currency_code),
-                    )
-                    .await?;
-
-                    for c in &cryptos {
-                        push_asset(
-                            &mut asset_map,
-                            &mut totals,
-                            "Crypto",
-                            c.crypto_name().to_string(),
-                            *c.crypto_total_price(),
-                            is_krw,
-                            rates,
-                        );
-                    }
-
-                    let cashes: Vec<CashAsset> = log_ctx(
-                        "[command_show_all_asset] cashes",
-                        self.mysql_query_service.find_cash_asset(user_seq, currency_code),
-                    )
-                    .await?;
-                    for c in &cashes {
-                        push_asset(
-                            &mut asset_map,
-                            &mut totals,
-                            "Cash",
-                            c.cash_name().to_string(),
-                            *c.cash(),
-                            is_krw,
-                            rates,
-                        );
-                    }
-                }
-
-                let msg: String = build_asset_message(&asset_map, &totals, rates);
-
-                log_ctx(
-                    "[command_show_all_asset] Failed to send message",
-                    self.tele_bot_service.input_message_confirm(&msg),
-                )
-                .await?;
-
-                let total_asset_amount_krw: Decimal = totals.krw + (totals.usd * usd_to_krw);
-                let assets: Assets = Assets::new(total_asset_amount_krw, asset_map);
-
-                let pie_image_bytes: Vec<u8> = log_ctx(
-                    "[command_show_all_asset] Failed to get asset pie image",
-                    self.graph_api_service.find_python_matplot_asset_pie(assets),
-                )
-                .await?;
-
-                log_ctx(
-                    "[command_show_all_asset] Failed to send asset pie image",
-                    self.tele_bot_service
-                        .input_photo_from_bytes(pie_image_bytes, "asset_pie.png"),
-                )
-                .await?;
-                
-                /* 이걸 기준으로 봐야함!! */
-                let stock_resp_details: Vec<StockRespDetail> = stock_list
-                    .iter()
-                    .map(|stock| {
-                        stock.convert_to_stock_resp_detail(
-                            total_stock_amount_krw,
-                            stock.currency_code().to_string(),
-                            usd_to_krw,
-                            krw_to_usd,
-                        )
-                    })
-                    .collect();
-
+                /* 3. 주식 포트폴리오 정보 */
+                let stock_resp_details: Vec<StockRespDetail> = build_stock_details(
+                    &collection.stock_list,
+                    collection.total_stock_amount_krw,
+                    rates.usd_to_krw,
+                    rates.krw_to_usd,
+                );
                 let stock_avg_purchase_price_krw: Decimal = stock_resp_details
                     .iter()
                     .map(|stock| stock.avg_purchase_price_krw)
                     .sum();
-                
-                let stock_msg: String = build_stock_message(
+                self.send_stock_summary_message(
                     &stock_resp_details,
-                    total_stock_amount_krw,
+                    collection.total_stock_amount_krw,
                     stock_avg_purchase_price_krw,
                     rates,
-                );
-
-                log_ctx(
-                    "[command_show_all_asset] Failed to send stock message",
-                    self.tele_bot_service.input_message_confirm(&stock_msg),
-                )
-                .await?;
-                
-                let etc_threshold: Decimal = Decimal::new(3, 2);
-                let mut stock_pie_data_dtos: Vec<StockPieDataDto> = Vec::new();
-                let mut etc_amount_krw: Decimal = Decimal::ZERO;
-
-                for resp in &stock_resp_details {
-                    if resp.stock_portfolio_weight <= etc_threshold {
-                        etc_amount_krw += *resp.stock_total_price_krw();
-                    } else {
-                        stock_pie_data_dtos.push(StockPieDataDto {
-                            stock_alias: resp.stock_alias.clone(),
-                            stock_amount_krw: *resp.stock_total_price_krw(),
-                        });
-                    }
-                }
-
-                if etc_amount_krw != Decimal::ZERO {
-                    stock_pie_data_dtos.push(StockPieDataDto {
-                        stock_alias: "ETC".to_string(),
-                        stock_amount_krw: etc_amount_krw,
-                    });
-                }
-                
-                let stock_pie_data: StockPieData = StockPieData::new(
-                    stock_pie_data_dtos.iter().map(|s| s.stock_alias().to_string()).collect(),
-                    stock_pie_data_dtos.iter().map(|s| *s.stock_amount_krw()).collect(),
-                    total_stock_amount_krw,
-                );
-
-                let stock_pie_bytes: Vec<u8> = log_ctx(
-                    "[command_show_all_asset] Failed to get stock pie image",
-                    self.graph_api_service
-                        .find_python_matplot_stock_pie(stock_pie_data),
                 )
                 .await?;
 
-                log_ctx(
-                    "[command_show_all_asset] Failed to send stock pie image",
-                    self.tele_bot_service
-                        .input_photo_from_bytes(stock_pie_bytes, "stock_pie.png"),
-                )
-                .await?;
+                /* 4. 주식 포트폴리오 정보 - 파이 그래프 */
+                let stock_pie_data: StockPieData =
+                    build_stock_pie_data(&stock_resp_details, collection.total_stock_amount_krw);
+                self.send_stock_pie(stock_pie_data).await?;
+
+                /* 5. 총자산 변동 그래프 */
+                self.send_asset_history_graphs(user_seq).await?;
             }
             _ => {
                 self.tele_bot_service

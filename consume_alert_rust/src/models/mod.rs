@@ -1,5 +1,6 @@
 pub mod agg_group;
 pub mod agg_result_set;
+pub mod asset_collection;
 pub mod asset_resp;
 pub mod assets;
 pub mod cash_asset;
@@ -34,6 +35,7 @@ pub mod stock_resp;
 pub mod stock_type;
 pub mod to_python_graph_circle;
 pub mod to_python_graph_line;
+pub mod user_asset_snapshot_summary;
 pub mod user_current_asset_snapshot;
 pub mod user_payment_methods;
 pub mod users_email;

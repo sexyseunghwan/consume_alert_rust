@@ -1,5 +1,8 @@
 use crate::common::*;
 
+use crate::models::asset_collection::{ExchangeRates, SEP};
+use crate::utils_modules::numeric_utils::format_decimal_with_commas;
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromQueryResult, Getters, new)]
 #[getset(get = "pub")]
 pub struct StockResp {
@@ -94,4 +97,71 @@ impl StockResp {
             avg_purchase_price_krw,
         }
     }
+}
+
+/// Converts the raw stock holdings into display-ready details, sorted by KRW value descending.
+pub fn build_stock_details(
+    stock_list: &[StockResp],
+    total_stock_amount_krw: Decimal,
+    usd_to_krw: Decimal,
+    krw_to_usd: Decimal,
+) -> Vec<StockRespDetail> {
+    let mut stock_resp_details: Vec<StockRespDetail> = stock_list
+        .iter()
+        .map(|stock| {
+            stock.convert_to_stock_resp_detail(
+                total_stock_amount_krw,
+                stock.currency_code().to_string(),
+                usd_to_krw,
+                krw_to_usd,
+            )
+        })
+        .collect();
+
+    stock_resp_details.sort_by_key(|s| std::cmp::Reverse(s.stock_total_price_krw));
+
+    stock_resp_details
+}
+
+/// Builds the Telegram summary message for the stock portfolio.
+pub fn build_stock_message(
+    stock_resp_details: &[StockRespDetail],
+    total_stock_amount_krw: Decimal,
+    stock_avg_purchase_price_krw: Decimal,
+    rates: ExchangeRates,
+) -> String {
+    let total_stock_amount_usd: Decimal = total_stock_amount_krw * rates.krw_to_usd;
+
+    let mut msg: String = format!("{}\n[주식 포트폴리오]\n", SEP);
+
+    if stock_resp_details.is_empty() {
+        msg.push_str("  (없음)\n");
+    } else {
+        for stock in stock_resp_details {
+            msg.push_str(&format!(
+                "*  {} : \n      {}₩ ({:.2}$) \n            ROI: {:.3}%\n            PROFIT(₩): {}\n",
+                stock.stock_alias(),
+                format_decimal_with_commas(stock.stock_total_price_krw, 0, false),
+                stock.stock_total_price_usd.round_dp(2),
+                stock.stock_roi,
+                format_decimal_with_commas(stock.stock_invest_profit_krw, 0, true)
+            ));
+        }
+    }
+
+    let total_stock_profit: Decimal = total_stock_amount_krw - stock_avg_purchase_price_krw;
+    let total_stock_roi: Decimal =
+        total_stock_profit / stock_avg_purchase_price_krw * Decimal::from(100);
+
+    msg.push_str(&format!(
+        "{}\n총 주식: \n      {}₩ ({:.2}$)\n            ROI: {:.3}%\n            PROFIT(₩): {}\n",
+        SEP,
+        format_decimal_with_commas(total_stock_amount_krw, 0, false),
+        total_stock_amount_usd.round_dp(2),
+        total_stock_roi.round_dp(2),
+        format_decimal_with_commas(total_stock_profit, 0, true)
+    ));
+
+    msg.push_str(SEP);
+    msg
 }

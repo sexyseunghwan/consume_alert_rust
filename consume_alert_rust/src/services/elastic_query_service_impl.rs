@@ -244,7 +244,7 @@ impl<R: EsRepository + Sync + Send + std::fmt::Debug> ElasticQueryService
         });
 
         /* Query Debug */
-        //println!("query: {}", query);
+        // println!("query: {}", query);
 
         let response_body: Value = self
             .elastic_conn

@@ -17,6 +17,11 @@ pub trait GraphApiService {
         versus_python_graph_info: &ToPythonGraphLine,
     ) -> anyhow::Result<Vec<u8>>;
 
+    async fn find_python_matplot_asset_history(
+        &self,
+        python_graph_info: &ToPythonGraphLine,
+    ) -> anyhow::Result<Vec<u8>>;
+
     // async fn find_python_matplot_consume_type(
     //     &self,
     //     to_python_graph_circle: &ToPythonGraphCircle,

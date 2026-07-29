@@ -18,13 +18,12 @@ pub fn to_numeric(s: &str) -> i64 {
 
 #[doc = "Formats a Decimal with thousand separators on the integer part, keeping N decimal places"]
 pub fn format_decimal_with_commas(value: Decimal, decimals: u32, show_plus_sign: bool) -> String {
-    
     let sign: &str = match (value.is_sign_negative(), show_plus_sign) {
         (true, _) => "-",
         (false, true) => "+",
         (false, false) => "",
     };
-    
+
     let rounded: Decimal = value.abs().round_dp(decimals);
     let formatted: String = format!("{:.*}", decimals as usize, rounded);
     let (int_part, frac_part) = formatted.split_once('.').unwrap_or((&formatted, ""));

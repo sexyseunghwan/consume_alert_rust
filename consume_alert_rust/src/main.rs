@@ -76,9 +76,17 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
                                               # 7) Added group-level query commands: gm, gt, gw, gy, gs (group counterparts of cm, ct, cw, cy, cs)
               2026-05-12 Seunghwan Shin       # [v.4.4.0] Modified modify_nh_card to handle multiple payment notification formats and persist all cases to the database
               2026-06-16 Seunghwan Shin       # [v.4.5.0] Removed image file storage and changed the API to return image bytes directly.
-              2026-07-03 Seunghwan Shin       # [v.4.5.1] 
+              2026-07-03 Seunghwan Shin       # [v.4.5.1]
                                               # 1) Fix Elasticsearch query filter issue caused by incomplete date format
                                               # 2) Modified the logic to handle consumption data correctly when the amount is provided in USD intead of KRW.
+              2026-07-29 Seunghwan Shin       # [v.4.6.0]
+                                              # 1) Implemented find_user_asset_snapshot_summary and wired it through the MysqlQueryService trait
+                                              # 2) Added KST-accurate date helpers (kst_midnight_to_utc, kst_days_ago, kst_months_ago) to fix a day-boundary bug in month arithmetic
+                                              # 3) Extended ToPythonGraphLine with a GraphLineSource trait and LineAggregation (Cumulative/Raw) so asset snapshots can share the same graph-line builder as spending data
+                                              # 4) Implemented and wired up command_show_all_asset's asset-history graphs (daily/weekly/monthly/quarterly/half-yearly/yearly) end-to-end
+                                              # 5) Fixed a startup bug where getUpdates polling conflicted with a leftover Telegram webhook (added delete_webhook before polling)
+                                              # 6) Refactored command_asset.rs: split command_show_all_asset into smaller helper methods and moved shared models/helpers into models/ and utils_modules/ (1043 -> 688 lines)
+                                              # 7) Fixed all cargo clippy warnings (unnecessary_sort_by, dead_code)
 */
 mod common;
 use common::*;
@@ -181,7 +189,7 @@ async fn main() {
         }
     };
     let arc_graph_api_service: Arc<GraphApiServiceImpl> = Arc::new(graph_api_service);
-    
+
     let elastic_query_service: Arc<AppElasticService> =
         Arc::new(AppElasticService::new(elastic_conn));
     let mysql_query_service: Arc<AppMysqlService> = Arc::new(AppMysqlService::new(mysql_conn));
@@ -223,6 +231,17 @@ async fn main() {
                     "[main] Bot polling started (token prefix: {}...)",
                     &bot.token()[..8]
                 );
+
+                /* getUpdates (long polling) and a webhook can't be active at the same time on
+                 * the same bot token — Telegram rejects getUpdates with a Conflict error while
+                 * a webhook URL is registered. Clear any leftover webhook before polling. */
+                if let Err(e) = bot.delete_webhook().send().await {
+                    error!(
+                        "[main] Failed to delete webhook before polling (token prefix: {}...): {:#}",
+                        &bot.token()[..8],
+                        e
+                    );
+                }
 
                 /* Each bot runs its own repl loop.
                  * teloxide::repl polls the Telegram API and dispatches messages

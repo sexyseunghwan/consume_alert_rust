@@ -269,7 +269,7 @@ impl ProcessServiceImpl {
         user_seq: i64,
         room_seq: i64,
         user_payment_methods: &[UserPaymentMethods],
-        currency_usd_to_krw: Decimal
+        currency_usd_to_krw: Decimal,
     ) -> anyhow::Result<SpentDetail> {
         let split_val: Vec<&str> = vec![",", "원"];
 
@@ -294,28 +294,25 @@ impl ProcessServiceImpl {
         })?;
         let consume_price_vec: Vec<String> =
             self.to_string_vector_by_replace(price_str, &split_val)?;
-        
-        let spent_money: i64 = match consume_price_vec
-            .first()
-            .map(|cp| cp.as_str()) {
-                Some("usd") => {
-                    let usd_decimal: Decimal = consume_price_vec
+
+        let spent_money: i64 = match consume_price_vec.first().map(|cp| cp.as_str()) {
+            Some("usd") => {
+                let usd_decimal: Decimal = consume_price_vec
                         .get(1)
                         .ok_or_else(|| anyhow!("[ProcessServiceImpl::process_samsung_card] Failed to find the value at index 1."))?
                         .parse::<Decimal>()
                         .inspect_err(|e| {
                             error!("[ProcessServiceImpl::process_samsung_card] Failed to parse the string as a Decimal: {:#}", e);
                         })?;
-                    let spent_amount: Decimal = usd_decimal * currency_usd_to_krw;
-                    let spent_amount_i64: i64 = spent_amount
+                let spent_amount: Decimal = usd_decimal * currency_usd_to_krw;
+                let spent_amount_i64: i64 = spent_amount
                         .to_i64()
                         .ok_or_else(|| { anyhow!("[ProcessServiceImpl::process_samsung_card] Failed to convert a Decimal to i64.") })?;
 
-                    spent_amount_i64
-                },
-                _ => self.find_consume_prodt_money(&consume_price_vec, 0)?
-            };
-    
+                spent_amount_i64
+            }
+            _ => self.find_consume_prodt_money(&consume_price_vec, 0)?,
+        };
 
         // Extract time and product name
         let time_str: &str = split_args_vec.get(2).ok_or_else(|| {
@@ -353,7 +350,7 @@ impl ProcessService for ProcessServiceImpl {
         user_seq: i64,
         room_seq: i64,
         user_payment_methods: Vec<UserPaymentMethods>,
-        currency_usd_to_krw: Decimal
+        currency_usd_to_krw: Decimal,
     ) -> anyhow::Result<SpentDetail> {
         let split_first: &String = split_args_vec
             .first()
@@ -369,7 +366,7 @@ impl ProcessService for ProcessServiceImpl {
                 acc.entry(nm).or_default().push(elem);
                 acc
             });
-        
+
         if card_company_nms.contains_key("nh") && split_first.contains("nh") {
             let user_payment_methods: &Vec<UserPaymentMethods> = card_company_nms
                 .get("nh")
@@ -381,7 +378,13 @@ impl ProcessService for ProcessServiceImpl {
                 .get("삼성")
                 .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_by_consume_filter_v1] The word `삼성` does not exist in the HashMap."))?;
 
-            self.modify_samsung_card(split_args_vec, user_seq, room_seq, user_payment_methods, currency_usd_to_krw)
+            self.modify_samsung_card(
+                split_args_vec,
+                user_seq,
+                room_seq,
+                user_payment_methods,
+                currency_usd_to_krw,
+            )
         } else {
             Err(anyhow!("[ProcessServiceImpl::modify_by_consume_filter_v1] Variable 'consume_type' contains an undefined string: {}", split_first))
         }

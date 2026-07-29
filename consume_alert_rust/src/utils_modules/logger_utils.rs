@@ -35,7 +35,7 @@ fn to_custom_format(
         now.now().format("%Y-%m-%d %H:%M:%S"),
         record.level(),
         std::thread::current().name().unwrap_or("unknown"),
-        &record.args()
+        record.args()
     )
 }
 

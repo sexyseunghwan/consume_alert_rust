@@ -189,14 +189,18 @@ impl<
             "cur",
             permon_datetime.date_start,
             permon_datetime.date_end,
-            &spent_detail_info_kst,
+            *spent_detail_info_kst.agg_result(),
+            spent_detail_info_kst.source_list(),
+            LineAggregation::Cumulative,
         )?;
 
         let versus_python_graph_info: ToPythonGraphLine = ToPythonGraphLine::new(
             "versus",
             permon_datetime.n_date_start,
             permon_datetime.n_date_end,
-            &versus_spent_detail_info_kst,
+            *versus_spent_detail_info_kst.agg_result(),
+            versus_spent_detail_info_kst.source_list(),
+            LineAggregation::Cumulative,
         )?;
 
         if detail_yn {

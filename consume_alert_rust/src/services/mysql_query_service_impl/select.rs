@@ -3,12 +3,13 @@ use crate::common::*;
 use crate::entity::{
     cash_asset, common_consume_keyword_type, crypto, crypto_asset, currency_exchange_rate_snapshot,
     deposit_asset, saving_asset, spent_detail, stock, stock_asset, stock_type, telegram_room,
-    user_payment_methods, users,
+    user_asset_snapshot_summary, user_payment_methods, users,
 };
 
 use crate::models::{
     cash_asset::*, crypto_resp::*, currency_exchange_rate_snapshot::*, deposit_asset::*,
-    saving_asset::*, spent_detail_with_info::*, stock_resp::*, user_payment_methods::*,
+    saving_asset::*, spent_detail_with_info::*, stock_resp::*, user_asset_snapshot_summary::*,
+    user_payment_methods::*,
 };
 use crate::repository::mysql_repository::*;
 
@@ -187,7 +188,7 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {
 
         Ok(result)
     }
-    
+
     pub async fn find_user_payment_methods(
         &self,
         user_seq: i64,
@@ -367,5 +368,31 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryServiceImpl<R> {
             })?;
 
         Ok(results.into_iter().map(Into::into).collect())
+    }
+
+    pub async fn find_user_asset_snapshot_summary(
+        &self,
+        user_seq: i64,
+        start_at: DateTime<Utc>,
+        end_at: DateTime<Utc>,
+    ) -> anyhow::Result<Vec<UserAssetSnapshotSummary>> {
+        let results: Vec<UserAssetSnapshotSummary> = user_asset_snapshot_summary::Entity::find()
+            .filter(user_asset_snapshot_summary::Column::UserSeq.eq(user_seq))
+            .filter(
+                user_asset_snapshot_summary::Column::AggregatedAt
+                    .between(start_at.naive_utc(), end_at.naive_utc()),
+            )
+            .order_by_asc(user_asset_snapshot_summary::Column::AggregatedAt)
+            .into_model::<UserAssetSnapshotSummary>()
+            .all(self.db_conn.get_connection())
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "[MysqlQueryServiceImpl::find_user_asset_snapshot_summary] Failed to query: {:?}",
+                    e
+                )
+            })?;
+
+        Ok(results)
     }
 }

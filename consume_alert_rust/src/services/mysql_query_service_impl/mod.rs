@@ -8,7 +8,7 @@ use crate::common::*;
 use crate::models::{
     cash_asset::*, crypto_resp::*, currency_exchange_rate_snapshot::*, deposit_asset::*,
     earned_detail::*, saving_asset::*, spent_detail::*, spent_detail_with_info::*, stock_resp::*,
-    user_payment_methods::*,
+    user_asset_snapshot_summary::*, user_payment_methods::*,
 };
 use crate::repository::mysql_repository::*;
 
@@ -157,5 +157,15 @@ impl<R: MysqlRepository + Send + Sync> MysqlQueryService for MysqlQueryServiceIm
         currency_code: &str,
     ) -> anyhow::Result<Vec<CashAsset>> {
         self.find_cash_asset(user_seq, currency_code).await
+    }
+
+    async fn find_user_asset_snapshot_summary(
+        &self,
+        user_seq: i64,
+        start_at: DateTime<Utc>,
+        end_at: DateTime<Utc>,
+    ) -> anyhow::Result<Vec<UserAssetSnapshotSummary>> {
+        self.find_user_asset_snapshot_summary(user_seq, start_at, end_at)
+            .await
     }
 }

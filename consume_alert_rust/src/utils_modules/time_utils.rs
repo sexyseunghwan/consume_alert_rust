@@ -15,6 +15,23 @@ pub fn find_current_kor_naivedate() -> DateTime<Utc> {
     kst_time.date_naive().and_time(NaiveTime::MIN).and_utc()
 }
 
+/// Converts a KST calendar date's midnight (00:00:00 +09:00) into the equivalent `DateTime<Utc>` instant.
+///
+/// Unlike [`find_current_kor_naivedate`], this performs a genuine timezone conversion
+/// (KST midnight -> UTC instant) rather than relabeling the naive date as UTC.
+pub fn kst_midnight_to_utc(date: NaiveDate) -> Result<DateTime<Utc>, anyhow::Error> {
+    date.and_time(NaiveTime::MIN) // 날짜에 자정시각을
+        .and_local_timezone(Seoul)
+        .single()
+        .map(|dt| dt.with_timezone(&Utc))
+        .ok_or_else(|| {
+            anyhow!(
+                "[time_utils::kst_midnight_to_utc] Invalid or ambiguous Seoul datetime for {:?}",
+                date
+            )
+        })
+}
+
 /// Returns the first day of the current Korean month as `DateTime<Utc>` (midnight UTC).
 pub fn find_current_kor_naivedate_first_date() -> Result<DateTime<Utc>, anyhow::Error> {
     let utc_now: DateTime<Utc> = Utc::now();
@@ -73,24 +90,35 @@ pub fn find_naivedate(year: i32, month: u32, date: u32) -> Result<DateTime<Utc>,
         .map(|d| d.and_time(NaiveTime::MIN).and_utc())
 }
 
-/// Returns a `DateTime<chrono_tz::Tz>` for midnight Korean time on the given year/month/day.
-pub fn find_kst_datetime(
+/// Returns a `DateTime<Utc>` for midnight KST (Korea Standard Time) on the given year/month/day,
+/// converted to the equivalent UTC instant (unlike [`find_naivedate`], which tags UTC midnight directly).
+pub fn find_kor_naivedate(
     year: i32,
     month: u32,
     date: u32,
-) -> Result<DateTime<chrono_tz::Tz>, anyhow::Error> {
-    let naive_date = NaiveDate::from_ymd_opt(year, month, date)
-        .ok_or_else(|| anyhow!("[Datetime Parsing Error][find_kst_datetime()] Invalid date => year: {}, month: {}, day: {}", year, month, date))?;
+) -> Result<DateTime<Utc>, anyhow::Error> {
+    let naive_date: NaiveDate = NaiveDate::from_ymd_opt(year, month, date)
+        .ok_or_else(|| anyhow!("[Datetime Parsing Error][find_kor_naivedate()] Invalid date => year: {}, month: {}, day: {}", year, month, date))?;
 
-    let naive_datetime = naive_date.and_time(NaiveTime::MIN);
-    let kst_datetime = naive_datetime
-        .and_local_timezone(Seoul)
-        .single()
-        .ok_or_else(|| {
-            anyhow!("[time_utils::find_kst_datetime] Invalid or ambiguous Seoul datetime")
-        })?;
+    kst_midnight_to_utc(naive_date)
+}
 
-    Ok(kst_datetime)
+/// Returns the `DateTime<Utc>` instant for KST midnight `days` days before `kst_today`.
+pub fn kst_days_ago(kst_today: NaiveDate, days: i64) -> Result<DateTime<Utc>, anyhow::Error> {
+    kst_midnight_to_utc(kst_today - chrono::Duration::days(days))
+}
+
+/// Returns the `DateTime<Utc>` instant for KST midnight `months` months before `kst_today`.
+pub fn kst_months_ago(kst_today: NaiveDate, months: u32) -> Result<DateTime<Utc>, anyhow::Error> {
+    let date: NaiveDate = kst_today.checked_sub_months(Months::new(months)).ok_or_else(|| {
+        anyhow!(
+            "[time_utils::kst_months_ago] Date underflow subtracting {} months from {:?}",
+            months,
+            kst_today
+        )
+    })?;
+
+    kst_midnight_to_utc(date)
 }
 
 /// Returns a `DateTime<Utc>` that is `add_month` months after/before `dt`.

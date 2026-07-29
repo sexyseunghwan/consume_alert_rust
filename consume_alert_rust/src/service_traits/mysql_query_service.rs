@@ -3,7 +3,7 @@ use crate::common::*;
 use crate::models::{
     cash_asset::*, crypto_resp::*, currency_exchange_rate_snapshot::*, deposit_asset::*,
     earned_detail::*, saving_asset::*, spent_detail::*, spent_detail_with_info::*, stock_resp::*,
-    user_payment_methods::*,
+    user_asset_snapshot_summary::*, user_payment_methods::*,
 };
 
 #[async_trait]
@@ -55,9 +55,9 @@ pub trait MysqlQueryService {
         spent_idx: i64,
     ) -> anyhow::Result<Option<SpentDetailWithInfo>>;
     async fn delete_spent_detail_with_transaction(&self, spent_idx: i64) -> anyhow::Result<()>;
-    
+
     /*
-        select 
+        select
             *
         from USER_PAYMENT_METHODS
         where user_seq = 1
@@ -74,7 +74,7 @@ pub trait MysqlQueryService {
         from CURRENCY_EXCHANGE_RATE_SNAPSHOT
         where is_active = true
         and base_currency_code = 'USD'
-        and target_currency_code = 'KRW'; 
+        and target_currency_code = 'KRW';
     */
     async fn find_currency_exchange_rate_snapshot(
         &self,
@@ -124,4 +124,19 @@ pub trait MysqlQueryService {
         user_seq: i64,
         currency_code: &str,
     ) -> anyhow::Result<Vec<CashAsset>>;
+
+    /*
+        SELECT
+            *
+        FROM USER_ASSET_SNAPSHOT_SUMMARY
+        WHERE user_seq = 1
+        AND aggregated_at BETWEEN '2026-07-13' AND '2026-07-15 23:59:59'
+        ORDER BY aggregated_at ASC;
+    */
+    async fn find_user_asset_snapshot_summary(
+        &self,
+        user_seq: i64,
+        start_at: DateTime<Utc>,
+        end_at: DateTime<Utc>,
+    ) -> anyhow::Result<Vec<UserAssetSnapshotSummary>>;
 }
