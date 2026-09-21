@@ -97,7 +97,7 @@ impl<
         let room_seq: i64 = self
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
-        
+
         self.common_process_python_double(CommonProcessPythonDoubleDto {
             index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
@@ -193,7 +193,7 @@ impl<
         let room_seq: i64 = self
             .resolve_telegram_room_seq(user_seq, telegram_token, telegram_user_id)
             .await?;
-        
+
         self.common_process_python_double(CommonProcessPythonDoubleDto {
             index_name: CONSUME_DETAIL.clone(),
             permon_datetime,
@@ -648,7 +648,7 @@ impl<
         telegram_user_id: &str,
     ) -> anyhow::Result<()> {
         let args: Vec<String> = self.to_preprocessed_tokens(" ");
-        
+
         let permon_datetime: PerDatetime = match args.len() {
             1 => {
                 let date_start: DateTime<Utc> = find_current_kor_naivedate_first_date()?;
@@ -670,7 +670,7 @@ impl<
                     .get(1)
                     .ok_or_else(|| anyhow!("[command_consumption_per_mon_group] Missing month"))?
                     .parse()?;
-                
+
                 let date_start: DateTime<Utc> = find_kor_naivedate(year, month, 1)?;
                 let date_end: DateTime<Utc> = find_lastday_naivedate(date_start)?;
 
@@ -689,7 +689,6 @@ impl<
                 ));
             }
         };
-
 
         let user_seq: i64 = self
             .resolve_user_seq(telegram_token, telegram_user_id)

@@ -8,7 +8,8 @@ use crate::service_traits::{
 use crate::models::{
     asset_collection::*, asset_resp::*, assets::*, cash_asset::*, crypto_resp::*, deposit_asset::*,
     earned_detail::*, file_info::*, per_datetime::*, saving_asset::*, stock_pie_data::*,
-    stock_resp::*, to_python_graph_line::*, user_asset_snapshot_summary::*,
+    stock_resp::*, telegram_photo_message::*, to_python_graph_line::*,
+    user_asset_snapshot_summary::*,
 };
 
 use crate::utils_modules::{
@@ -555,17 +556,13 @@ impl<
     /// Fetches one period's snapshots, renders the Python line graph, and wraps it as a `FileInfo`.
     async fn render_asset_history_graph(
         &self,
-        user_seq: i64,
         label: &str,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
+        snapshots: &[UserAssetSnapshotSummary],
     ) -> anyhow::Result<FileInfo> {
-        let snapshots: Vec<UserAssetSnapshotSummary> = self
-            .fetch_asset_snapshot_range(user_seq, label, start, end)
-            .await?;
-
         let python_graph: ToPythonGraphLine =
-            ToPythonGraphLine::new("", start, end, 0.0, &snapshots, LineAggregation::Raw)?;
+            ToPythonGraphLine::new("", start, end, 0.0, snapshots, LineAggregation::Raw)?;
 
         let graph_bytes: Vec<u8> = self
             .graph_api_service
@@ -576,14 +573,14 @@ impl<
     }
 
     /* 5. 총자산 변동 그래프 (일/주/월/분기/반기/년)
-       자산 스냅샷은 UTC로 저장되어 있지만, 조회 구간은 사용자가 인식하는
-       KST(UTC+9) 날짜 경계를 기준으로 계산한 뒤 UTC로 변환해야 한다.
-       끝점 유실을 막기 위해 `start_at <= aggregated_at < end_at` 반개구간으로 조회한다.
+    자산 스냅샷은 UTC로 저장되어 있지만, 조회 구간은 사용자가 인식하는
+    KST(UTC+9) 날짜 경계를 기준으로 계산한 뒤 UTC로 변환해야 한다.
+    끝점 유실을 막기 위해 `start_at <= aggregated_at < end_at` 반개구간으로 조회한다.
 
-       ex) KST 오늘 2026-07-10 하루
-           KST: 2026-07-10 00:00:00 +09:00 ~ 2026-07-11 00:00:00 +09:00
-           UTC: 2026-07-09 15:00:00 UTC     ~ 2026-07-10 15:00:00 UTC */
-    async fn send_asset_history_graphs(&self, user_seq: i64) -> anyhow::Result<()> {
+    ex) KST 오늘 2026-07-10 하루
+        KST: 2026-07-10 00:00:00 +09:00 ~ 2026-07-11 00:00:00 +09:00
+        UTC: 2026-07-09 15:00:00 UTC     ~ 2026-07-10 15:00:00 UTC */
+    async fn send_asset_history_infos_and_graphs(&self, user_seq: i64) -> anyhow::Result<()> {
         let now_kst: DateTime<chrono_tz::Tz> = Utc::now().with_timezone(&Seoul);
         info!("[command_show_all_asset] now_kst: {:?}", now_kst);
 
@@ -605,16 +602,37 @@ impl<
             ("yearly", kst_months_ago(kst_today, 12)?),
         ];
 
-        let mut img_files: Vec<FileInfo> = Vec::with_capacity(periods.len());
-
         for (label, start_utc) in periods {
-            let file: FileInfo = self
-                .render_asset_history_graph(user_seq, label, start_utc, tomorrow_start_utc)
+            let snapshots: Vec<UserAssetSnapshotSummary> = self
+                .fetch_asset_snapshot_range(user_seq, label, start_utc, tomorrow_start_utc)
                 .await?;
-            img_files.push(file);
-        }
 
-        self.tele_bot_service.input_photo_confirm(img_files).await?;
+            let file: FileInfo = self
+                .render_asset_history_graph(label, start_utc, tomorrow_start_utc, &snapshots)
+                .await?;
+
+            let telegram_photo_msg: TelegramPhotoMessage = asset_history_generator(
+                label,
+                file.file_bytes,
+                start_utc,
+                tomorrow_start_utc,
+                &snapshots,
+            )?;
+
+            log_ctx(
+                "[command_show_all_asset] Failed to send asset history message",
+                self.tele_bot_service
+                    .input_message_confirm(&telegram_photo_msg.message),
+            )
+            .await?;
+
+            log_ctx(
+                "[command_show_all_asset] Failed to send asset history photo",
+                self.tele_bot_service
+                    .input_photo_from_bytes(telegram_photo_msg.photo_bytes, &file.file_name),
+            )
+            .await?;
+        }
 
         Ok(())
     }
@@ -668,9 +686,36 @@ impl<
                 let stock_pie_data: StockPieData =
                     build_stock_pie_data(&stock_resp_details, collection.total_stock_amount_krw);
                 self.send_stock_pie(stock_pie_data).await?;
+            }
+            _ => {
+                self.tele_bot_service
+                    .input_message_confirm("Invalid date format. Please use format `my`")
+                    .await?;
+                return Err(anyhow!(
+                    "[command_show_all_asset] Invalid parameter: {:?}",
+                    self.tele_bot_service.get_input_text()
+                ));
+            }
+        };
 
-                /* 5. 총자산 변동 그래프 */
-                self.send_asset_history_graphs(user_seq).await?;
+        Ok(())
+    }
+
+    pub(super) async fn command_show_asset_history(
+        &self,
+        telegram_token: &str,
+        telegram_user_id: &str,
+    ) -> anyhow::Result<()> {
+        let args: Vec<String> = self.to_preprocessed_tokens(" ");
+
+        match args.len() {
+            1 => {
+                let user_seq: i64 = self
+                    .resolve_user_seq(telegram_token, telegram_user_id)
+                    .await?;
+
+                /* 총자산 변동 그래프 */
+                self.send_asset_history_infos_and_graphs(user_seq).await?;
             }
             _ => {
                 self.tele_bot_service

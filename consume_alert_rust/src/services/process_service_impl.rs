@@ -148,11 +148,98 @@ impl ProcessServiceImpl {
         Ok(consume_result_by_types)
     }
 
+    /// Extracts NH payment fields while preserving whitespace inside the merchant name.
+    fn parse_nh_card_fields(
+        &self,
+        split_args_vec: &[String],
+    ) -> anyhow::Result<(i64, DateTime<FixedOffset>, String)> {
+        // The caller splits on newlines, so retain those boundaries and each line's contents.
+        let message: String = split_args_vec.join("\n");
+
+        // Find Datetime format
+        let datetime_re: Regex = Regex::new(
+            r"(?:^|\s)(?P<date>[0-9]{2}/[0-9]{2})\s+(?P<time>[0-9]{2}:[0-9]{2})(?:\s|$)",
+        )?;
+
+        let Some(datetime) = datetime_re.captures(&message) else {
+            // Legacy short notifications have separate card, user/amount and merchant lines,
+            // with no date. Keep their existing current-KST behavior.
+            if !(3..=4).contains(&split_args_vec.len()) {
+                return Err(anyhow!(
+                    "[ProcessServiceImpl::modify_nh_card] Date/time field not found"
+                ));
+            }
+            let price_str: &str = split_args_vec.get(1).ok_or_else(|| {
+                anyhow!("[ProcessServiceImpl::modify_nh_card] Price field not found")
+            })?;
+            let consume_price_vec: Vec<String> = self.to_string_vector_by_replace(price_str, &[",", "원"])?;
+            let spent_money: i64 = self.find_consume_prodt_money(&consume_price_vec, 1)?;
+            let spent_name: String = split_args_vec
+                .get(2)
+                .map(|name| name.trim())
+                .filter(|name| !name.is_empty())
+                .ok_or_else(|| {
+                    anyhow!("[ProcessServiceImpl::modify_nh_card] Product name field not found")
+                })?
+                .to_string();
+            
+            return Ok((
+                spent_money,
+                Utc::now().with_timezone(&Seoul).fixed_offset(),
+                spent_name,
+            ));
+        };
+
+        let date = datetime
+            .name("date")
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_nh_card] Date field not found"))?;
+        let time = datetime
+            .name("time")
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_nh_card] Time field not found"))?;
+
+        // Search only before the transaction date: totals and phone numbers are not prices.
+        let amount_re: Regex = Regex::new(r"(?:^|\s)([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)원(?:\s|$)")?;
+        let amount = amount_re
+            .captures(&message[..date.start()])
+            .and_then(|captures| captures.get(1))
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_nh_card] Price field not found"))?;
+        let spent_money: i64 = amount.as_str().replace(',', "").parse()?;
+        let spent_at: DateTime<FixedOffset> = self
+            .to_consume_datetime_seoul(&[date.as_str().to_string(), time.as_str().to_string()])?;
+
+        // Regex matches and str::find return UTF-8 boundaries; trim only the outer whitespace.
+        let after_datetime: &str = &message[time.end()..];
+
+        let merchant_region: &str = if let Some(merchant_end) = after_datetime.find("총누적") {
+            &after_datetime[..merchant_end]
+        } else {
+            // Legacy multiline notifications may omit the total and have other footer lines.
+            let merchant_line: &str = after_datetime
+                .trim_start()
+                .lines()
+                .next()
+                .unwrap_or_default();
+            
+            merchant_line
+                .split_once("고객센터")
+                .map_or(merchant_line, |(name, _)| name)
+        };
+        let spent_name: &str = merchant_region.trim();
+
+        if spent_name.is_empty() {
+            return Err(anyhow!(
+                "[ProcessServiceImpl::modify_nh_card] Product name field not found"
+            ));
+        }
+
+        Ok((spent_money, spent_at, spent_name.to_string()))
+    }
+
     /// Parses an NH card payment notification message and builds a `SpentDetail`.
     ///
     /// # Arguments
     ///
-    /// * `split_args_vec` - Tokenized fields extracted from the notification text
+    /// * `split_args_vec` - Notification lines, or the complete single-line notification
     /// * `user_seq` - Unique identifier of the user
     /// * `room_seq` - Unique identifier of the Telegram room
     /// * `user_payment_methods` - Slice of payment methods registered by the user
@@ -171,14 +258,13 @@ impl ProcessServiceImpl {
         room_seq: i64,
         user_payment_methods: &[UserPaymentMethods],
     ) -> anyhow::Result<SpentDetail> {
-        let split_val: Vec<&str> = vec![",", "원"];
-
-        let card_name: String = split_args_vec
+        let first_line: &String = split_args_vec
             .first()
-            .ok_or_else(|| {
-                anyhow!("[ProcessServiceImpl::modify_nh_card] Price field (index 0) not found")
-            })?
-            .replace("승인", "");
+            .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_nh_card] Card field not found"))?;
+        let card_name: &str = first_line
+            .split_once("승인")
+            .map_or(first_line.as_str(), |(card, _)| card)
+            .trim();
 
         let payment_method_id: i64 = user_payment_methods
             .iter()
@@ -191,45 +277,7 @@ impl ProcessServiceImpl {
                 )
             })?;
 
-        let (spent_money, spent_at, spent_name): (i64, DateTime<FixedOffset>, String) =
-            if split_args_vec.len() > 4 {
-                let price_str: &str = split_args_vec.get(2).ok_or_else(|| {
-                    anyhow!("[ProcessServiceImpl::modify_nh_card] Price field (index 2) not found")
-                })?;
-                let consume_price_vec: Vec<String> =
-                    self.to_string_vector_by_replace(price_str, &split_val)?;
-                let spent_money: i64 = self.find_consume_prodt_money(&consume_price_vec, 0)?;
-
-                let time_str: &str = split_args_vec.get(3).ok_or_else(|| {
-                    anyhow!("[ProcessServiceImpl::modify_nh_card] Time field (index 3) not found")
-                })?;
-                let consume_time_vec: Vec<String> =
-                    time_str.split(" ").map(|s| s.trim().to_string()).collect();
-                let spent_at: DateTime<FixedOffset> =
-                    self.to_consume_datetime_seoul(&consume_time_vec)?;
-
-                let spent_name: String = split_args_vec
-                    .get(4)
-                    .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_nh_card] Product name field (index 4) not found"))?
-                    .to_string();
-
-                (spent_money, spent_at, spent_name)
-            } else {
-                let price_str: &str = split_args_vec.get(1).ok_or_else(|| {
-                    anyhow!("[ProcessServiceImpl::modify_nh_card] Price field (index 1) not found")
-                })?;
-                let consume_price_vec: Vec<String> =
-                    self.to_string_vector_by_replace(price_str, &split_val)?;
-                let spent_money: i64 = self.find_consume_prodt_money(&consume_price_vec, 1)?;
-                let spent_at: DateTime<FixedOffset> =
-                    Utc::now().with_timezone(&Seoul).fixed_offset();
-                let spent_name: String = split_args_vec
-                    .get(2)
-                    .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_nh_card] Product name field (index 2) not found"))?
-                    .to_string();
-
-                (spent_money, spent_at, spent_name)
-            };
+        let (spent_money, spent_at, spent_name) = self.parse_nh_card_fields(split_args_vec)?;
 
         let spent_detail: SpentDetail = SpentDetail {
             spent_name,
@@ -371,7 +419,7 @@ impl ProcessService for ProcessServiceImpl {
             let user_payment_methods: &Vec<UserPaymentMethods> = card_company_nms
                 .get("nh")
                 .ok_or_else(|| anyhow!("[ProcessServiceImpl::modify_by_consume_filter_v1] The word `NH` does not exist in the HashMap."))?;
-
+            
             self.modify_nh_card(split_args_vec, user_seq, room_seq, user_payment_methods)
         } else if card_company_nms.contains_key("삼성") && split_first.contains("삼성") {
             let user_payment_methods: &Vec<UserPaymentMethods> = card_company_nms

@@ -172,7 +172,10 @@ impl ToPythonGraphLine {
             match aggregation {
                 LineAggregation::Cumulative => {
                     let kst_day: NaiveDateTime = item.line_date_kst().and_time(NaiveTime::MIN);
-                    date_values.entry(kst_day).and_modify(|e| *e += value).or_insert(value);
+                    date_values
+                        .entry(kst_day)
+                        .and_modify(|e| *e += value)
+                        .or_insert(value);
                 }
                 LineAggregation::Raw => {
                     let kst_datetime: NaiveDateTime = item.line_datetime_kst();
@@ -180,7 +183,7 @@ impl ToPythonGraphLine {
                 }
             }
         }
-        
+
         let mut sorted_dates: Vec<_> = date_values.into_iter().collect(); /* HashMap -> Vector */
         sorted_dates.sort_by_key(|(datetime, _)| *datetime);
 

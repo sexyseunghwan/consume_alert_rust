@@ -141,6 +141,10 @@ impl<
                 self.command_show_all_asset(&telegram_token, &telegram_user_id)
                     .await?
             }
+            "mh" => {
+                self.command_show_asset_history(&telegram_token, &telegram_user_id)
+                    .await?
+            }
             _ => {
                 self.command_consumption_auto(&telegram_token, &telegram_user_id)
                     .await?

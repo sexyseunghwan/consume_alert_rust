@@ -259,7 +259,7 @@ impl<
             .inspect_err(|e| {
                 error!("[main_controller::command_consumption_auto] Failed to get user payment methods: {:#}", e);
             })?;
-
+        
         let currency_usd_to_krw: Decimal = self
             .mysql_query_service
             .find_currency_exchange_rate_snapshot("USD", "KRW")

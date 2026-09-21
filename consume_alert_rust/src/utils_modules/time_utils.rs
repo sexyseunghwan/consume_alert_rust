@@ -110,13 +110,15 @@ pub fn kst_days_ago(kst_today: NaiveDate, days: i64) -> Result<DateTime<Utc>, an
 
 /// Returns the `DateTime<Utc>` instant for KST midnight `months` months before `kst_today`.
 pub fn kst_months_ago(kst_today: NaiveDate, months: u32) -> Result<DateTime<Utc>, anyhow::Error> {
-    let date: NaiveDate = kst_today.checked_sub_months(Months::new(months)).ok_or_else(|| {
-        anyhow!(
-            "[time_utils::kst_months_ago] Date underflow subtracting {} months from {:?}",
-            months,
-            kst_today
-        )
-    })?;
+    let date: NaiveDate = kst_today
+        .checked_sub_months(Months::new(months))
+        .ok_or_else(|| {
+            anyhow!(
+                "[time_utils::kst_months_ago] Date underflow subtracting {} months from {:?}",
+                months,
+                kst_today
+            )
+        })?;
 
     kst_midnight_to_utc(date)
 }
