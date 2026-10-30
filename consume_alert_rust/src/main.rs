@@ -88,6 +88,7 @@ History     : 2023-05-04 Seunghwan Shin       # [v.1.0.0] first create
                                               # 6) Refactored command_asset.rs: split command_show_all_asset into smaller helper methods and moved shared models/helpers into models/ and utils_modules/ (1043 -> 688 lines)
                                               # 7) Fixed all cargo clippy warnings (unnecessary_sort_by, dead_code)
               2026-09-21 Seunghwan Shin       # [v.4.6.1] Fixed NH card notification parsing to support single-line messages and preserve spaces in merchant names while retaining legacy format compatibility.
+              2026-10-30 Seunghwan Shin       # [v.4.7.0] Added held share counts to Telegram stock portfolio summaries using existing holding data and number formatting.
 */
 mod common;
 use common::*;

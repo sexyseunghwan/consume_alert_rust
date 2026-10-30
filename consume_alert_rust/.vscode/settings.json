@@ -1,0 +1,10 @@
+{
+    "editor.tokenColorCustomizations": {
+        "comments": "#90EE90"
+    },
+    "editor.semanticTokenColorCustomizations": {
+        "rules": {
+            "comment": "#90EE90"
+        }
+    }
+}

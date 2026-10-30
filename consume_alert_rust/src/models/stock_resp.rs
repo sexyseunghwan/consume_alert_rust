@@ -20,6 +20,7 @@ pub struct StockResp {
 pub struct StockRespDetail {
     pub stock_name: String,
     pub stock_alias: String,
+    pub stock_cnt: i64,
     pub stock_total_price_usd: Decimal,
     pub stock_total_price_krw: Decimal,
     pub stock_roi: Decimal,
@@ -88,6 +89,7 @@ impl StockResp {
         StockRespDetail {
             stock_name: self.stock_name().to_string(),
             stock_alias: self.stock_alias().to_string(),
+            stock_cnt: self.stock_cnt,
             stock_total_price_usd,
             stock_total_price_krw,
             stock_roi,
@@ -139,8 +141,9 @@ pub fn build_stock_message(
     } else {
         for stock in stock_resp_details {
             msg.push_str(&format!(
-                "*  {} : \n      {}₩ ({:.2}$) \n            ROI: {:.3}%\n            PROFIT(₩): {}\n",
+                "*  {} ({}주) : \n      {}₩ ({:.2}$) \n            ROI: {:.3}%\n            PROFIT(₩): {}\n",
                 stock.stock_alias(),
+                stock.stock_cnt().to_formatted_string(&Locale::en),
                 format_decimal_with_commas(stock.stock_total_price_krw, 0, false),
                 stock.stock_total_price_usd.round_dp(2),
                 stock.stock_roi,
